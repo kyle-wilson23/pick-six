@@ -42,7 +42,8 @@ workflow_status:
         name: 'Product Brief'
         agent: 'analyst'
         command: '/bmad:bmm:workflows:create-product-brief'
-        status: 'required'
+        status: '_bmad-output/planning-artifacts/product-brief-pick-six-2026-01-05.md'
+        completed: '2026-01-06'
         note: 'Strategic product planning - Start here!'
 
   # Phase 2: Planning

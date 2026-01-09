@@ -12,28 +12,45 @@ Pick Six transforms traditional email-based fantasy football pick'em leagues int
 
 📋 **Currently in Planning Phase** - This project is being developed using the [BMAD Method](https://github.com/brendan-mccaffrey/bmad) for comprehensive product and system design.
 
-**Current Phase:** Planning (Product Brief Complete ✓)
+**Current Phase:** Planning & Requirements Definition
 
-## Key Features (Planned)
+**Completed Artifacts:**
 
-### League Management
+- ✅ Product Brief (January 2026)
+- ✅ Product Requirements Document (January 2026)
 
-- **Admin Dashboard** - Create and configure leagues with custom rules and settings
-- **Invitation System** - Email-based invitations for new league members
-- **User Management** - Role-based access control (admin/participants)
+**Next Steps:** UX Design → Technical Architecture → Epic Breakdown
 
-### Weekly Operations
+## Key Features (Planned MVP)
 
-- **Automated Reminders** - Email notifications for weekly pick deadlines
-- **Real-time Odds** - Integration with third-party API for NFL moneyline odds
-- **Pick Tracking** - User submission and validation against league rules
-- **Scoring & Standings** - Automated calculation and leaderboard updates
+### Multi-League Management
 
-### User Experience
+- **League Creation** - Support for multiple concurrent leagues with unique configurations
+- **Participant Invitations** - Email-based invitation system with signup links
+- **Admin Override Capabilities** - Submit/modify picks on behalf of participants with full audit trail
+- **League Rules Reference** - Accessible documentation of all scoring rules and mechanics
 
-- **Authentication** - Secure user signup and login
-- **Responsive Design** - Mobile-friendly interface for picks on-the-go
-- **Historical Data** - Season and historical performance tracking
+### Automated Weekly Operations
+
+- **Email Automation** - Automatic pick reminders with standings, jailed team, and pick submission link
+- **Jailed Team Calculation** - Automated identification with tie-breaker logic (odds → spread → random)
+- **Deadline Enforcement** - Automatic pick lockout at Thursday ~8:10 PM or 5 minutes before first game
+- **Automated Scoring** - Game result processing and leaderboard updates after Monday Night Football
+
+### Pick Submission Experience
+
+- **Live Odds Integration** - Real-time NFL moneyline odds and point spreads
+- **Smart Validation** - Prevents duplicate team picks and jailed team violations
+- **Pick Modification** - Unlimited changes before weekly deadline
+- **Mobile-Optimized Workflow** - 60-90 second pick submission on mobile devices
+- **Clear Status Indicators** - Visual confirmation of submitted picks
+
+### Transparency & Reporting
+
+- **Live Leaderboards** - Updated standings revealed every Tuesday after MNF
+- **Historical Pick Tracking** - Complete season-long pick history for all participants
+- **Admin CSV Export** - Complete league state export as fail-safe backup
+- **Audit Trail** - Complete logging of all admin override actions
 
 ## Technology Stack
 
@@ -55,17 +72,31 @@ This project is currently in the planning and design phase. Once implementation 
 - Configuration guide
 - Running the application locally
 
+For now, refer to the planning artifacts in `_bmad-output/planning-artifacts/` to understand the product vision and requirements.
+
 ## Project Structure
 
 ```
 pick-six/
 ├── _bmad/                  # BMAD Method framework files
 ├── _bmad-output/           # Planning artifacts and documentation
-│   ├── planning-artifacts/ # PRD, Architecture, UX designs
-│   └── implementation-artifacts/ # Sprint plans, stories
-├── docs/                   # Additional documentation
+│   ├── planning-artifacts/ # Product Brief ✓, PRD ✓, Architecture (TBD), UX designs (TBD)
+│   └── implementation-artifacts/ # Sprint plans, stories (TBD)
+├── docs/                   # Additional documentation (TBD)
 └── src/                    # Source code (coming soon)
 ```
+
+## Planning Artifacts
+
+- **Product Brief** (`_bmad-output/planning-artifacts/product-brief-pick-six-2026-01-05.md`)
+  - Executive summary and product vision
+  - Problem statement and target users
+  - Success metrics and MVP scope definition
+- **Product Requirements Document** (`_bmad-output/planning-artifacts/prd.md`)
+  - Complete functional requirements (60 FRs across 8 capability areas)
+  - Non-functional requirements (53 NFRs covering performance, security, reliability)
+  - User journeys (5 comprehensive narratives)
+  - Technical specifications for web application architecture
 
 ## Contributing
 

@@ -54,7 +54,8 @@ workflow_status:
         name: 'Product Requirements Document'
         agent: 'pm'
         command: '/bmad:bmm:workflows:create-prd'
-        status: 'required'
+        status: '_bmad-output/planning-artifacts/prd.md'
+        completed: '2026-01-09'
         output: 'Product Requirements Document with FRs and NFRs'
 
       - id: 'create-ux-design'

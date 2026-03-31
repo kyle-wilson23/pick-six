@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick Six - Design Direction Showcase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-default: #121212;
+    --bg-paper: #1E1E1E;
+    --bg-elevated: #2A2A2A;
+    --bg-overlay: #333333;
+    --primary: #2ECC71;
+    --primary-light: #58D68D;
+    --primary-dark: #27AE60;
+    --success: #2ECC71;
+    --warning: #F5A623;
+    --warning-light: #F7C258;
+    --error: #EF5350;
+    --info: #42A5F5;
+    --gold: #FFD700;
+    --gold-light: #FFE44D;
+    --text-primary: rgba(255,255,255,0.87);
+    --text-secondary: rgba(255,255,255,0.60);
+    --text-disabled: rgba(255,255,255,0.38);
+    --text-hint: rgba(255,255,255,0.30);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-default);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Showcase Navigation */
+  .showcase-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--bg-paper);
+    border-bottom: 1px solid var(--bg-overlay);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+    overflow-x: auto;
+  }
+  .showcase-nav h1 {
+    font-size: 16px; font-weight: 700; color: var(--primary);
+    white-space: nowrap; margin-right: 16px;
+  }
+  .showcase-tab {
+    padding: 8px 16px; border-radius: var(--radius-lg);
+    background: transparent; border: 1px solid var(--bg-overlay);
+    color: var(--text-secondary); font-family: inherit;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .showcase-tab:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .showcase-tab.active {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+  }
+
+  /* Section Container */
+  .section { display: none; padding: 80px 24px 40px; max-width: 480px; margin: 0 auto; }
+  .section.active { display: block; }
+  .section.desktop-section { max-width: 1200px; }
+  .section-title {
+    font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);
+  }
+  .section-desc {
+    font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;
+  }
+
+  /* Design Tokens Display */
+  .token-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .token-swatch {
+    border-radius: var(--radius-lg); padding: 16px; min-height: 80px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .token-swatch .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .token-swatch .hex { font-size: 12px; font-weight: 400; margin-top: 4px; }
+  .token-swatch.full-width { grid-column: 1 / -1; }
+
+  /* Pick Status Banner */
+  .pick-banner {
+    background: rgba(46, 204, 113, 0.15);
+    border-left: 4px solid var(--success);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .pick-banner.locked {
+    background: rgba(66, 165, 245, 0.15);
+    border-left-color: var(--info);
+  }
+  .pick-banner .team-logo {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--bg-overlay); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .pick-banner .banner-text { font-size: 14px; font-weight: 500; }
+  .pick-banner .banner-text span { color: var(--primary); font-weight: 600; }
+  .pick-banner.locked .banner-text span { color: var(--info); }
+  .pick-banner .lock-icon { margin-left: auto; color: var(--info); font-size: 16px; }
+
+  /* Deadline Countdown */
+  .deadline {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 16px; padding: 8px 0;
+  }
+  .deadline .clock { color: var(--text-secondary); font-size: 14px; }
+  .deadline .time { font-size: 16px; font-weight: 600; color: var(--warning); }
+  .deadline.urgent .time { color: var(--error); font-size: 18px; font-weight: 700; }
+
+  /* Jailed Team Callout */
+  .jailed-callout {
+    background: rgba(245, 166, 35, 0.1);
+    border: 1px solid rgba(245, 166, 35, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .jailed-callout .jail-icon {
+    font-size: 20px; color: var(--warning);
+  }
+  .jailed-callout .jail-text { font-size: 13px; color: var(--text-secondary); }
+  .jailed-callout .jail-text strong { color: var(--warning); font-weight: 600; }
+  .jailed-callout .jail-info {
+    font-size: 11px; color: var(--text-disabled); margin-top: 2px;
+  }
+
+  /* Matchup Card */
+  .matchup-card {
+    background: var(--bg-paper);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .matchup-card:hover { background: var(--bg-elevated); }
+  .matchup-card.selected { border-color: var(--primary); background: var(--bg-elevated); }
+  .matchup-card.jailed {
+    border-color: var(--warning);
+    opacity: 0.7; cursor: not-allowed;
+  }
+  .matchup-card.picked { opacity: 0.5; cursor: not-allowed; }
+  .matchup-card.anti-jailed { border-color: rgba(255, 215, 0, 0.3); }
+
+  .matchup-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 8px;
+  }
+  .matchup-time { font-size: 12px; color: var(--text-disabled); font-weight: 500; white-space: nowrap; }
+  .matchup-weather { font-size: 11px; color: var(--text-disabled); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+  .matchup-teams { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+  .team {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: var(--radius-md);
+    transition: background 0.15s;
+    min-width: 0;
+  }
+  .team:hover:not(.disabled) { background: rgba(255,255,255,0.05); }
+  .team.disabled { cursor: not-allowed; }
+  .team-logo-circle {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--bg-overlay); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+    position: relative;
+  }
+  .team.disabled .team-logo-circle { filter: grayscale(70%); opacity: 0.5; }
+  .team-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .team.disabled .team-name { color: var(--text-disabled); }
+  .team-odds { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: auto; flex-shrink: 0; }
+
+  .vs-divider {
+    font-size: 11px; font-weight: 600; color: var(--text-disabled);
+    text-transform: uppercase; flex-shrink: 0;
+  }
+
+  /* Tags */
+  .tag {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 2px 6px; border-radius: var(--radius-sm);
+    position: absolute; bottom: -4px; right: -4px;
+  }
+  .tag.jailed { background: var(--warning); color: #000; }
+  .tag.picked { background: var(--bg-overlay); color: var(--text-disabled); font-size: 8px; }
+  .tag.bonus {
+    background: var(--gold); color: #000;
+    position: static; margin-left: auto; padding: 3px 8px;
+    font-size: 10px; flex-shrink: 0; white-space: nowrap;
+  }
+
+  /* Submit Button */
+  .submit-btn {
+    width: 100%; padding: 14px 24px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: var(--radius-lg);
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .submit-btn:hover { background: var(--primary-dark); }
+  .submit-btn:disabled {
+    background: var(--bg-overlay); color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+
+  /* Tab Bar */
+  .tab-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg-paper);
+    border-top: 1px solid var(--bg-overlay);
+    display: flex; padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    max-width: 480px; margin: 0 auto;
+  }
+  .tab-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; padding: 4px;
+    color: var(--text-disabled); font-size: 10px; font-weight: 500;
+    text-decoration: none; transition: color 0.2s;
+  }
+  .tab-item.active { color: var(--primary); }
+  .tab-item .tab-icon { font-size: 20px; }
+
+  /* Standings Table */
+  .standings-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+  .standings-table th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text-disabled); text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 8px 12px;
+  }
+  .standings-table td {
+    padding: 12px; background: var(--bg-paper);
+    font-size: 14px; font-weight: 400;
+  }
+  .standings-table tr td:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+  .standings-table tr td:last-child { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+  .standings-rank { font-weight: 700; color: var(--text-secondary); width: 32px; }
+  .standings-name { font-weight: 500; }
+  .standings-points { font-weight: 700; color: var(--primary); text-align: right; }
+  .standings-record { font-size: 12px; color: var(--text-secondary); text-align: right; }
+  .standings-table tr.highlight td { background: rgba(46, 204, 113, 0.08); }
+
+  /* Landing Page */
+  .landing-hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; padding: 40px 24px;
+    background: linear-gradient(180deg, rgba(18,18,18,0.4) 0%, rgba(18,18,18,0.95) 100%),
+                linear-gradient(135deg, #1a3a2a 0%, #121212 50%, #1a2a3a 100%);
+    position: relative;
+  }
+  .landing-logo {
+    font-size: 48px; font-weight: 700; color: var(--primary);
+    margin-bottom: 8px; letter-spacing: -1px;
+  }
+  .landing-tagline {
+    font-size: 18px; color: var(--text-secondary); margin-bottom: 32px;
+    max-width: 320px; line-height: 1.5;
+  }
+  .landing-cta {
+    padding: 16px 48px; background: var(--primary);
+    color: #fff; border: none; border-radius: var(--radius-lg);
+    font-family: inherit; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 16px;
+  }
+  .landing-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  .landing-secondary {
+    font-size: 14px; color: var(--text-secondary);
+    text-decoration: underline; cursor: pointer;
+  }
+  .landing-features {
+    display: flex; gap: 24px; margin-top: 48px; flex-wrap: wrap; justify-content: center;
+  }
+  .landing-feature {
+    text-align: center; max-width: 140px;
+  }
+  .landing-feature .feat-icon { font-size: 28px; margin-bottom: 8px; }
+  .landing-feature .feat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  /* Error Popup */
+  .error-popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--bg-elevated); border: 1px solid var(--error);
+    border-radius: var(--radius-lg); padding: 20px 24px;
+    text-align: center; z-index: 200; display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .error-popup.show { display: block; animation: popIn 0.2s ease; }
+  .error-popup .error-icon { font-size: 32px; margin-bottom: 8px; }
+  .error-popup .error-msg { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  @keyframes popIn { from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } }
+
+  /* Input Field */
+  .input-field {
+    width: 100%; padding: 14px 16px;
+    background: var(--bg-paper); border: 1px solid var(--bg-overlay);
+    border-radius: var(--radius-lg); color: var(--text-primary);
+    font-family: inherit; font-size: 14px;
+    transition: border-color 0.2s; margin-bottom: 12px;
+  }
+  .input-field:focus { outline: none; border-color: var(--primary); }
+  .input-field::placeholder { color: var(--text-hint); }
+  .input-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+
+  /* Admin Override Card */
+  .admin-card {
+    background: var(--bg-paper); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .admin-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .admin-card-title { font-size: 14px; font-weight: 600; }
+  .admin-status {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: var(--radius-sm); text-transform: uppercase;
+  }
+  .admin-status.submitted { background: rgba(46,204,113,0.15); color: var(--primary); }
+  .admin-status.pending { background: rgba(245,166,35,0.15); color: var(--warning); }
+
+  /* Scroll padding for bottom nav */
+  .has-bottom-nav { padding-bottom: 80px; }
+
+  /* Section Divider */
+  .divider {
+    height: 1px; background: var(--bg-overlay);
+    margin: 24px 0;
+  }
+
+  /* Typography Preview */
+  .type-sample { margin-bottom: 16px; }
+  .type-sample .type-label {
+    font-size: 11px; color: var(--text-disabled); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+
+  /* Desktop Top Tab Bar */
+  .desktop-app-bar {
+    background: var(--bg-paper);
+    border-bottom: 1px solid var(--bg-overlay);
+    padding: 0 32px;
+    display: flex; align-items: center; height: 56px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .desktop-app-bar .app-logo {
+    font-size: 18px; font-weight: 700; color: var(--primary);
+    margin-right: 40px; letter-spacing: -0.5px;
+  }
+  .desktop-app-bar .app-tabs { display: flex; gap: 4px; flex: 1; }
+  .desktop-app-bar .app-tab {
+    padding: 16px 20px; font-size: 13px; font-weight: 500;
+    color: var(--text-disabled); border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .desktop-app-bar .app-tab:hover { color: var(--text-secondary); }
+  .desktop-app-bar .app-tab.active {
+    color: var(--primary); border-bottom-color: var(--primary);
+  }
+  .desktop-app-bar .app-user {
+    font-size: 13px; color: var(--text-secondary); font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .desktop-app-bar .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--primary-dark); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #fff;
+  }
+
+  /* Desktop Frame */
+  .desktop-frame {
+    background: var(--bg-default);
+    border: 1px solid var(--bg-overlay);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .desktop-content { padding: 24px 32px; }
+
+  /* Desktop Matchup Grid */
+  .desktop-matchup-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .desktop-matchup-grid .matchup-card { margin-bottom: 0; }
+
+  /* Desktop Standings */
+  .desktop-standings-layout {
+    display: grid; grid-template-columns: 1fr 360px; gap: 32px;
+  }
+
+  /* Desktop Admin Layout */
+  .desktop-admin-layout {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  }
+
+  /* Desktop Landing */
+  .desktop-landing-hero {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 64px 48px; min-height: 480px;
+    background: linear-gradient(135deg, rgba(18,18,18,0.4) 0%, rgba(18,18,18,0.95) 100%),
+                linear-gradient(135deg, #1a3a2a 0%, #121212 50%, #1a2a3a 100%);
+    border-radius: var(--radius-lg);
+  }
+  .desktop-landing-text { max-width: 440px; }
+  .desktop-landing-text .landing-logo {
+    font-size: 56px; text-align: left; margin-bottom: 16px;
+  }
+  .desktop-landing-text .landing-tagline {
+    text-align: left; font-size: 20px; max-width: 400px; margin-bottom: 32px;
+  }
+  .desktop-landing-preview {
+    width: 380px; flex-shrink: 0;
+    background: var(--bg-paper); border-radius: var(--radius-lg);
+    padding: 20px; border: 1px solid var(--bg-overlay);
+  }
+  .desktop-landing-preview .preview-title {
+    font-size: 14px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  /* Desktop Pick Status inline */
+  .desktop-header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 16px;
+  }
+  .desktop-header-row .section-title { margin-bottom: 0; }
+  .desktop-header-row .pick-banner { margin-bottom: 0; flex: 1; max-width: 400px; }
+
+  /* Desktop info bar */
+  .desktop-info-bar {
+    display: flex; gap: 16px; margin-bottom: 20px;
+  }
+  .desktop-info-bar > * { flex: 1; }
+  .desktop-info-bar .jailed-callout { margin-bottom: 0; }
+  .desktop-info-bar .deadline-card {
+    background: var(--bg-paper); border-radius: var(--radius-lg);
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  }
+
+  /* Sidebar card */
+  .sidebar-card {
+    background: var(--bg-paper); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 16px;
+  }
+  .sidebar-card-title {
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+  }
+  .sidebar-pick-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; font-size: 13px;
+  }
+  .sidebar-pick-item .week { color: var(--text-disabled); font-weight: 500; width: 40px; }
+  .sidebar-pick-item .team-sm {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700;
+  }
+  .sidebar-pick-item .result { margin-left: auto; font-weight: 600; font-size: 12px; }
+  .sidebar-pick-item .result.win { color: var(--primary); }
+  .sidebar-pick-item .result.loss { color: var(--error); }
+
+  /* View label */
+  .view-label {
+    display: inline-block; background: var(--bg-elevated);
+    padding: 4px 12px; border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: 600; color: var(--text-disabled);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Showcase Navigation -->
+<nav class="showcase-nav">
+  <h1>PICK SIX</h1>
+  <button class="showcase-tab active" onclick="showSection('landing')">Landing</button>
+  <button class="showcase-tab" onclick="showSection('pick')">Pick Interface</button>
+  <button class="showcase-tab" onclick="showSection('standings')">Standings</button>
+  <button class="showcase-tab" onclick="showSection('admin')">Admin</button>
+  <button class="showcase-tab" onclick="showSection('tokens')">Design Tokens</button>
+  <button class="showcase-tab" onclick="showSection('components')">Components</button>
+  <span style="width:1px;height:24px;background:var(--bg-overlay);flex-shrink:0;"></span>
+  <button class="showcase-tab" onclick="showSection('desktop-landing')">Desktop: Landing</button>
+  <button class="showcase-tab" onclick="showSection('desktop-pick')">Desktop: Picks</button>
+  <button class="showcase-tab" onclick="showSection('desktop-standings')">Desktop: Standings</button>
+  <button class="showcase-tab" onclick="showSection('desktop-admin')">Desktop: Admin</button>
+</nav>
+
+<!-- LANDING PAGE -->
+<div id="landing" class="section active">
+  <div class="landing-hero">
+    <div class="landing-logo">PICK SIX</div>
+    <p class="landing-tagline">Your NFL pick'em league, automated. Make your weekly pick with everything you need in one place.</p>
+    <button class="landing-cta">Join Your League</button>
+    <span class="landing-secondary">Already have an account? Log in</span>
+    <div class="landing-features">
+      <div class="landing-feature">
+        <div class="feat-icon">&#127944;</div>
+        <div class="feat-label">Live NFL Odds</div>
+      </div>
+      <div class="landing-feature">
+        <div class="feat-icon">&#9989;</div>
+        <div class="feat-label">Real-time Validation</div>
+      </div>
+      <div class="landing-feature">
+        <div class="feat-icon">&#128202;</div>
+        <div class="feat-label">Auto Standings</div>
+      </div>
+      <div class="landing-feature">
+        <div class="feat-icon">&#9200;</div>
+        <div class="feat-label">60-Second Picks</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PICK INTERFACE -->
+<div id="pick" class="section has-bottom-nav">
+  <div class="section-title">Week 5 Matchups</div>
+  <div class="section-desc">Select your pick for this week</div>
+
+  <!-- Pick Status Banner - Submitted -->
+  <div class="pick-banner">
+    <div class="team-logo">BUF</div>
+    <div class="banner-text">Your pick is submitted: <span>Buffalo Bills</span></div>
+  </div>
+
+  <!-- Deadline -->
+  <div class="deadline">
+    <span class="clock">&#9200;</span>
+    <span class="time">2d 14h 22m until deadline</span>
+  </div>
+
+  <!-- Jailed Team Callout -->
+  <div class="jailed-callout">
+    <span class="jail-icon">&#128274;</span>
+    <div>
+      <div class="jail-text"><strong>Jailed Team: Kansas City Chiefs</strong> (-450)</div>
+      <div class="jail-info">Biggest favorite this week. Cannot be selected directly.</div>
+    </div>
+  </div>
+
+  <!-- Matchup: Available + Anti-Jailed Bonus -->
+  <div class="matchup-card anti-jailed" onclick="selectCard(this)">
+    <div class="matchup-header">
+      <span class="matchup-time">Thu 8:15 PM EST</span>
+      <span class="matchup-weather">&#9925; 42°F Partly Cloudy</span>
+    </div>
+    <div class="matchup-teams">
+      <div class="team">
+        <div class="team-logo-circle" style="background:#E31837;">KC</div>
+        <div>
+          <div class="team-name" style="color:var(--text-disabled);">Chiefs</div>
+          <div style="font-size:11px;color:var(--warning);">JAILED</div>
+        </div>
+        <span class="team-odds">-450</span>
+      </div>
+      <span class="vs-divider">@</span>
+      <div class="team">
+        <div class="team-logo-circle" style="background:#0076B6;">LAC</div>
+        <div class="team-name">Chargers</div>
+        <span class="team-odds">+360</span>
+        <span class="tag bonus">2 PTS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matchup: Selected -->
+  <div class="matchup-card selected">
+    <div class="matchup-header">
+      <span class="matchup-time">Sun 1:00 PM EST</span>
+      <span class="matchup-weather">&#127782;&#65039; 35°F Snow</span>
+    </div>
+    <div class="matchup-teams">
+      <div class="team">
+        <div class="team-logo-circle" style="background:#00338D;">BUF</div>
+        <div class="team-name">Bills</div>
+        <span class="team-odds">-280</span>
+      </div>
+      <span class="vs-divider">vs</span>
+      <div class="team">
+        <div class="team-logo-circle" style="background:#008E97;">MIA</div>
+        <div class="team-name">Dolphins</div>
+        <span class="team-odds">+220</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matchup: One Team Already Picked -->
+  <div class="matchup-card" onclick="selectCard(this)">
+    <div class="matchup-header">
+      <span class="matchup-time">Sun 1:00 PM EST</span>
+      <span class="matchup-weather">&#9728;&#65039; 72°F Clear</span>
+    </div>
+    <div class="matchup-teams">
+      <div class="team disabled">
+        <div class="team-logo-circle" style="background:#004C54;">
+          PHI
+          <span class="tag picked">WK 2</span>
+        </div>
+        <div class="team-name">Eagles</div>
+        <span class="team-odds">-320</span>
+      </div>
+      <span class="vs-divider">vs</span>
+      <div class="team">
+        <div class="team-logo-circle" style="background:#003594;">NYG</div>
+        <div class="team-name">Giants</div>
+        <span class="team-odds">+260</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matchup: Available -->
+  <div class="matchup-card" onclick="selectCard(this)">
+    <div class="matchup-header">
+      <span class="matchup-time">Sun 4:25 PM EST</span>
+      <span class="matchup-weather">&#9728;&#65039; 68°F Clear</span>
+    </div>
+    <div class="matchup-teams">
+      <div class="team">
+        <div class="team-logo-circle" style="background:#003594;">DAL</div>
+        <div class="team-name">Cowboys</div>
+        <span class="team-odds">-180</span>
+      </div>
+      <span class="vs-divider">@</span>
+      <div class="team">
+        <div class="team-logo-circle" style="background:#5A1414;">WAS</div>
+        <div class="team-name">Commanders</div>
+        <span class="team-odds">+150</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matchup: Available -->
+  <div class="matchup-card" onclick="selectCard(this)">
+    <div class="matchup-header">
+      <span class="matchup-time">Sun 8:20 PM EST</span>
+      <span class="matchup-weather">&#127786;&#65039; Indoor</span>
+    </div>
+    <div class="matchup-teams">
+      <div class="team">
+        <div class="team-logo-circle" style="background:#A71930;">SF</div>
+        <div class="team-name">49ers</div>
+        <span class="team-odds">-210</span>
+      </div>
+      <span class="vs-divider">@</span>
+      <div class="team">
+        <div class="team-logo-circle" style="background:#AA0000;">ARI</div>
+        <div class="team-name">Cardinals</div>
+        <span class="team-odds">+175</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="submit-btn">Submit Pick: Buffalo Bills</button>
+
+  <!-- Bottom Tab Bar -->
+  <div class="tab-bar">
+    <a class="tab-item active"><span class="tab-icon">&#127944;</span>This Week</a>
+    <a class="tab-item"><span class="tab-icon">&#127942;</span>Standings</a>
+    <a class="tab-item"><span class="tab-icon">&#128196;</span>History</a>
+    <a class="tab-item"><span class="tab-icon">&#128218;</span>Rules</a>
+  </div>
+</div>
+
+<!-- STANDINGS -->
+<div id="standings" class="section has-bottom-nav">
+  <div class="section-title">Current Standings</div>
+  <div class="section-desc">Updated after Week 4 &middot; Tuesday reveal</div>
+
+  <table class="standings-table">
+    <thead>
+      <tr><th>#</th><th>Participant</th><th>Record</th><th>Pts</th></tr>
+    </thead>
+    <tbody>
+      <tr class="highlight">
+        <td class="standings-rank">1</td>
+        <td class="standings-name">Sarah M.</td>
+        <td class="standings-record">4-0</td>
+        <td class="standings-points">5</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">2</td>
+        <td class="standings-name">Kyle W.</td>
+        <td class="standings-record">3-1</td>
+        <td class="standings-points">4</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">3</td>
+        <td class="standings-name">Mike R.</td>
+        <td class="standings-record">3-1</td>
+        <td class="standings-points">3</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">4</td>
+        <td class="standings-name">Dave T.</td>
+        <td class="standings-record">2-2</td>
+        <td class="standings-points">3</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">5</td>
+        <td class="standings-name">Tom B.</td>
+        <td class="standings-record">2-2</td>
+        <td class="standings-points">2</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">6</td>
+        <td class="standings-name">Jessica L.</td>
+        <td class="standings-record">2-1</td>
+        <td class="standings-points">2</td>
+      </tr>
+      <tr>
+        <td class="standings-rank">7</td>
+        <td class="standings-name">Chris P.</td>
+        <td class="standings-record">1-3</td>
+        <td class="standings-points">1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="tab-bar">
+    <a class="tab-item"><span class="tab-icon">&#127944;</span>This Week</a>
+    <a class="tab-item active"><span class="tab-icon">&#127942;</span>Standings</a>
+    <a class="tab-item"><span class="tab-icon">&#128196;</span>History</a>
+    <a class="tab-item"><span class="tab-icon">&#128218;</span>Rules</a>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section has-bottom-nav">
+  <div class="section-title">Admin Dashboard</div>
+  <div class="section-desc">Week 5 &middot; 11 of 14 picks submitted</div>
+
+  <div class="pick-banner">
+    <div class="team-logo">BUF</div>
+    <div class="banner-text">Your pick is submitted: <span>Buffalo Bills</span></div>
+  </div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Submission Status</div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Sarah M.</span>
+      <span class="admin-status submitted">Submitted</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-disabled);">Picked: 49ers &middot; Submitted Tue 7:12 PM</div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Dave T.</span>
+      <span class="admin-status pending">Pending</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-disabled);">No pick submitted yet</div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Jessica L.</span>
+      <span class="admin-status pending">Pending</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-disabled);">No pick submitted yet</div>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Tom B.</span>
+      <span class="admin-status submitted">Submitted</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-disabled);">Picked: Cowboys &middot; Submitted Thu 9:45 AM</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Tuesday Email</div>
+
+  <label class="input-label">Custom Message</label>
+  <input class="input-field" placeholder="Hey everyone! Big week ahead..." value="Week 5 - rivalry week! Let's see who's paying attention. 🏈">
+
+  <button class="submit-btn" style="background:var(--info);">Preview Tuesday Email</button>
+
+  <div class="tab-bar">
+    <a class="tab-item"><span class="tab-icon">&#127944;</span>This Week</a>
+    <a class="tab-item"><span class="tab-icon">&#127942;</span>Standings</a>
+    <a class="tab-item"><span class="tab-icon">&#128196;</span>History</a>
+    <a class="tab-item"><span class="tab-icon">&#128218;</span>Rules</a>
+    <a class="tab-item active"><span class="tab-icon">&#9881;&#65039;</span>Admin</a>
+  </div>
+</div>
+
+<!-- DESIGN TOKENS -->
+<div id="tokens" class="section">
+  <div class="section-title">Design Tokens</div>
+  <div class="section-desc">Color palette and visual foundation</div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Backgrounds</div>
+  <div class="token-grid">
+    <div class="token-swatch" style="background:var(--bg-default);border:1px solid var(--bg-overlay);">
+      <span class="label" style="color:var(--text-secondary);">Default</span>
+      <span class="hex" style="color:var(--text-disabled);">#121212</span>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-paper);">
+      <span class="label" style="color:var(--text-secondary);">Paper</span>
+      <span class="hex" style="color:var(--text-disabled);">#1E1E1E</span>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-elevated);">
+      <span class="label" style="color:var(--text-secondary);">Elevated</span>
+      <span class="hex" style="color:var(--text-disabled);">#2A2A2A</span>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-overlay);">
+      <span class="label" style="color:var(--text-secondary);">Overlay</span>
+      <span class="hex" style="color:var(--text-disabled);">#333333</span>
+    </div>
+  </div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Primary & Semantic</div>
+  <div class="token-grid">
+    <div class="token-swatch" style="background:var(--primary);">
+      <span class="label" style="color:#000;">Primary</span>
+      <span class="hex" style="color:rgba(0,0,0,0.6);">#2ECC71</span>
+    </div>
+    <div class="token-swatch" style="background:var(--gold);">
+      <span class="label" style="color:#000;">Gold Accent</span>
+      <span class="hex" style="color:rgba(0,0,0,0.6);">#FFD700</span>
+    </div>
+    <div class="token-swatch" style="background:var(--warning);">
+      <span class="label" style="color:#000;">Warning</span>
+      <span class="hex" style="color:rgba(0,0,0,0.6);">#F5A623</span>
+    </div>
+    <div class="token-swatch" style="background:var(--error);">
+      <span class="label" style="color:#fff;">Error</span>
+      <span class="hex" style="color:rgba(255,255,255,0.7);">#EF5350</span>
+    </div>
+    <div class="token-swatch" style="background:var(--info);">
+      <span class="label" style="color:#fff;">Info</span>
+      <span class="hex" style="color:rgba(255,255,255,0.7);">#42A5F5</span>
+    </div>
+    <div class="token-swatch" style="background:var(--primary-dark);">
+      <span class="label" style="color:#fff;">Primary Dark</span>
+      <span class="hex" style="color:rgba(255,255,255,0.7);">#27AE60</span>
+    </div>
+  </div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin:24px 0 12px;">Border Radius</div>
+  <div class="token-grid">
+    <div class="token-swatch" style="background:var(--bg-paper);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;min-height:60px;">
+      <div><span class="label" style="color:var(--text-secondary);">SM</span><br><span class="hex" style="color:var(--text-disabled);">8px</span></div>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-paper);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;min-height:60px;">
+      <div><span class="label" style="color:var(--text-secondary);">MD</span><br><span class="hex" style="color:var(--text-disabled);">12px</span></div>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-paper);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;min-height:60px;">
+      <div><span class="label" style="color:var(--text-secondary);">LG</span><br><span class="hex" style="color:var(--text-disabled);">16px</span></div>
+    </div>
+    <div class="token-swatch" style="background:var(--bg-paper);border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center;min-height:60px;">
+      <div><span class="label" style="color:var(--text-secondary);">XL</span><br><span class="hex" style="color:var(--text-disabled);">24px</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPONENTS -->
+<div id="components" class="section">
+  <div class="section-title">Component Library</div>
+  <div class="section-desc">Interactive component examples</div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Typography Scale</div>
+  <div class="type-sample">
+    <div class="type-label">H1 - 28px Bold</div>
+    <div style="font-size:28px;font-weight:700;">Week 5 Matchups</div>
+  </div>
+  <div class="type-sample">
+    <div class="type-label">H2 - 24px Bold</div>
+    <div style="font-size:24px;font-weight:700;">Current Standings</div>
+  </div>
+  <div class="type-sample">
+    <div class="type-label">H3 - 20px Semi-Bold</div>
+    <div style="font-size:20px;font-weight:600;">Buffalo Bills vs Miami Dolphins</div>
+  </div>
+  <div class="type-sample">
+    <div class="type-label">Body 1 - 16px Regular</div>
+    <div style="font-size:16px;font-weight:400;color:var(--text-secondary);">Make your weekly pick with all the info you need in one place.</div>
+  </div>
+  <div class="type-sample">
+    <div class="type-label">Caption - 12px Regular</div>
+    <div style="font-size:12px;font-weight:400;color:var(--text-disabled);">Submitted Thu 9:45 AM &middot; Week 5</div>
+  </div>
+  <div class="type-sample">
+    <div class="type-label">Overline - 11px Semi-Bold</div>
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--warning);">JAILED</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Buttons</div>
+  <button class="submit-btn" style="margin-bottom:12px;">Primary Button</button>
+  <button class="submit-btn" style="background:var(--bg-paper);border:1px solid var(--bg-overlay);color:var(--text-primary);margin-bottom:12px;">Secondary Button</button>
+  <button class="submit-btn" disabled style="margin-bottom:12px;">Disabled Button</button>
+
+  <div class="divider"></div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Input Fields</div>
+  <label class="input-label">Email Address</label>
+  <input class="input-field" placeholder="you@example.com">
+  <label class="input-label">Password</label>
+  <input class="input-field" type="password" placeholder="Enter your password">
+
+  <div class="divider"></div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Status Banners</div>
+  <div class="pick-banner" style="margin-bottom:12px;">
+    <div class="team-logo">BUF</div>
+    <div class="banner-text">Your pick is submitted: <span>Buffalo Bills</span></div>
+  </div>
+  <div class="pick-banner locked" style="margin-bottom:12px;">
+    <div class="team-logo">BUF</div>
+    <div class="banner-text">Your pick is locked in: <span>Buffalo Bills</span></div>
+    <span class="lock-icon">&#128274;</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">Tags & Badges</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:var(--warning);color:#000;padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;">JAILED</span>
+    <span style="background:var(--bg-overlay);color:var(--text-disabled);padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;">PICKED WK 3</span>
+    <span style="background:var(--gold);color:#000;padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;">2 POINTS</span>
+    <span style="background:rgba(46,204,113,0.15);color:var(--primary);padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;">SUBMITTED</span>
+    <span style="background:rgba(245,166,35,0.15);color:var(--warning);padding:3px 10px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;">PENDING</span>
+  </div>
+</div>
+
+<!-- DESKTOP: LANDING -->
+<div id="desktop-landing" class="section desktop-section">
+  <span class="view-label">Desktop &middot; 960px</span>
+  <div class="desktop-frame">
+    <div class="desktop-landing-hero">
+      <div class="desktop-landing-text">
+        <div class="landing-logo">PICK SIX</div>
+        <p class="landing-tagline">Your NFL pick'em league, automated. Make your weekly pick with everything you need in one place.</p>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="landing-cta" style="margin-bottom:0;">Join Your League</button>
+          <span class="landing-secondary">Already have an account? Log in</span>
+        </div>
+        <div class="landing-features" style="justify-content:flex-start;margin-top:40px;">
+          <div class="landing-feature">
+            <div class="feat-icon">&#127944;</div>
+            <div class="feat-label">Live NFL Odds</div>
+          </div>
+          <div class="landing-feature">
+            <div class="feat-icon">&#9989;</div>
+            <div class="feat-label">Real-time Validation</div>
+          </div>
+          <div class="landing-feature">
+            <div class="feat-icon">&#128202;</div>
+            <div class="feat-label">Auto Standings</div>
+          </div>
+          <div class="landing-feature">
+            <div class="feat-icon">&#9200;</div>
+            <div class="feat-label">60-Second Picks</div>
+          </div>
+        </div>
+      </div>
+      <div class="desktop-landing-preview">
+        <div class="preview-title">Week 5 Preview</div>
+        <div class="matchup-card" style="cursor:default;margin-bottom:8px;">
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#00338D;width:32px;height:32px;font-size:11px;">BUF</div>
+              <div class="team-name" style="font-size:13px;">Bills</div>
+              <span class="team-odds" style="font-size:13px;">-280</span>
+            </div>
+            <span class="vs-divider">vs</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#008E97;width:32px;height:32px;font-size:11px;">MIA</div>
+              <div class="team-name" style="font-size:13px;">Dolphins</div>
+              <span class="team-odds" style="font-size:13px;">+220</span>
+            </div>
+          </div>
+        </div>
+        <div class="matchup-card" style="cursor:default;margin-bottom:0;">
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#003594;width:32px;height:32px;font-size:11px;">DAL</div>
+              <div class="team-name" style="font-size:13px;">Cowboys</div>
+              <span class="team-odds" style="font-size:13px;">-180</span>
+            </div>
+            <span class="vs-divider">@</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#5A1414;width:32px;height:32px;font-size:11px;">WAS</div>
+              <div class="team-name" style="font-size:13px;">Commanders</div>
+              <span class="team-odds" style="font-size:13px;">+150</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP: PICK INTERFACE -->
+<div id="desktop-pick" class="section desktop-section">
+  <span class="view-label">Desktop &middot; 960px</span>
+  <div class="desktop-frame">
+    <div class="desktop-app-bar">
+      <span class="app-logo">PICK SIX</span>
+      <div class="app-tabs">
+        <span class="app-tab active">This Week</span>
+        <span class="app-tab">Standings</span>
+        <span class="app-tab">History</span>
+        <span class="app-tab">Rules</span>
+      </div>
+      <div class="app-user">
+        <span>Kyle W.</span>
+        <div class="user-avatar">KW</div>
+      </div>
+    </div>
+    <div class="desktop-content">
+      <div class="desktop-header-row">
+        <div>
+          <div class="section-title" style="margin-bottom:4px;">Week 5 Matchups</div>
+          <div class="section-desc" style="margin-bottom:0;">Select your pick for this week</div>
+        </div>
+        <div class="pick-banner" style="max-width:340px;">
+          <div class="team-logo">BUF</div>
+          <div class="banner-text">Your pick: <span>Buffalo Bills</span></div>
+        </div>
+      </div>
+
+      <div class="desktop-info-bar">
+        <div class="deadline-card">
+          <span class="clock">&#9200;</span>
+          <span class="time" style="font-size:14px;">2d 14h 22m until deadline</span>
+        </div>
+        <div class="jailed-callout">
+          <span class="jail-icon">&#128274;</span>
+          <div>
+            <div class="jail-text"><strong>Jailed: Kansas City Chiefs</strong> (-450)</div>
+            <div class="jail-info">Biggest favorite this week</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop-matchup-grid">
+        <div class="matchup-card anti-jailed" onclick="selectCard(this)">
+          <div class="matchup-header">
+            <span class="matchup-time">Thu 8:15 PM EST</span>
+            <span class="matchup-weather">&#9925; 42°F Partly Cloudy</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#E31837;">KC</div>
+              <div>
+                <div class="team-name" style="color:var(--text-disabled);">Chiefs</div>
+                <div style="font-size:11px;color:var(--warning);">JAILED</div>
+              </div>
+              <span class="team-odds">-450</span>
+            </div>
+            <span class="vs-divider">@</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#0076B6;">LAC</div>
+              <div class="team-name">Chargers</div>
+              <span class="team-odds">+360</span>
+              <span class="tag bonus">2 PTS</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-card selected">
+          <div class="matchup-header">
+            <span class="matchup-time">Sun 1:00 PM EST</span>
+            <span class="matchup-weather">&#127782;&#65039; 35°F Snow</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#00338D;">BUF</div>
+              <div class="team-name">Bills</div>
+              <span class="team-odds">-280</span>
+            </div>
+            <span class="vs-divider">vs</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#008E97;">MIA</div>
+              <div class="team-name">Dolphins</div>
+              <span class="team-odds">+220</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-card" onclick="selectCard(this)">
+          <div class="matchup-header">
+            <span class="matchup-time">Sun 1:00 PM EST</span>
+            <span class="matchup-weather">&#9728;&#65039; 72°F Clear</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team disabled">
+              <div class="team-logo-circle" style="background:#004C54;">
+                PHI
+                <span class="tag picked">WK 2</span>
+              </div>
+              <div class="team-name">Eagles</div>
+              <span class="team-odds">-320</span>
+            </div>
+            <span class="vs-divider">vs</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#003594;">NYG</div>
+              <div class="team-name">Giants</div>
+              <span class="team-odds">+260</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-card" onclick="selectCard(this)">
+          <div class="matchup-header">
+            <span class="matchup-time">Sun 4:25 PM EST</span>
+            <span class="matchup-weather">&#9728;&#65039; 68°F Clear</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#003594;">DAL</div>
+              <div class="team-name">Cowboys</div>
+              <span class="team-odds">-180</span>
+            </div>
+            <span class="vs-divider">@</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#5A1414;">WAS</div>
+              <div class="team-name">Commanders</div>
+              <span class="team-odds">+150</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-card" onclick="selectCard(this)">
+          <div class="matchup-header">
+            <span class="matchup-time">Sun 8:20 PM EST</span>
+            <span class="matchup-weather">&#127786;&#65039; Indoor</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#A71930;">SF</div>
+              <div class="team-name">49ers</div>
+              <span class="team-odds">-210</span>
+            </div>
+            <span class="vs-divider">@</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#AA0000;">ARI</div>
+              <div class="team-name">Cardinals</div>
+              <span class="team-odds">+175</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-card" onclick="selectCard(this)">
+          <div class="matchup-header">
+            <span class="matchup-time">Mon 8:15 PM EST</span>
+            <span class="matchup-weather">&#9728;&#65039; 62°F Clear</span>
+          </div>
+          <div class="matchup-teams">
+            <div class="team">
+              <div class="team-logo-circle" style="background:#0B2265;">NYG</div>
+              <div class="team-name">Packers</div>
+              <span class="team-odds">-155</span>
+            </div>
+            <span class="vs-divider">@</span>
+            <div class="team">
+              <div class="team-logo-circle" style="background:#0C2340;">CHI</div>
+              <div class="team-name">Bears</div>
+              <span class="team-odds">+130</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+        <button class="submit-btn" style="max-width:280px;">Submit Pick: Buffalo Bills</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP: STANDINGS -->
+<div id="desktop-standings" class="section desktop-section">
+  <span class="view-label">Desktop &middot; 960px</span>
+  <div class="desktop-frame">
+    <div class="desktop-app-bar">
+      <span class="app-logo">PICK SIX</span>
+      <div class="app-tabs">
+        <span class="app-tab">This Week</span>
+        <span class="app-tab active">Standings</span>
+        <span class="app-tab">History</span>
+        <span class="app-tab">Rules</span>
+      </div>
+      <div class="app-user">
+        <span>Kyle W.</span>
+        <div class="user-avatar">KW</div>
+      </div>
+    </div>
+    <div class="desktop-content">
+      <div class="desktop-standings-layout">
+        <div>
+          <div class="section-title" style="margin-bottom:4px;">Current Standings</div>
+          <div class="section-desc">Updated after Week 4 &middot; Tuesday reveal</div>
+
+          <table class="standings-table" style="width:100%;">
+            <thead>
+              <tr><th>#</th><th>Participant</th><th>Record</th><th>Pts</th></tr>
+            </thead>
+            <tbody>
+              <tr class="highlight">
+                <td class="standings-rank">1</td>
+                <td class="standings-name">Sarah M.</td>
+                <td class="standings-record">4-0</td>
+                <td class="standings-points">5</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">2</td>
+                <td class="standings-name">Kyle W.</td>
+                <td class="standings-record">3-1</td>
+                <td class="standings-points">4</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">3</td>
+                <td class="standings-name">Mike R.</td>
+                <td class="standings-record">3-1</td>
+                <td class="standings-points">3</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">4</td>
+                <td class="standings-name">Dave T.</td>
+                <td class="standings-record">2-2</td>
+                <td class="standings-points">3</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">5</td>
+                <td class="standings-name">Tom B.</td>
+                <td class="standings-record">2-2</td>
+                <td class="standings-points">2</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">6</td>
+                <td class="standings-name">Jessica L.</td>
+                <td class="standings-record">2-1</td>
+                <td class="standings-points">2</td>
+              </tr>
+              <tr>
+                <td class="standings-rank">7</td>
+                <td class="standings-name">Chris P.</td>
+                <td class="standings-record">1-3</td>
+                <td class="standings-points">1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Your Pick History</div>
+            <div class="sidebar-pick-item">
+              <span class="week">WK 4</span>
+              <div class="team-sm" style="background:#00338D;">BUF</div>
+              <span style="font-size:13px;">Bills</span>
+              <span class="result win">W</span>
+            </div>
+            <div class="sidebar-pick-item">
+              <span class="week">WK 3</span>
+              <div class="team-sm" style="background:#003594;">DAL</div>
+              <span style="font-size:13px;">Cowboys</span>
+              <span class="result win">W</span>
+            </div>
+            <div class="sidebar-pick-item">
+              <span class="week">WK 2</span>
+              <div class="team-sm" style="background:#004C54;">PHI</div>
+              <span style="font-size:13px;">Eagles</span>
+              <span class="result win">W</span>
+            </div>
+            <div class="sidebar-pick-item">
+              <span class="week">WK 1</span>
+              <div class="team-sm" style="background:#A71930;">SF</div>
+              <span style="font-size:13px;">49ers</span>
+              <span class="result loss">L</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Season Stats</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--primary);">4</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Points</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--text-primary);">3-1</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Record</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--gold);">1</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Bonus Points</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--text-primary);">2nd</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Rank</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP: ADMIN -->
+<div id="desktop-admin" class="section desktop-section">
+  <span class="view-label">Desktop &middot; 960px</span>
+  <div class="desktop-frame">
+    <div class="desktop-app-bar">
+      <span class="app-logo">PICK SIX</span>
+      <div class="app-tabs">
+        <span class="app-tab">This Week</span>
+        <span class="app-tab">Standings</span>
+        <span class="app-tab">History</span>
+        <span class="app-tab">Rules</span>
+        <span class="app-tab active">Admin</span>
+      </div>
+      <div class="app-user">
+        <span>Mike R.</span>
+        <div class="user-avatar">MR</div>
+      </div>
+    </div>
+    <div class="desktop-content">
+      <div class="desktop-header-row">
+        <div>
+          <div class="section-title" style="margin-bottom:4px;">Admin Dashboard</div>
+          <div class="section-desc" style="margin-bottom:0;">Week 5 &middot; 11 of 14 picks submitted</div>
+        </div>
+        <div class="pick-banner" style="max-width:340px;">
+          <div class="team-logo">BUF</div>
+          <div class="banner-text">Your pick: <span>Buffalo Bills</span></div>
+        </div>
+      </div>
+
+      <div class="desktop-admin-layout">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Submission Status</div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Sarah M.</span>
+              <span class="admin-status submitted">Submitted</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">Picked: 49ers &middot; Submitted Tue 7:12 PM</div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Kyle W.</span>
+              <span class="admin-status submitted">Submitted</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">Picked: Bills &middot; Submitted Tue 6:30 PM</div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Dave T.</span>
+              <span class="admin-status pending">Pending</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">No pick submitted yet</div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Jessica L.</span>
+              <span class="admin-status pending">Pending</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">No pick submitted yet</div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Tom B.</span>
+              <span class="admin-status submitted">Submitted</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">Picked: Cowboys &middot; Submitted Thu 9:45 AM</div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <span class="admin-card-title">Chris P.</span>
+              <span class="admin-status pending">Pending</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-disabled);">No pick submitted yet</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Tuesday Email</div>
+
+          <div class="sidebar-card">
+            <label class="input-label">Subject Line</label>
+            <input class="input-field" value="Pick Six - Week 5 Matchups Are Live!">
+
+            <label class="input-label">Custom Message</label>
+            <textarea class="input-field" style="min-height:100px;resize:vertical;font-family:inherit;">Week 5 - rivalry week! Let's see who's paying attention. 🏈</textarea>
+
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="submit-btn" style="background:var(--info);flex:1;">Preview Email</button>
+              <button class="submit-btn" style="background:var(--primary);flex:1;">Send Now</button>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Week Overview</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--primary);">11</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Submitted</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--warning);">3</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Pending</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--text-primary);">14</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Total</div>
+              </div>
+              <div>
+                <div style="font-size:24px;font-weight:700;color:var(--text-primary);">79%</div>
+                <div style="font-size:11px;color:var(--text-disabled);font-weight:500;">Completion</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error Popup -->
+<div class="error-popup" id="errorPopup">
+  <div class="error-icon">&#128274;</div>
+  <div class="error-msg">Jailed team cannot be chosen</div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function selectCard(card) {
+  if (card.classList.contains('jailed') || card.classList.contains('picked')) {
+    if (card.classList.contains('jailed')) {
+      const popup = document.getElementById('errorPopup');
+      popup.classList.add('show');
+      setTimeout(() => popup.classList.remove('show'), 2000);
+    }
+    return;
+  }
+  document.querySelectorAll('.matchup-card').forEach(c => {
+    if (!c.classList.contains('jailed') && !c.classList.contains('picked')) {
+      c.classList.remove('selected');
+    }
+  });
+  card.classList.add('selected');
+}
+</script>
+</body>
+</html>

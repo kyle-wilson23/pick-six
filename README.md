@@ -12,14 +12,16 @@ Pick Six transforms traditional email-based fantasy football pick'em leagues int
 
 📋 **Currently in Planning Phase** - This project is being developed using the [BMAD Method](https://github.com/brendan-mccaffrey/bmad) for comprehensive product and system design.
 
-**Current Phase:** Planning & Requirements Definition
+**Current Phase:** Planning & Design (Phase 2 of 4)
 
 **Completed Artifacts:**
 
 - ✅ Product Brief (January 2026)
 - ✅ Product Requirements Document (January 2026)
+- ✅ UX Design Specification (February 2026)
+- ✅ Interactive Design Mockups -- mobile + desktop (February 2026)
 
-**Next Steps:** UX Design → Technical Architecture → Epic Breakdown
+**Next Steps:** Technical Architecture → Epics & Stories → Implementation Readiness Check
 
 ## Key Features (Planned MVP)
 
@@ -40,10 +42,11 @@ Pick Six transforms traditional email-based fantasy football pick'em leagues int
 ### Pick Submission Experience
 
 - **Live Odds Integration** - Real-time NFL moneyline odds and point spreads
-- **Smart Validation** - Prevents duplicate team picks and jailed team violations
+- **Weather Data** - Game-day weather conditions and home team identification per matchup
+- **Smart Validation** - Prevents duplicate team picks and jailed team violations in real-time
 - **Pick Modification** - Unlimited changes before weekly deadline
-- **Mobile-Optimized Workflow** - 60-90 second pick submission on mobile devices
-- **Clear Status Indicators** - Visual confirmation of submitted picks
+- **Mobile-Optimized Workflow** - 60-90 second pick submission on any device
+- **Clear Status Indicators** - Persistent visual confirmation of submitted picks
 
 ### Transparency & Reporting
 
@@ -54,12 +57,13 @@ Pick Six transforms traditional email-based fantasy football pick'em leagues int
 
 ## Technology Stack
 
-_Technology decisions are being finalized during the architecture phase. The stack will include:_
+_Some technology decisions are being finalized during the architecture phase._
 
-- **Frontend:** Next.js and React
+- **Frontend:** Next.js / React with Material-UI (MUI)
+- **Design System:** MUI with custom dark theme (emerald green primary, gold accent, Inter font)
 - **Backend:** API and business logic layer (TBD)
 - **Database:** Data persistence layer (TBD)
-- **External APIs:** NFL odds provider (being evaluated)
+- **External APIs:** NFL odds provider (being evaluated), weather API for game-day conditions
 - **Email Service:** Transactional email provider (TBD)
 - **Hosting:** Cloud deployment platform (TBD)
 
@@ -80,7 +84,7 @@ For now, refer to the planning artifacts in `_bmad-output/planning-artifacts/` t
 pick-six/
 ├── _bmad/                  # BMAD Method framework files
 ├── _bmad-output/           # Planning artifacts and documentation
-│   ├── planning-artifacts/ # Product Brief ✓, PRD ✓, Architecture (TBD), UX designs (TBD)
+│   ├── planning-artifacts/ # Product Brief ✓, PRD ✓, UX Design ✓, Architecture (TBD)
 │   └── implementation-artifacts/ # Sprint plans, stories (TBD)
 ├── docs/                   # Additional documentation (TBD)
 └── src/                    # Source code (coming soon)
@@ -97,6 +101,17 @@ pick-six/
   - Non-functional requirements (53 NFRs covering performance, security, reliability)
   - User journeys (5 comprehensive narratives)
   - Technical specifications for web application architecture
+- **UX Design Specification** (`_bmad-output/planning-artifacts/ux-design-specification.md`)
+  - Core user experience definition and experience principles
+  - Emotional design goals and journey mapping
+  - Visual design foundation (dark mode, color system, typography, spacing)
+  - Component strategy with 10 custom component specifications
+  - UX consistency patterns (buttons, feedback, forms, navigation, empty states)
+  - Responsive design strategy and WCAG Level A accessibility plan
+- **Design Direction Mockups** (`_bmad-output/planning-artifacts/ux-design-directions.html`)
+  - Interactive HTML showcase with 6 mobile views and 4 desktop views
+  - Landing page, pick interface, standings, admin dashboard
+  - Design tokens reference and component library preview
 
 ## Contributing
 

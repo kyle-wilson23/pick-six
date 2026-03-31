@@ -62,8 +62,9 @@ workflow_status:
         name: 'UX Design'
         agent: 'ux-designer'
         command: '/bmad:bmm:workflows:create-ux-design'
-        status: 'conditional'
-        note: 'Determined after PRD - likely needed for web application'
+        status: '_bmad-output/planning-artifacts/ux-design-specification.md'
+        completed: '2026-02-16'
+        output: 'UX Design Specification with visual mockups'
 
   # Phase 3: Solutioning
   - phase: 3

@@ -1,0 +1,112 @@
+# generated: 2026-04-04
+# project: pick-six
+# project_key: pick-six
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: '2026-04-04'
+project: pick-six
+project_key: pick-six
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-initialize-next-js-app-with-mui-shell: backlog
+  1-2-database-client-and-user-model: backlog
+  1-3-email-password-login-and-logout-with-secure-sessions: backlog
+  1-4-rolling-session-persistence: backlog
+  1-5-invitation-tokens-and-signup-via-invite-link: backlog
+  1-6-protected-app-routes-and-csrf-baseline: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-create-league-and-season: backlog
+  2-2-invite-participants-by-email: backlog
+  2-3-pre-season-league-initialization: backlog
+  2-4-admin-league-list-and-settings: backlog
+  2-5-participant-league-home-roster-and-rules-page: backlog
+  2-6-admin-as-full-participant: backlog
+  2-7-first-nfl-competition-week-at-league-creation-mid-season-start: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-nfl-schedule-teams-and-18-week-season-model: backlog
+  3-2-odds-fetch-tuesday-snapshot-and-week-long-consistency: backlog
+  3-3-jailed-team-identification-and-tie-breakers: backlog
+  3-4-pick-api-with-server-side-validation: backlog
+  3-5-deadline-enforcement-server-authority: backlog
+  3-6-picks-ui-matchups-odds-spread-weather-optional: backlog
+  3-7-jailed-and-already-picked-ux-with-countdown-and-status: backlog
+  3-8-nfl-team-logos-discovery-and-implementation: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-pick-submission-status-dashboard: backlog
+  4-2-submit-or-change-pick-on-behalf-including-post-deadline: backlog
+  4-3-audit-trail-for-overrides-and-admin-pick-visibility: backlog
+  4-4-jailed-team-verification-view: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-ingest-game-results-and-finalize-games: backlog
+  5-2-calculate-weekly-points-1-vs-2-anti-jailed: backlog
+  5-3-mnf-completion-and-tuesday-standings-update: backlog
+  5-4-live-leaderboard: backlog
+  5-5-personal-pick-history: backlog
+  5-6-tuesday-reveal-vs-peer-visibility: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-transactional-email-integration: backlog
+  6-2-tuesday-6-00-pm-league-email-content-and-admin-preview: backlog
+  6-3-wednesday-and-thursday-reminders: backlog
+  6-4-email-deep-links-to-picks: backlog
+  6-5-cron-routes-secrets-and-idempotent-weekly-orchestration: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-admin-csv-export-of-full-league-snapshot: backlog
+  7-2-structured-logging-and-admin-visible-health-signals: backlog
+  7-3-accessibility-baseline-wcag-2-1-level-a-for-core-flows: backlog
+  7-4-performance-and-deployment-hardening: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-test-league-flag-labeling-and-optional-global-gates: backlog
+  8-2-shortened-simulated-season-and-admin-driven-week-advancement: backlog
+  8-3-simulated-odds-and-jailed-team-for-rehearsal: backlog
+  8-4-simulated-game-results-and-scoring-reveal-cycle: backlog
+  8-5-email-and-scheduled-jobs-in-rehearsal: backlog
+  8-6-rehearsal-runbook-for-invited-participants: backlog
+  8-7-delete-test-league-and-data-cleanup: backlog
+  epic-8-retrospective: optional

@@ -91,8 +91,9 @@ workflow_status:
         name: 'Test Design'
         agent: 'tea'
         command: '/bmad:bmm:workflows:test-design'
-        status: 'optional'
-        note: 'Testability assessment before implementation'
+        status: '_bmad-output/test-design-system.md'
+        completed: '2026-04-04'
+        note: 'Testability assessment before implementation (system-level)'
 
       - id: 'implementation-readiness'
         name: 'Implementation Readiness Check'

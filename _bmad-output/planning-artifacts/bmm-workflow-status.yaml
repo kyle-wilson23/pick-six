@@ -98,7 +98,8 @@ workflow_status:
         name: 'Implementation Readiness Check'
         agent: 'architect'
         command: '/bmad:bmm:workflows:implementation-readiness'
-        status: 'required'
+        status: '_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-04.md'
+        completed: '2026-04-04'
         note: 'Validates PRD + Architecture + Epics + UX'
 
   # Phase 4: Implementation

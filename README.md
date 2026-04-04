@@ -7,7 +7,7 @@ This is a **personal project** where I am **experimenting with [BMAD](https://gi
 ## Where things stand
 
 - **Done ✅** Product brief, PRD, UX spec and mockups, **system architecture**, and **epics & user stories** (see `_bmad-output/planning-artifacts/`).
-- **Next 🚀** Implementation readiness check, then sprint planning and **actual build** (no production app in `src/` yet).
+- **Next 🚀** Sprint planning and **actual build** (no production app in `src/` yet); implementation readiness assessment is recorded under `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-04.md`.
 
 Stack direction from planning: **Next.js / React**, **MUI**, plus backend/data/email/odds choices documented in the architecture artifact.
 

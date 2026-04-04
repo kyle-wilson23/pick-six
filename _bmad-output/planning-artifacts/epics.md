@@ -319,6 +319,7 @@ So that only invited people join the league.
 **When** the user opens `/signup/[token]` (or equivalent) and completes registration
 **Then** the account is created and linked to the invitation (**FR8**)
 **And** expired or invalid tokens show a clear error without revealing whether an email exists
+**And** **implementation order:** validate with **seeded** or **admin-only** invite creation until **Story 2.2** ships; for production-path QA, complete **Story 2.2** (invitation records + signup links) so invites are created through the real admin flow
 
 ---
 
@@ -864,13 +865,15 @@ So that I can play too (**NFR37–NFR44**).
 
 As a user,
 I want fast loads and safe deploys,
-So that Sunday traffic and mid-season fixes do not break the season (**NFR1–NFR3**, **NFR19–NFR21**, **NFR51–NFR53**, **NFR49**).
+So that Sunday traffic and mid-season fixes do not break the season (**NFR1–NFR3**, **NFR5**, **NFR8**, **NFR19–NFR21**, **NFR51–NFR53**, **NFR49**).
 
 **Acceptance Criteria:**
 
 **Given** production build
 **When** primary routes are measured (Lighthouse or RUM sampling)
 **Then** documented budgets align with **NFR1–NFR3** for MVP (with known exceptions listed)
+**And** primary state-changing flows (e.g. login, pick submit) meet **NFR5** completion-time budgets on the server/UI boundary, excluding variable network latency (document measurement method)
+**And** touch interactions on core mobile pick flows meet **NFR8** responsiveness in manual or instrumented spot-checks
 **And** hosting is Vercel (or equivalent) per **NFR53**; migrations are reversible **NFR52**; backup strategy documented **NFR49**; no planned deploys in critical windows **NFR21**
 
 ---
@@ -996,6 +999,7 @@ So that leftover simulated data does not clutter the app and we can start clean 
 ## Workflow validation summary (Step 4)
 
 - **FR coverage:** FR1–FR60 each appear in the FR Coverage Map and in at least one story acceptance path; scoring FR54 appears in Epic 3 (validation) and Epic 5 (points). **Team logos** are tracked in the coverage map (UX extension; **Story 3.8**). **Epic 8** is a **post-MVP rehearsal** capability (not a numbered FR); it exercises existing FRs under simulation. **Story 8.7** covers **deleting** test leagues.
+- **NFR spot-check:** **NFR5** and **NFR8** are explicitly in **Story 7.4** acceptance criteria; other NFRs are cited per story inventory and ACs.
 - **Starter template:** Story 1.1 matches architecture requirement for `create-next-app` as first implementation slice.
 - **Incremental DB:** Models and tables are introduced in the first story that needs them (Users in 1.2; league/season in 2.1; schedule in 3.1; etc.).
 - **Epic independence:** Later epics depend on earlier ones only as stacked product value (auth before league; league before picks; picks before full scoring reveal orchestration; email after core data paths)—no forward epic required for a prior epic’s *internal* completeness. **Epic 8** intentionally depends on core epics being built first (rehearsal wraps the real system).

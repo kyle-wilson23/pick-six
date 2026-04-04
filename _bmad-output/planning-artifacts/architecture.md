@@ -82,10 +82,10 @@ The PRD lists **53 NFRs** that constrain architecture:
 
 ### Technical Preferences (from README + PRD)
 
-No separate `project-context.md` file exists. **README** documents intended direction:
+**`docs/project-context.md`** is the short implementer rule list (stack table, non-negotiables, JSON/DB naming) and defers to this document for full decisions. **README** documents high-level product direction:
 
 - **Frontend:** Next.js / React with **Material-UI (MUI)** and a custom dark theme (emerald primary, gold accent, Inter).
-- **Backend, database, email, odds, hosting:** explicitly **TBD** in README — decided in subsequent architecture steps.
+- **Backend, database, email, odds, hosting:** summarized in README; detailed choices appear in this architecture document and `docs/project-context.md`.
 
 BMAD config lists user skill level as **intermediate**.
 

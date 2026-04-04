@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Tailwind remains in the pipeline per create-next-app; UI uses MUI as source of truth. */
+html,
+body {
+  height: 100%;
+}

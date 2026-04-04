@@ -40,8 +40,8 @@ tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: backlog
-  1-1-initialize-next-js-app-with-mui-shell: backlog
+  epic-1: in-progress
+  1-1-initialize-next-js-app-with-mui-shell: done
   1-2-database-client-and-user-model: backlog
   1-3-email-password-login-and-logout-with-secure-sessions: backlog
   1-4-rolling-session-persistence: backlog

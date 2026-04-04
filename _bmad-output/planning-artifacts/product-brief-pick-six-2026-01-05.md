@@ -632,6 +632,15 @@ After first season completion, evaluate:
 - Is the system reliable enough to trust for future seasons?
 - Should we invest in enhancements (league renewal, multi-league, etc.)?
 
+### Planning alignment (epics and stories)
+
+Implementation-level breakdown (stories, acceptance criteria, sequencing) is maintained in **`_bmad-output/planning-artifacts/epics.md`**. The following product intents are captured there and should stay consistent with this brief and the PRD:
+
+- **Mid-season start:** Leagues can be configured at creation with a **first NFL week** later than Week 1 if launch slips after September—competition begins at that week instead of waiting for the next season.
+- **Pre-season validation:** Before picks open, users can still load **Week 1** (or preview) **odds and weather** so third-party integrations are verified in July/August.
+- **Team logos:** Move from abbreviation-only `TeamLogo` to real marks where licensing allows (see UX spec + epics).
+- **Rehearsal / test leagues:** Optional **test leagues** (per-league flag), simulated time and fixtures for multi-week dry runs with invited users, **deletable** when done—reduces risk before the real season.
+
 ### Future Vision
 
 While MVP focuses on single-league, single-season value delivery, the long-term vision for Pick Six includes:

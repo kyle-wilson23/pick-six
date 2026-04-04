@@ -82,7 +82,9 @@ workflow_status:
         name: 'Epics & Stories'
         agent: 'pm'
         command: '/bmad:bmm:workflows:create-epics-and-stories'
-        status: 'required'
+        status: '_bmad-output/planning-artifacts/epics.md'
+        completed: '2026-04-04'
+        output: 'Epics and user stories with acceptance criteria'
         note: 'Break down PRD into implementable epics and stories'
 
       - id: 'test-design'

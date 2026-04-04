@@ -59,11 +59,15 @@ The PRD lists **53 NFRs** that constrain architecture:
 - **Integrations:** At least one **NFL odds** provider (server-side fetch and cache), **transactional email**, optional **weather** per UX spec, and **game results** (source TBD in architecture).
 - **Runtime constraints:** No websockets required for MVP (manual refresh acceptable); odds **static for the week** after Tuesday snapshot; picks hidden from peers until Tuesday reveal.
 - **Deployment:** Must fit **Vercel/Netlify-class** hosting per NFR53; scheduled work may need platform cron or an external scheduler.
-- **Epics/stories:** Not present yet; requirements volume is PRD-driven (60 FRs).
+- **Epics/stories:** See **`_bmad-output/planning-artifacts/epics.md`** for user stories and acceptance criteria (solutioning 2026). PRD remains 60 FRs; epics add operational and UX-adjacent requirements (mid-season start, pre-season preview, logos, rehearsal leagues).
 
 ### Cross-Cutting Concerns Identified
 
 - **Multi-tenancy:** Leagues, roles (admin vs participant), and data isolation across leagues.
+- **League season boundaries:** Store **first NFL competition week** (1–18) on `League` or `Season` when required by product (default 1). All week pointers, pick eligibility, and scoring windows must respect it—no implicit “always Week 1” for every league (`epics.md` Story 2.7).
+- **Test / rehearsal leagues:** Optional **league kind** or flag for simulation (fixture odds, admin-driven week advance, decoupled email policy). Isolated by `leagueId`; deletable with cascade rules documented (Epic 8).
+- **Pre-season odds/weather:** Server routes should support **Week 1** (or configured preview week) fetch for **integration smoke tests** before the pick window opens—without breaking in-season Tuesday snapshot rules (`epics.md` Epic 3).
+- **Team logos:** Prefer **`next/image`** and static assets or licensed URLs; map `teamId` → asset; no NFL API keys in client (Epic 3 Story 3.8).
 - **Time and timezones:** Deadline “5 minutes before first kick” and **EST-oriented** copy must be implemented in a **server-authoritative** way with clear storage of instants.
 - **Privacy vs transparency:** Participant picks hidden until Tuesday; admin sees all; leaderboard timing aligned with MNF completion.
 - **Auditability:** Admin overrides, jailed tie-break randomness (seeded/logged), email send outcomes, and scoring adjustments.
@@ -566,4 +570,4 @@ Then: add Prisma + Neon `DATABASE_URL`, MUI, Auth.js, and domain modules per **P
 
 **Architecture status:** READY FOR IMPLEMENTATION.
 
-**Next BMM phase:** `create-epics-and-stories` → `implementation-readiness` (per `bmm-workflow-status.yaml`).
+**Next BMM phase:** `implementation-readiness` (epics: **`_bmad-output/planning-artifacts/epics.md`**).

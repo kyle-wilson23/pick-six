@@ -1233,3 +1233,18 @@ Long-term vision for broader platform availability:
 - **NFR51:** Updates must be deployable during off-season or between games without data loss
 - **NFR52:** Database migrations must be reversible in case of deployment issues
 - **NFR53:** System must support deployment to standard web hosting platforms (Vercel, Netlify)
+
+---
+
+## Supplementary requirements (epics alignment)
+
+_The numbered FRs/NFRs above remain the contractual requirement set. The following items were added during solutioning (2026) and are specified with full acceptance criteria in **`_bmad-output/planning-artifacts/epics.md`**. Implementers should satisfy the PRD first, then use epics for story ordering and edge-case behavior._
+
+| Theme | Summary | Epics reference |
+|-------|---------|-------------------|
+| **First NFL week at league creation** | Admin sets **first competition week** (1–18); weeks before it are out of scope for picks/scoring for that league. | Epic 2 — Story 2.7 |
+| **Pre-season Week 1 preview** | Off-season / pre-kickoff: fetch and display **Week 1** odds and weather where APIs allow; clear “preview / not pickable” when picks are not open. | Epic 3 — Stories 3.1–3.2, 3.6 |
+| **Team logos** | Real NFL team images for `TeamLogo` (assets or provider); licensing; fallback to abbreviation. | Epic 3 — Story 3.8 |
+| **Rehearsal / test leagues** | League-level test flag; simulated weeks, fixture odds, admin-driven advancement; optional email policy; **delete league** cleanup. | Epic 8 |
+
+These do **not** replace or renumber existing FRs; they extend MVP delivery planning and operational readiness.

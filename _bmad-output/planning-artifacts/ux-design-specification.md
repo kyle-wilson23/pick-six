@@ -181,6 +181,18 @@ The pick submission interface must display current weather conditions for each m
 
 Weather data integration leverages free weather APIs, requires minimal implementation complexity, and delivers disproportionate strategic value for engaged participants. For casual participants, weather data remains unobtrusive background context rather than required analysis.
 
+**Pre-season Week 1 preview (integration validation)**
+
+Before the league’s pick window opens (e.g. July–August), signed-in users should still be able to view **NFL regular season Week 1** matchups with **live or early odds** and **weather** when APIs return data—matching the in-season pick UI as closely as practical. Use clear **preview** labeling and disable or hide pick actions until competition is active so users can **validate third-party integrations** before September without confusing rehearsal data for real picks. Detailed acceptance criteria: **`_bmad-output/planning-artifacts/epics.md`** (Epic 3, Stories 3.1–3.2, 3.6).
+
+**Mid-season league start**
+
+If the league is configured to begin at **NFL Week N** (not Week 1), copy and navigation should make that explicit (e.g. league home, rules): competition and pick history start at Week **N**; earlier NFL weeks are not part of this league. See **`_bmad-output/planning-artifacts/epics.md`** — Story 2.7.
+
+**Test / rehearsal leagues**
+
+Optional **test leagues** must be visually distinct (banner/chip) so participants do not mistake simulated or accelerated weeks for the real season. Deletion and cleanup are product/ops concerns documented in **Epic 8** in **`epics.md`**.
+
 **No Offline Functionality Required**
 
 Pick submission, validation, deadline enforcement, and standings access all require server connectivity and real-time data. No offline capability needed or designed—users must have network access to interact with the application.
@@ -1375,7 +1387,7 @@ MUI provides comprehensive coverage for standard UI patterns, themed with Pick S
 - Disabled: 70% grayscale filter, 50% opacity (already-picked teams)
 - Jailed: 50% desaturation (jailed team within matchup card)
 
-**Future Enhancement:** Replace abbreviation text with actual team logo images when available via API or local asset mapping.
+**Roadmap (implementation):** Replace abbreviation text with **actual team logo images** (static licensed assets, provider-supplied URLs, or approved API) per **`_bmad-output/planning-artifacts/epics.md`** — Story 3.8. Preserve **sm/md/lg** sizes, **disabled/jailed** visual states, and **abbreviation + circle fallback** on load failure. Respect NFL mark licensing in asset choice.
 
 #### AdminSubmissionCard
 

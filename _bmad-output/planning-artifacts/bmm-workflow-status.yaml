@@ -74,7 +74,8 @@ workflow_status:
         name: 'System Architecture'
         agent: 'architect'
         command: '/bmad:bmm:workflows:create-architecture'
-        status: 'required'
+        status: '_bmad-output/planning-artifacts/architecture.md'
+        completed: '2026-04-04'
         output: 'System architecture document'
 
       - id: 'create-epics-and-stories'

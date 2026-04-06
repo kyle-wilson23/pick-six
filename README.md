@@ -49,10 +49,11 @@ The app lives under `src/` (App Router).
 
 ## Where things stand
 
-- **Done ✅** Product brief, PRD, UX spec and mockups, **system architecture**, **epics & user stories**, and **Story 1.1**: Next.js + MUI dark shell (emerald / gold accent, Inter).
-- **Next 🚀** Epic 1 continued (database, auth, …); implementation readiness assessment: `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-04.md`.
+- **Done ✅** Planning (brief, PRD, UX, architecture, epics) and a **Next.js + MUI** shell (dark theme, emerald / gold, Inter).
+- **Done ✅** **Data:** Prisma + Postgres (Neon-ready URLs), `User` model & migrations, singleton `src/lib/db.ts`, `db:*` scripts — set `.env.local` and migrate per **Database** above.
+- **Next 🚀** Auth, sessions, invites, protected routes. Readiness notes: `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-04.md`.
 
-Stack direction from planning: **Next.js / React**, **MUI**, plus backend/data/email/odds choices documented in the architecture artifact.
+**Stack 📦** Next.js / React, MUI; email, odds, and backend choices live in the architecture doc.
 
 ## Docs 📚
 

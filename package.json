@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "node scripts/prisma-env.cjs generate",
     "db:migrate": "node scripts/prisma-env.cjs migrate dev",
     "db:migrate:deploy": "node scripts/prisma-env.cjs migrate deploy",
@@ -42,6 +44,7 @@
     "eslint-config-next": "16.2.2",
     "prisma": "6.19.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

@@ -5,6 +5,10 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/db";
 import { normalizeEmail } from "@/lib/normalize-email";
+import {
+  getSessionMaxAgeSeconds,
+  SESSION_UPDATE_AGE_SECONDS,
+} from "@/lib/session-constants";
 
 /** Precomputed bcrypt hash of a dummy secret — used so `bcrypt.compare` always runs (timing). */
 const DUMMY_PASSWORD_BCRYPT =
@@ -16,10 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     // Auth.js: credentials as the only provider cannot use `strategy: "database"` (assertConfig).
     // Session is carried in an HTTP-only signed cookie (JWT); Prisma `Session` rows are unused until
-    // another provider type is added. Rolling / maxAge tuning still applies (Story 1.4).
+    // another provider type is added. Rolling limits: `src/lib/session-constants.ts` (Story 1.4).
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
-    updateAge: 24 * 60 * 60,
+    maxAge: getSessionMaxAgeSeconds(),
+    updateAge: SESSION_UPDATE_AGE_SECONDS,
   },
   pages: {
     signIn: "/login",

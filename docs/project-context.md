@@ -67,7 +67,7 @@ Keep domain logic in **`lib/domain`** testable; Route Handlers orchestrate I/O.
 ## Testing / quality
 
 - TypeScript **strict** when enabled; ESLint clean for new code.
-- Prefer co-located tests (`*.test.ts` or `__tests__/`) as in architecture doc once testing is added.
+- **Vitest:** `npm test` (watch: `npm run test:watch`). Prefer co-located `*.test.ts` / `*.test.tsx` (or `__tests__/`) per architecture doc — especially for `lib/domain` and pure helpers.
 
 ## Docs and planning
 

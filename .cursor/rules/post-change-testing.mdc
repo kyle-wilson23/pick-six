@@ -1,0 +1,18 @@
+---
+description: After code changes, consider tests and run the test suite when relevant
+alwaysApply: true
+---
+
+# Post-change testing
+
+When you **finish** a set of edits (before treating work as done):
+
+1. **Ask whether tests apply** — If the change touches **behavior, data rules, validation, auth, or pure helpers** (especially under `src/lib/**`, future `src/lib/domain/**`, or Zod schemas), prefer adding or updating **colocated** `*.test.ts` / `*.test.tsx` next to the source (see `architecture.md` — Implementation Patterns → Tests).
+
+2. **Skip** test obligations for **docs-only**, **pure styling**, or **mechanical refactors** with no behavior change — unless they fix something that should have been covered.
+
+3. **If you added or changed tests** (or touched code that already has tests), run **`npm test`**. For a quick local loop, **`npm run test:watch`** is available.
+
+4. **Keep tests focused** — Prefer testing **pure functions** and **domain logic** over mocking all of Next.js; integration/e2e can stay deferred per project norms.
+
+This rule is a **consideration nudge**, not a mandate to block trivial edits with boilerplate tests.

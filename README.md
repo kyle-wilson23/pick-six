@@ -45,7 +45,7 @@ The app lives under `src/` (App Router).
 
    Open [http://localhost:3000](http://localhost:3000).
 
-**Other scripts:** production build `npm run build`, then `npm run start`; lint `npm run lint`. If you use **pnpm** or **yarn**, use the same script names after install.
+**Other scripts:** production build `npm run build`, then `npm run start`; lint `npm run lint`; unit tests `npm test` (watch: `npm run test:watch`). If you use **pnpm** or **yarn**, use the same script names after install.
 
 ## Where things stand
 

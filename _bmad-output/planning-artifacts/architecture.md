@@ -180,7 +180,7 @@ Interactive prompts typically cover TypeScript, ESLint, Tailwind CSS, `src/` dir
 | **Credential model** | **Email + password** (FR8–FR9) | Invitation flow: token in DB + email link to complete signup; passwords hashed with **bcrypt** or **argon2** (NFR10). |
 | **Paid auth vendors** | **Not planned for MVP** (e.g. Clerk, Auth0 paid tiers) | Keeps max free-tier goal; more app code for invitations and password reset, acceptable at this scale. |
 | **Authorization** | **Role checks in application layer** (league admin vs participant) backed by DB membership rows | Multi-tenant: enforce `leagueId` + membership on every mutation; admin override routes require admin role + audit log (FR28–FR34, NFR16–NFR18). |
-| **API / mutation safety** | **CSRF** for cookie-based session mutations where applicable; **rate limiting** on auth endpoints (NFR12, NFR15) | Use middleware or Route Handler wrappers; exact mechanism TBD in implementation (e.g. `@upstash/ratelimit` on free tier or Vercel-native patterns). |
+| **API / mutation safety** | **CSRF** for cookie-based session mutations where applicable; **rate limiting** on auth endpoints (NFR12, NFR15) | Use Next.js **`src/proxy.ts`** (Next.js 16+; replaces the deprecated `middleware.ts` convention) or Route Handler wrappers; exact mechanism TBD in implementation (e.g. `@upstash/ratelimit` on free tier or Vercel-native patterns). |
 
 **Explicitly out of scope for cost and PRD:** SSO for enterprises, social login **unless** added later as zero-cost (e.g. optional OAuth providers with Auth.js without new vendor fees).
 
@@ -437,7 +437,7 @@ pick-six/
 │   │       ├── picks.ts          # pure: validate pick, deadline math
 │   │       ├── jailed.ts
 │   │       └── scoring.ts
-│   ├── middleware.ts
+│   ├── proxy.ts                  # Next.js request boundary (auth rate limit, etc.; replaces middleware.ts in Next 16+)
 │   └── types/
 ├── e2e/                          # optional — Playwright later
 └── _bmad-output/                 # existing planning artifacts (repo root)

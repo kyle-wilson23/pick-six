@@ -6,7 +6,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["scripts/**/*.cjs"],
+    files: ["scripts/**/*.cjs", "prisma/**/*.cjs"],
     rules: {
       // CommonJS scripts use require(); ESLint TS rules target ESM/TS sources.
       "@typescript-eslint/no-require-imports": "off",

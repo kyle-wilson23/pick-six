@@ -1,10 +1,15 @@
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
-
-import { GoldAccentChip } from "@/components/gold-accent-chip";
 import Typography from "@mui/material/Typography";
 
-export default function Home() {
+import { LoginLinkButton } from "@/components/auth/login-link-button";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { GoldAccentChip } from "@/components/gold-accent-chip";
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth();
+
   return (
     <Stack
       component="main"
@@ -29,13 +34,24 @@ export default function Home() {
         Next.js App Router + MUI dark shell — Inter typography, emerald primary,
         gold accent for special highlights.
       </Typography>
+      {session?.user ? (
+        <Typography variant="body2" color="text.secondary">
+          Signed in as {session.user.email ?? session.user.name ?? session.user.id}
+        </Typography>
+      ) : null}
       <Stack
         direction="row"
         spacing={2}
         useFlexGap
         flexWrap="wrap"
         justifyContent="center"
+        alignItems="center"
       >
+        {session?.user ? (
+          <LogoutButton />
+        ) : (
+          <LoginLinkButton />
+        )}
         <Button variant="contained" color="primary" size="large">
           Primary action
         </Button>

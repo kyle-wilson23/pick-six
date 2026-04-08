@@ -30,26 +30,34 @@ const RATE_LIMITED_POST_PATHS = new Set([
   "/api/signup/invite",
 ]);
 
+/**
+ * Sets `x-pathname` for matched routes (see `config.matcher`). `src/app/(app)/layout.tsx`
+ * uses it for post-login `callbackUrl`. When adding authenticated pages under `(app)` whose
+ * URL is not under `/dashboard`, extend `matcher` accordingly.
+ */
 export function proxy(request: NextRequest) {
-  if (request.method !== "POST") {
-    return NextResponse.next();
-  }
-
   const pathname = request.nextUrl.pathname;
-  if (!RATE_LIMITED_POST_PATHS.has(pathname)) {
-    return NextResponse.next();
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  if (request.method === "POST" && RATE_LIMITED_POST_PATHS.has(pathname)) {
+    if (!checkSignInRateLimit(rateLimitClientKey(request))) {
+      return NextResponse.json(
+        { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+        { status: 429 },
+      );
+    }
   }
 
-  if (!checkSignInRateLimit(rateLimitClientKey(request))) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-      { status: 429 },
-    );
-  }
-
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
-  matcher: ["/api/auth/callback/credentials", "/api/signup/invite"],
+  matcher: [
+    "/api/auth/callback/credentials",
+    "/api/signup/invite",
+    "/dashboard",
+    "/dashboard/:path*",
+  ],
 };

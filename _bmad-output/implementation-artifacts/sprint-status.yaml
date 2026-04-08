@@ -46,7 +46,7 @@ development_status:
   1-3-email-password-login-and-logout-with-secure-sessions: done
   1-4-rolling-session-persistence: done
   1-5-invitation-tokens-and-signup-via-invite-link: done
-  1-6-protected-app-routes-and-csrf-baseline: backlog
+  1-6-protected-app-routes-and-csrf-baseline: done
   epic-1-retrospective: optional
 
   epic-2: backlog

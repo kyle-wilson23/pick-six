@@ -1,7 +1,7 @@
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-
+import { DashboardLinkButton } from "@/components/auth/dashboard-link-button";
 import { LoginLinkButton } from "@/components/auth/login-link-button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GoldAccentChip } from "@/components/gold-accent-chip";
@@ -48,7 +48,10 @@ export default async function Home() {
         alignItems="center"
       >
         {session?.user ? (
-          <LogoutButton />
+          <>
+            <DashboardLinkButton />
+            <LogoutButton />
+          </>
         ) : (
           <LoginLinkButton />
         )}

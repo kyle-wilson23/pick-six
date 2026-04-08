@@ -1,0 +1,64 @@
+---
+description: Avoid passing functions/components from Server to Client Components (Next.js App Router); MUI + next/link patterns with valid HTML/a11y
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Next.js App Router: Server / Client boundaries
+
+## The error
+
+`Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with "use server"`
+
+This appears when a **Server Component** passes a **function** (including another **React component** type like `next/link`’s `Link`) across the server/client boundary—often as `component={Link}`, `icon={SomeIcon}`, or a callback. React serializes Server Component output; **functions are not serializable**.
+
+**MUI is involved often:** Many `@mui/material` components are **Client Components**. A **Server** `page.tsx` / `layout.tsx` that does `import Link from "next/link"` and `<Button component={Link} href="…">` passes the `Link` **constructor** into MUI’s client `Button` → error.
+
+## Rules of thumb
+
+1. **If the tree needs `component={Link}` (or any component prop) from `next/link`:** put that UI in a **dedicated file** with **`"use client"`** at the top (e.g. `src/components/auth/*-link-button.tsx`). Keep the **page/layout server** when you still want `auth()`, `fetch`, etc.
+2. **Do not** fix this by marking random helpers with `"use server"`—that is for **Server Actions**, not for fixing this error.
+3. **Prefer one interactive root** for “button that navigates”: MUI **`Button`** with **`component={Link}`** and **`href`** renders as a **single `<a>`** with button styles—valid HTML, one tab stop, screen readers see a link. Match existing components: `LoginLinkButton`, `DashboardLinkButton`.
+4. **Avoid** `<Link><Button></Button></Link>` (nested interactive / confusing roles) **unless** the inner control is explicitly **non-interactive** (e.g. `component="span"`)—even then, prefer a **client** `Button component={Link}` for consistency and clarity.
+5. **Same boundary rule for other props:** do not pass component references or inline functions from a Server Component into imported **Client** children; **colocate** that subtree in a Client Component or pass **serializable props only** (strings, numbers, plain objects).
+
+## Quick reference
+
+| Situation | Approach |
+|-----------|----------|
+| Server page needs a styled link-as-button | Small **`"use client"`** wrapper; **`Button component={Link} href={...}`** inside it |
+| Need `auth()` on the server + nav buttons | Server `page.tsx` calls **`auth()`**; render **client** link buttons as siblings/children |
+| Passing icons into client MUI | Prefer **`"use client"`** parent for that subtree, or pass **element rendered inside client**—not `Icon={MdFoo}` from server if it crosses incorrectly |
+
+## Anti-patterns
+
+```tsx
+// ❌ Server Component file (no "use client") — passes Link into client MUI
+import Link from "next/link";
+import Button from "@mui/material/Button";
+// <Button component={Link} href="/x">…</Button>
+```
+
+```tsx
+// ❌ Wrapping real <button> inside <a> (invalid / a11y issues)
+// <Link href="…"><Button type="button">…</Button></Link>
+```
+
+## Preferred pattern (client module)
+
+```tsx
+"use client";
+
+import Button from "@mui/material/Button";
+import Link from "next/link";
+
+export function ExampleNavButton() {
+  return (
+    <Button variant="outlined" component={Link} href="/example">
+      Example
+    </Button>
+  );
+}
+```
+
+Keep server data flow **down** via props (strings/ids); keep **navigation + MUI + Link** in client wrappers when `component={Link}` is required.

@@ -2,6 +2,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { cache } from "react";
 
 import { prisma } from "@/lib/db";
 import { normalizeEmail } from "@/lib/normalize-email";
@@ -14,7 +15,7 @@ import {
 const DUMMY_PASSWORD_BCRYPT =
   "$2b$12$wIngUcvRlENaoscUlYysUOdE6iPhLjkY7g4YUAesh07.kdy7TPgom";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   trustHost: true,
   adapter: PrismaAdapter(prisma),
   session: {
@@ -72,3 +73,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const handlers = nextAuth.handlers;
+export const signIn = nextAuth.signIn;
+export const signOut = nextAuth.signOut;
+
+/** Dedupes JWT session resolution within a single RSC request (e.g. layout + page). */
+export const auth = cache(nextAuth.auth);

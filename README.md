@@ -2,7 +2,7 @@
 
 **Pick Six** is a web app for running custom NFL pick’em leagues: automated weekly ops (reminders, jailed team, deadlines, scoring), live odds for picks, and a rule engine for mechanics generic fantasy sites do not support.
 
-This is a **personal project** where I am **experimenting with [BMAD](https://github.com/brendan-mccaffrey/bmad)** 🧪 (structured product and solutioning workflows) alongside **Next.js** and **MUI**.
+This is a **personal project** where I am **experimenting with [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** 🧪 ([documentation](https://docs.bmad-method.org/)) for structured product and solutioning workflows, alongside **Next.js** and **MUI**.
 
 ## Installation
 
@@ -60,3 +60,5 @@ The app lives under `src/` (App Router).
 ## Docs 📚
 
 Planning outputs live under [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/) — start with [`prd.md`](_bmad-output/planning-artifacts/prd.md) for scope and requirements.
+
+**BMAD in this repo:** workflows under [`_bmad/`](_bmad/), Cursor rules under [`.cursor/rules/bmad/`](.cursor/rules/bmad/). Install or upgrade the bundled method with `npx bmad-method install` (Node 20+); see [How to install BMAD](https://docs.bmad-method.org/how-to/install-bmad/).

@@ -13,6 +13,8 @@ for (const file of [".env", ".env.local"]) {
   }
 }
 
+const crypto = require("node:crypto");
+
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
@@ -34,6 +36,28 @@ async function main() {
   });
 
   console.log(`Seeded user: ${email} (password: ${password})`);
+
+  const inviteEmail = "invited@example.com";
+  await prisma.invitation.deleteMany({ where: { invitedEmail: inviteEmail } });
+
+  const rawToken = crypto.randomBytes(32).toString("base64url");
+  const tokenHash = crypto.createHash("sha256").update(rawToken, "utf8").digest("hex");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await prisma.invitation.create({
+    data: {
+      tokenHash,
+      invitedEmail: inviteEmail.trim().toLowerCase(),
+      expiresAt,
+    },
+  });
+
+  const base = (process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000").replace(
+    /\/$/,
+    "",
+  );
+  console.log(`Seeded invitation for ${inviteEmail} (expires ${expiresAt.toISOString()})`);
+  console.log(`Invite signup URL: ${base}/signup/${rawToken}`);
 }
 
 main()

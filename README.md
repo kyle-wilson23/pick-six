@@ -37,6 +37,8 @@ The app lives under `src/` (App Router).
 
    - Optional: `npm run db:studio` opens Prisma Studio.
 
+   - **Invitation links (dev / QA):** Until the admin invite flow exists (Epic 2), create test invitations with **`npm run db:seed`** — the script prints a full signup URL for a seeded invite email.
+
 3. **Run locally**
 
    ```bash

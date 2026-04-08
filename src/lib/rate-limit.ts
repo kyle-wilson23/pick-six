@@ -1,6 +1,6 @@
 /**
  * Sign-in rate limit: **same client IP** (from `x-forwarded-for` / `x-real-ip`), sliding window.
- * Default: 10 POSTs to `/api/auth/callback/credentials` per 15 minutes (NFR12).
+ * Default: 10 POSTs per 15 minutes to `/api/auth/callback/credentials` and `/api/signup/invite` (NFR12).
  *
  * **Production / multi-instance:** This in-memory store is per instance only. For horizontal scale,
  * use a shared store (e.g. Upstash Redis + `@upstash/ratelimit`) and wire env vars; until then,

@@ -19,7 +19,6 @@ The app lives under `src/` (App Router).
 2. **Database (PostgreSQL + Prisma)**
 
    PostgreSQL is accessed via **Prisma** (`prisma/schema.prisma`). The app uses a singleton client from `src/lib/db.ts`.
-
    - Copy `.env.example` to `.env.local` and set **`DATABASE_URL`** and **`DIRECT_URL`**.
      - **Neon:** In the Neon dashboard, use the **pooled** connection string (host contains `-pooler`) for `DATABASE_URL`, and the **direct** string for `DIRECT_URL`. See [Neon — Connect from Prisma](https://neon.tech/docs/guides/prisma).
      - **Local Postgres** (e.g. Docker): you can set both variables to the same URL.
@@ -53,7 +52,8 @@ The app lives under `src/` (App Router).
 
 - **Done ✅** Planning (brief, PRD, UX, architecture, epics) and a **Next.js + MUI** shell (dark theme, emerald / gold, Inter).
 - **Done ✅** **Data:** Prisma + Postgres (Neon-ready URLs), `User` model & migrations, singleton `src/lib/db.ts`, `db:*` scripts — set `.env.local` and migrate per **Database** above.
-- **Next 🚀** Auth, sessions, invites, protected routes. Readiness notes: `_bmad-output/planning-artifacts/implementation-readiness-report-2026-04-04.md`.
+- **Done ✅** **Epic 1 — Foundations:** email/password login and logout with secure sessions, rolling session persistence, invitation tokens and signup via invite link, protected app routes, and CSRF baseline for cookie-backed mutations.
+- **Next 🚀** **Epic 2 — League setup:** create league and season, invite participants by email, pre-season initialization, admin league list/settings, participant league home, and related stories (see sprint status and PRD).
 
 **Stack 📦** Next.js / React, MUI; email, odds, and backend choices live in the architecture doc.
 

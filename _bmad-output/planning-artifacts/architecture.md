@@ -23,16 +23,16 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 **Functional Requirements:**
 
-The PRD defines **60 functional requirements (FR1–FR60)** grouped into eight capability areas that map directly to system boundaries:
+The PRD defines **61 functional requirements (FR1–FR61)** grouped into eight capability areas that map directly to system boundaries:
 
-- **League management (FR1–FR7):** Multi-league creation and admin views, invitations, pre-season initialization, league info for participants, and a rules reference page.
+- **League management (FR1–FR7, FR61):** Multi-league creation and admin views, invitations, pre-season initialization, league info for participants, a rules reference page, and **admin-initiated permanent league deletion** with server-side authorization and data removal.
 - **User management & authentication (FR8–FR13):** Invitation-based signup, email/password login, extended sessions, logout, roster visibility, admin as full participant.
 - **Pick submission & management (FR14–FR27):** Weekly matchups with moneyline and spread, season pick history, jailed-team and duplicate-team UX, single pick per week, anti-jailed 2-point path, unlimited changes before deadline, countdown, server-side deadline enforcement, real-time validation.
 - **Admin operations & overrides (FR28–FR34):** Submission status dashboard, submit/modify on behalf of users (including post-deadline), same validation rules, audit trail and visibility, jailed-team verification with tie-breaker transparency.
 - **Email notifications (FR35–FR40):** Tuesday 6:00 PM league email, Wed/Thu reminders for missing picks, deep links, personalization by pick status.
 - **Scoring, results & leaderboard (FR41–FR49):** Post-game processing, 1- vs 2-point scoring, Tuesday updates after MNF, standings and history, pick privacy until Tuesday reveal, admin always-on visibility.
 - **Jailed team & rules (FR50–FR54):** Automated jailed identification, odds then spread then seeded random tie-break, no duplicate teams, anti-jailed bonus.
-- **Data export & season (FR55–FR60):** Admin CSV export of full league snapshot, 18-week season, weekly orchestration.
+- **Data export & season (FR55–FR60):** Admin CSV export of full league snapshot, 18-week season, weekly orchestration. (**FR61** is grouped under league management above.)
 
 Architecturally, this implies distinct **domains**: identity and sessions, multi-tenant league and membership, weekly game/odds snapshots, pick lifecycle and locking, scoring and standings, outbound email with schedules, audit logging, and export.
 
@@ -59,7 +59,7 @@ The PRD lists **53 NFRs** that constrain architecture:
 - **Integrations:** At least one **NFL odds** provider (server-side fetch and cache), **transactional email**, optional **weather** per UX spec, and **game results** (source TBD in architecture).
 - **Runtime constraints:** No websockets required for MVP (manual refresh acceptable); odds **static for the week** after Tuesday snapshot; picks hidden from peers until Tuesday reveal.
 - **Deployment:** Must fit **Vercel/Netlify-class** hosting per NFR53; scheduled work may need platform cron or an external scheduler.
-- **Epics/stories:** See **`_bmad-output/planning-artifacts/epics.md`** for user stories and acceptance criteria (solutioning 2026). PRD remains 60 FRs; epics add operational and UX-adjacent requirements (mid-season start, pre-season preview, logos, rehearsal leagues).
+- **Epics/stories:** See **`_bmad-output/planning-artifacts/epics.md`** for user stories and acceptance criteria (solutioning 2026). PRD defines **61 FRs (FR1–FR61)**; epics add operational and UX-adjacent requirements (mid-season start, pre-season preview, logos, rehearsal leagues).
 
 ### Cross-Cutting Concerns Identified
 
@@ -467,7 +467,7 @@ pick-six/
 
 | FR area | Primary location |
 |---------|------------------|
-| League management (FR1–FR7) | `app/(app)/leagues/`, `app/api/leagues/`, Prisma models `League`, `Season` |
+| League management (FR1–FR7, FR61) | `app/(app)/leagues/`, `app/api/leagues/` (including **admin-only** `DELETE` or equivalent for **FR61**), Prisma models `League`, `Season` |
 | Auth (FR8–FR13) | `app/(auth)/`, `app/api/auth/`, `lib/auth.ts`, Auth.js config |
 | Picks (FR14–FR27) | `app/(app)/leagues/[leagueId]/picks/`, `app/api/leagues/[leagueId]/picks/`, `lib/domain/picks.ts` |
 | Admin overrides (FR28–FR34) | `app/(app)/leagues/[leagueId]/admin/`, `app/api/.../admin/`, `audit_log_entries` |

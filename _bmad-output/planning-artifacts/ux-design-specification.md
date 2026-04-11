@@ -193,6 +193,15 @@ If the league is configured to begin at **NFL Week N** (not Week 1), copy and na
 
 Optional **test leagues** must be visually distinct (banner/chip) so participants do not mistake simulated or accelerated weeks for the real season. Deletion and cleanup are product/ops concerns documented in **Epic 8** in **`epics.md`**.
 
+**Admin: delete league (production)**
+
+League admins need a **permanent delete** path from **league settings or league options** (**FR61**, **Story 2.8** in **`epics.md`**). Treat this as a **high-friction destructive action**, not a routine control:
+
+- **Placement:** With other league admin options (same surface as settings / configuration — **FR5**).
+- **Primary control:** A **red** (error / destructive) button, clearly labeled so it is not confused with secondary actions.
+- **Confirmation:** A **modal dialog** that states consequences (irreversible, data removed for this league), shows the **league name**, and requires typing the exact word **`delete`** (lowercase) into a text field before the **confirm** button is enabled. Do not enable confirm on a single unchecked checkbox alone.
+- **Distinction:** **Epic 8** rehearsal leagues may also be deleted (**Story 8.7**); production delete (**Story 2.8**) uses the same interaction pattern where practical so muscle memory stays consistent.
+
 **No Offline Functionality Required**
 
 Pick submission, validation, deadline enforcement, and standings access all require server connectivity and real-time data. No offline capability needed or designed—users must have network access to interact with the application.

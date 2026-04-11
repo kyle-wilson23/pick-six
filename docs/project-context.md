@@ -43,7 +43,7 @@ Pin versions in `package.json` at implementation time; do not invent version num
 
 ## Planning supplements (see `epics.md`)
 
-Detailed **user stories and acceptance criteria** live in **`_bmad-output/planning-artifacts/epics.md`**. It extends PRD scope with: **mid-season league start** (Story 2.7), **pre-season Week 1 odds/weather preview** for API validation (Stories 3.1–3.2, 3.6), **real team logos** (Story 3.8), **test/rehearsal leagues** and deletion (Epic 8), and **simulation mode** for pre-season dry runs. Prefer epics for implementation ordering; keep PRD FRs/NFRs as the requirement baseline.
+Detailed **user stories and acceptance criteria** live in **`_bmad-output/planning-artifacts/epics.md`**. It extends PRD scope with: **mid-season league start** (Story 2.7), **pre-season Week 1 odds/weather preview** for API validation (Stories 3.1–3.2, 3.6), **real team logos** (Story 3.8), **admin delete production league** (**FR61**, Story 2.8), **test/rehearsal leagues** and deletion (Epic 8), and **simulation mode** for pre-season dry runs. Prefer epics for implementation ordering; keep PRD FRs/NFRs as the requirement baseline.
 
 ## Cron / scheduling (Vercel Hobby)
 

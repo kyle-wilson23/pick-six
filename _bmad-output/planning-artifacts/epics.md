@@ -82,6 +82,7 @@ FR57: CSV export provides complete league snapshot suitable for external spreads
 FR58: The system supports complete 18-week NFL regular season tracking
 FR59: The system maintains season-long state including all participant picks, outcomes, and point totals
 FR60: The system provides weekly cycle orchestration (Tuesday emails → deadline enforcement → scoring → repeat)
+FR61: League admins can permanently delete a league they administer; the action removes that league and its dependent application data from the system, is available from league settings or options, and is protected by deliberate confirmation so it cannot be completed accidentally
 ```
 
 ### NonFunctional Requirements
@@ -164,7 +165,7 @@ NFR53: System must support deployment to standard web hosting platforms (Vercel,
 - **Pre-season preview:** In July/August (or any time before picks open), signed-in users should still be able to **see NFL regular season Week 1** matchups with **live/early odds and weather** where APIs allow—so third-party integrations can be validated before the season. See **Stories 3.1–3.2, 3.6**.
 - **Mid-season league start:** At **league creation**, admins can set the **first NFL week** when competition begins (e.g. Week 1 or Week 8 if deployment is late). See **Story 2.7**; Epic 3+ must respect this for “current week” and picks.
 - **Team logos:** UX `TeamLogo` currently specifies abbreviation-in-circle; **Story 3.8** implements real logos (see Epic 3).
-- **Pre-season rehearsal / simulation mode:** Run a multi-week league dry run with invited users before the real NFL season—non-real-time week advancement, simulated odds and results, controlled email behavior. Prefer **test leagues** (per-league flag) plus optional global toggles; **deletable** when done. **Epic 8** (not in PRD FR1–FR60).
+- **Pre-season rehearsal / simulation mode:** Run a multi-week league dry run with invited users before the real NFL season—non-real-time week advancement, simulated odds and results, controlled email behavior. Prefer **test leagues** (per-league flag) plus optional global toggles; **deletable** when done. **Epic 8** (no additional numbered FR beyond **FR1–FR61**; rehearsal is a delivery wrapper).
 - Email deep links to pick flow; no-tutorial-first-use for core screens.
 
 **From project context (`docs/project-context.md`):**
@@ -175,7 +176,7 @@ NFR53: System must support deployment to standard web hosting platforms (Vercel,
 
 | FR | Epic | Notes |
 |----|------|-------|
-| FR1–FR7 | Epic 2 | League creation, invites, initialization, admin list/settings, participant info + rules |
+| FR1–FR7, FR61 | Epic 2 | League creation, invites, initialization, admin list/settings, participant info + rules, **admin delete league** (Story 2.8) |
 | FR8–FR11 | Epic 1 | Invitation signup, login, logout, session persistence |
 | FR12–FR13 | Epic 2 | Roster visibility, admin as full participant |
 | FR14–FR27 | Epic 3 | Matchups, odds, picks, validation, deadline, UX for picks |
@@ -199,9 +200,9 @@ Users and league admins can accept invitations, create accounts, sign in, stay s
 
 ### Epic 2: Create the league, invite players, and publish rules
 
-League admins can create and initialize a league, invite participants by email, and everyone can see league info, roster, and a rules reference—without yet needing weekly scoring. **Story 2.7:** leagues can be configured at creation to **start competition at NFL Week N** (including mid-season) if deployment slips.
+League admins can create and initialize a league, invite participants by email, and everyone can see league info, roster, and a rules reference—without yet needing weekly scoring. **Story 2.7:** leagues can be configured at creation to **start competition at NFL Week N** (including mid-season) if deployment slips. **Story 2.8:** admins can **permanently delete** a league they run, with UX that prevents accidents (**FR61**).
 
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR12, FR13; **Story 2.7** (first competition week—product extension of FR1/FR3 scope)
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR12, FR13, FR61; **Story 2.7** (first competition week—product extension of FR1/FR3 scope)
 
 ### Epic 3: Study matchups and submit validated weekly picks
 
@@ -447,6 +448,33 @@ So that we can **start mid-season** instead of waiting until next year if we mis
 **And** participant-facing copy (league home, rules) states **competition starts NFL Week N** when **N > 1**
 **And** **Immutability:** after the league has **started competition** (define explicitly: e.g. first pick submitted or first week deadline passed), the admin **cannot** change first week without a documented support/migration path; before any pick, admin may still adjust if product allows (document chosen rule)
 **And** downstream epics (**schedule, odds snapshot, picks, scoring, standings**) use this field when determining **which NFL week** the league is on—no hard-coded assumption that all leagues always start at Week 1
+
+---
+
+### Story 2.8: Admin delete league (production)
+
+As a league admin,
+I want to permanently delete a league I administer from the league settings or options area,
+So that I can remove a mistaken or obsolete league without contacting support (**FR61**).
+
+**Acceptance Criteria:**
+
+**Given** an authenticated user who is a **league admin** for the league  
+**When** they open **league settings or league options** (same general surface as **FR5** / **Story 2.4**)  
+**Then** they can start a **Delete league** flow  
+**And** the primary control is a **destructive (red)** button or equivalent clearly labeled for irreversible deletion
+
+**And** confirming opens a **dialog** that explains the consequence (permanent loss of league data for members), shows the **league name**, and includes a **text field** where the admin must type the exact word **`delete`** (lowercase) before the **confirm** control is enabled
+
+**And** until the text matches exactly, **Confirm** (or primary destructive action) stays **disabled** or no-ops
+
+**And** on success, the league and **dependent rows** (memberships, season linkage, invitations, picks, audit rows, and other league-scoped data defined in schema) are removed via **documented cascade** or **transactional delete**; **user accounts** that belong to other leagues remain intact
+
+**And** only **league admins** can invoke the server endpoint; others receive **403**; unauthenticated callers receive **401**
+
+**And** the implementation is suitable for **production leagues** (not limited to test/rehearsal); **Epic 8 Story 8.7** remains the rehearsal-focused cleanup story—reuse delete/cascade patterns where sensible but do not require a league to be a test league for **FR61**
+
+**And** optional but recommended: append an **audit log** entry (or structured application log) recording league id, actor user id, and timestamp for accountability
 
 ---
 
@@ -998,7 +1026,7 @@ So that leftover simulated data does not clutter the app and we can start clean 
 
 ## Workflow validation summary (Step 4)
 
-- **FR coverage:** FR1–FR60 each appear in the FR Coverage Map and in at least one story acceptance path; scoring FR54 appears in Epic 3 (validation) and Epic 5 (points). **Team logos** are tracked in the coverage map (UX extension; **Story 3.8**). **Epic 8** is a **post-MVP rehearsal** capability (not a numbered FR); it exercises existing FRs under simulation. **Story 8.7** covers **deleting** test leagues.
+- **FR coverage:** FR1–FR61 each appear in the FR Coverage Map and in at least one story acceptance path; scoring FR54 appears in Epic 3 (validation) and Epic 5 (points). **Team logos** are tracked in the coverage map (UX extension; **Story 3.8**). **Epic 8** is a **post-MVP rehearsal** capability (not a numbered FR); it exercises existing FRs under simulation. **Story 8.7** covers **deleting** test leagues; **Story 2.8** covers **FR61** (production admin delete).
 - **NFR spot-check:** **NFR5** and **NFR8** are explicitly in **Story 7.4** acceptance criteria; other NFRs are cited per story inventory and ACs.
 - **Starter template:** Story 1.1 matches architecture requirement for `create-next-app` as first implementation slice.
 - **Incremental DB:** Models and tables are introduced in the first story that needs them (Users in 1.2; league/season in 2.1; schedule in 3.1; etc.).

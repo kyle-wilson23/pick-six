@@ -34,6 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
+last_updated: '2026-04-11'
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -49,14 +50,15 @@ development_status:
   1-6-protected-app-routes-and-csrf-baseline: done
   epic-1-retrospective: done
 
-  epic-2: backlog
-  2-1-create-league-and-season: backlog
+  epic-2: in-progress
+  2-1-create-league-and-season: ready-for-dev
   2-2-invite-participants-by-email: backlog
   2-3-pre-season-league-initialization: backlog
   2-4-admin-league-list-and-settings: backlog
   2-5-participant-league-home-roster-and-rules-page: backlog
   2-6-admin-as-full-participant: backlog
   2-7-first-nfl-competition-week-at-league-creation-mid-season-start: backlog
+  2-8-admin-delete-league-production: backlog
   epic-2-retrospective: optional
 
   epic-3: backlog

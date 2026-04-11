@@ -1,6 +1,6 @@
 # Story 1.5: Invitation tokens and signup via invite link
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -122,7 +122,7 @@ src/proxy.ts                  # extend matcher: signup POST path(s) per Route Ha
 
 ### Story completion status
 
-- **review** — Code-review remediation applied 2026-04-07; ready for final sign-off to **done**.
+- **done** — Code-review remediation applied 2026-04-07; aligned with sprint-status (Epic 1 retro, 2026-04-11).
 
 ## Dev Agent Record
 

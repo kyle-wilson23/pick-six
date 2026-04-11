@@ -4,4 +4,6 @@ globs:
 alwaysApply: false
 ---
 
-IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: LOAD the FULL @_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec/workflow.md, READ its entire contents and follow its directions exactly!
+IT IS CRITICAL — BMAD 6.3+ (Cursor): There is no `create-tech-spec` skill in the default core+bmm bundle, and `_bmad/bmm/workflows/bmad-quick-flow/create-tech-spec/workflow.md` is not copied into the repo.
+
+Use **bmad-quick-dev** (`.cursor/skills/bmad-quick-dev/`) for an ad-hoc technical change, or **bmad-create-architecture** for structured technical design — or run **bmad-help** / `npx bmad-method install` to add a module that provides tech-spec if your BMAD distribution includes it.

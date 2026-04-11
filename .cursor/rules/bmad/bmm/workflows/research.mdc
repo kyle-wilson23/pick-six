@@ -4,4 +4,11 @@ globs:
 alwaysApply: false
 ---
 
-IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: LOAD the FULL @_bmad/bmm/workflows/1-analysis/research/workflow.md, READ its entire contents and follow its directions exactly!
+IT IS CRITICAL THAT YOU FOLLOW THESE STEPS — BMAD 6.3+ uses `.cursor/skills/`, not `_bmad/bmm/workflows/`:
+
+1. Pick the research skill that matches the user's ask:
+   - `{project-root}/.cursor/skills/bmad-domain-research/` (domain / industry)
+   - `{project-root}/.cursor/skills/bmad-market-research/` (market / competition)
+   - `{project-root}/.cursor/skills/bmad-technical-research/` (technical / architecture)
+2. Read that skill's `SKILL.md`, then its `workflow.md`, and follow exactly (including referenced files).
+3. Load `{project-root}/_bmad/bmm/config.yaml` when the workflow requires it.

@@ -61,4 +61,6 @@ The app lives under `src/` (App Router).
 
 Planning outputs live under [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/) — start with [`prd.md`](_bmad-output/planning-artifacts/prd.md) for scope and requirements.
 
-**BMAD in this repo:** workflows under [`_bmad/`](_bmad/), Cursor rules under [`.cursor/rules/bmad/`](.cursor/rules/bmad/). Install or upgrade the bundled method with `npx bmad-method install` (Node 20+); see [How to install BMAD](https://docs.bmad-method.org/how-to/install-bmad/).
+**BMAD in this repo (v6):** Install and config live under [`_bmad/`](_bmad/) (manifest, `core` / `bmm` module settings, skill index).
+
+Install or upgrade with `npx bmad-method install` (Node 20+). Docs: [How to install BMAD](https://docs.bmad-method.org/how-to/install-bmad/), [Upgrade to v6](https://docs.bmad-method.org/how-to/upgrade-to-v6/).

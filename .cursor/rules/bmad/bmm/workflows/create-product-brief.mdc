@@ -4,4 +4,4 @@ globs:
 alwaysApply: false
 ---
 
-IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: LOAD the FULL @_bmad/bmm/workflows/1-analysis/create-product-brief/workflow.md, READ its entire contents and follow its directions exactly!
+IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: Read `{project-root}/.cursor/skills/bmad-product-brief/SKILL.md`, then LOAD the FULL `{project-root}/.cursor/skills/bmad-product-brief/workflow.md`, READ its entire contents and follow its directions exactly!

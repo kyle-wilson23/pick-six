@@ -4,4 +4,4 @@ globs:
 alwaysApply: false
 ---
 
-IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: LOAD the FULL @_bmad/bmm/workflows/2-plan-workflows/create-ux-design/workflow.md, READ its entire contents and follow its directions exactly!
+IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: Read `{project-root}/.cursor/skills/bmad-create-ux-design/SKILL.md`, then LOAD the FULL `{project-root}/.cursor/skills/bmad-create-ux-design/workflow.md`, READ its entire contents and follow its directions exactly!

@@ -21,10 +21,64 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  accounts Account[]
-  sessions Session[]
+  accounts          Account[]
+  sessions          Session[]
+  leagueMemberships LeagueMembership[]
 
   @@map("users")
+}
+
+enum LeagueMembershipRole {
+  ADMIN
+  MEMBER
+
+  @@map("league_membership_role")
+}
+
+/// FR1 league container. **Name is globally unique** in MVP (one tenant namespace).
+model League {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  seasons     Season[]
+  memberships LeagueMembership[]
+
+  @@map("leagues")
+}
+
+/// One row per league per NFL season year. **`first_competition_week`** (1–18) is the single
+/// source of truth for when in-season competition starts for this league+season (Stories 2.1, 2.7; Epic 3+).
+model Season {
+  id       String @id @default(cuid())
+  leagueId String @map("league_id")
+  /// NFL season label year (see `getCurrentNflSeasonYear` in app layer).
+  nflSeasonYear Int @map("nfl_season_year")
+  /// First NFL regular season week when this league’s picks begin (1–18; default 1).
+  firstCompetitionWeek Int @default(1) @map("first_competition_week")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, nflSeasonYear])
+  @@map("seasons")
+}
+
+model LeagueMembership {
+  id        String               @id @default(cuid())
+  userId    String               @map("user_id")
+  leagueId  String               @map("league_id")
+  role      LeagueMembershipRole
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leagueId])
+  @@map("league_memberships")
 }
 
 // Auth.js Prisma adapter tables (NFR11). With Credentials + JWT session strategy, `Session` rows

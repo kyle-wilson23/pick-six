@@ -28,12 +28,13 @@ function rateLimitClientKey(request: NextRequest): string {
 const RATE_LIMITED_POST_PATHS = new Set([
   "/api/auth/callback/credentials",
   "/api/signup/invite",
+  "/api/leagues",
 ]);
 
 /**
  * Sets `x-pathname` for matched routes (see `config.matcher`). `src/app/(app)/layout.tsx`
  * uses it for post-login `callbackUrl`. When adding authenticated pages under `(app)` whose
- * URL is not under `/dashboard`, extend `matcher` accordingly.
+ * URL is not under `/dashboard` or `/leagues`, extend `matcher` accordingly.
  */
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -57,7 +58,10 @@ export const config = {
   matcher: [
     "/api/auth/callback/credentials",
     "/api/signup/invite",
+    "/api/leagues",
     "/dashboard",
     "/dashboard/:path*",
+    "/leagues",
+    "/leagues/:path*",
   ],
 };

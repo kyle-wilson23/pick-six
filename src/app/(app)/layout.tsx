@@ -3,7 +3,7 @@
  * Public marketing, login, signup, and `/api/**` stay outside this group.
  *
  * `x-pathname` is set in `src/proxy.ts` only for routes matched there — extend the proxy
- * `matcher` when adding new app URLs so `callbackUrl` after login targets the requested path.
+ * `matcher` when adding new app URLs (e.g. `/leagues`) so `callbackUrl` after login targets the requested path.
  */
 
 import { headers } from "next/headers";

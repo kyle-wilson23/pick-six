@@ -2,6 +2,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
 import { auth } from "@/lib/auth";
+import { CreateLeagueLinkButton } from "@/components/leagues/create-league-link-button";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
         Authenticated area for future league features. Public routes (home, login, signup) stay
         outside the <code>(app)</code> group.
       </Typography>
+      <CreateLeagueLinkButton />
     </Stack>
   );
 }

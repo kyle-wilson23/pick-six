@@ -1,6 +1,6 @@
 # Story 2.1: Create league and season
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,7 +18,7 @@ so that all picks and weeks are scoped correctly.
 
 2. **Given** the creating user  
    **When** the league is created  
-   **Then** they are recorded as **league admin** and as a **member** of that league (same row can carry `ADMIN` role + participant membership semantics expected by **FR12**/**FR13** in later stories—creator must appear on roster paths without a second story).
+   **Then** they have **league admin** authority **and** **participant** eligibility via **one** `league_memberships` row with role **`ADMIN`** (no separate `MEMBER` row for the creator). Downstream **FR12**/**FR13** roster paths must treat `ADMIN` as a full participant so the creator appears without a follow-up story.
 
 3. **Given** MVP product rules (scoring, jailed team, deadlines, etc.) are **not** user-configurable yet  
    **When** code reads league/season defaults  
@@ -42,14 +42,14 @@ so that all picks and weeks are scoped correctly.
 
 ## Tasks / Subtasks
 
-- [ ] **Prisma schema** — Add `League`, `Season` (or equivalent), and **`LeagueMembership`** (or `league_memberships`) with `userId`, `leagueId`, **role** enum (`ADMIN` | `MEMBER` minimum). Map tables/columns **`snake_case`**; PKs **`cuid()`** consistent with `User`. Include **`first_competition_week`** (int,1–18, default 1) on the chosen model. Add **unique** constraint for league **name** (global MVP). Run migration via `npm run db:migrate`.
-- [ ] **Domain/constants** — Add a small module for MVP rule constants + season labeling helper (e.g. current NFL season year/label strategy—document if year is hardcoded env or derived).
-- [ ] **POST `/api/leagues`** — Route Handler: `auth()` →401 if no session; Zod body (`name` string trimmed, length bounds; `firstCompetitionWeek` optional with default 1); transactional create: `League` + `Season` + membership for `session.user.id` as **ADMIN**; map Prisma unique violation to structured error; JSON success body per architecture (**direct** resource JSON is fine, e.g. `{ id, name, … }`).
-- [ ] **CSRF / origin** — Call **`assertCookieSessionMutationOrigin(request)`** at the top of the POST handler after reading method; document in handler comment.
-- [ ] **UI (minimal)** — Under `src/app/(app)/…`, add a **create league** page (e.g. `/leagues/new`) using **MUI** with **`Stack`** for layout: name field, first-competition-week selector (1–18, default 1), submit → POST `/api/leagues`, surface API errors. Link from `/dashboard` or a leagues index placeholder for discoverability.
-- [ ] **Proxy matcher** — If the new page lives under `(app)` paths not yet matched, extend **`src/proxy.ts`** `matcher` and document the coupling (see **Epic 1 retro**: `x-pathname` / protected paths).
-- [ ] **Tests** — Vitest: Zod schema (or pure normalization) for create-league body; optional pure helper for “default season label/year” if non-trivial. Keep tests colocated per `.cursor/rules/post-change-testing.mdc`.
-- [ ] **Regression** — `npm run lint`, `npm test`, `npm run build`.
+- [x] **Prisma schema** — Add `League`, `Season` (or equivalent), and **`LeagueMembership`** (or `league_memberships`) with `userId`, `leagueId`, **role** enum (`ADMIN` | `MEMBER` minimum). Map tables/columns **`snake_case`**; PKs **`cuid()`** consistent with `User`. Include **`first_competition_week`** (int,1–18, default 1) on the chosen model. Add **unique** constraint for league **name** (global MVP). Run migration via `npm run db:migrate`.
+- [x] **Domain/constants** — Add a small module for MVP rule constants + season labeling helper (e.g. current NFL season year/label strategy—document if year is hardcoded env or derived).
+- [x] **POST `/api/leagues`** — Route Handler: `auth()` →401 if no session; Zod body (`name` string trimmed, length bounds; `firstCompetitionWeek` optional with default 1); transactional create: `League` + `Season` + membership for `session.user.id` as **ADMIN**; map Prisma unique violation to structured error; JSON success body per architecture (**direct** resource JSON is fine, e.g. `{ id, name, … }`).
+- [x] **CSRF / origin** — Call **`assertCookieSessionMutationOrigin(request)`** at the top of the POST handler after reading method; document in handler comment.
+- [x] **UI (minimal)** — Under `src/app/(app)/…`, add a **create league** page (e.g. `/leagues/new`) using **MUI** with **`Stack`** for layout: name field, first-competition-week selector (1–18, default 1), submit → POST `/api/leagues`, surface API errors. Link from `/dashboard` or a leagues index placeholder for discoverability.
+- [x] **Proxy matcher** — If the new page lives under `(app)` paths not yet matched, extend **`src/proxy.ts`** `matcher` and document the coupling (see **Epic 1 retro**: `x-pathname` / protected paths).
+- [x] **Tests** — Vitest: Zod schema (or pure normalization) for create-league body; optional pure helper for “default season label/year” if non-trivial. Keep tests colocated per `.cursor/rules/post-change-testing.mdc`.
+- [x] **Regression** — `npm run lint`, `npm test`, `npm run build`.
 
 ## Dev Notes
 
@@ -57,7 +57,7 @@ so that all picks and weeks are scoped correctly.
 
 - **Epic 2 goal:** Leagues, invites, initialization, admin list/settings, participant views, rules—**this story** establishes **data + API + minimal UI** for **FR1** and seeds **FR12/FR13** for the creator.
 - **Depends on:** Epic 1 complete (Auth.js **`auth()`**, JWT session with **`session.user.id`**, protected `(app)` shell, CSRF helper).
-- **Downstream:** **2.2** will attach **`Invitation.leagueId`** (or equivalent)—**do not** break existing `Invitation` rows; migration must be **additive**. **2.3–2.7** consume league/season and **`firstCompetitionWeek`**. **Epic 3** must read **`firstCompetitionWeek`** when computing “current” competition week—document field name in schema comments.
+- **Downstream:** **2.2** will attach **`Invitation.leagueId`** (or equivalent)—**do not** break existing `Invitation` rows; migration must be **additive**. **2.3–2.6** consume league/season. **`first_competition_week`** is **persisted in 2.1** on `Season`; **Story 2.7** (still backlog in sprint tracking) covers **behavior** tied to that field—e.g. immutability after competition starts, mid-season creation UX—not re-doing the column. **Epic 3** must read **`firstCompetitionWeek`** when computing “current” competition week—document field name in schema comments.
 
 ### Technical requirements
 
@@ -132,14 +132,43 @@ Align with architecture tree: `app/(app)/leagues/`, `app/api/leagues/` [Source: 
 - **Do not** implement email invites (**2.2**), full admin list (**2.4**), or rules page (**2.5**) in this story—only create path + minimal UI.
 - **Immutability** of `firstCompetitionWeek` after competition starts is spelled out in **Story 2.7**; for **2.1**, persist and validate; optional admin edit **before** any picks can wait for **2.4** if not needed day one.
 
+## Change Log
+
+- **2026-04-11** — Code review closure: AC2 clarified (single `ADMIN` row = admin + participant); epic note added that **2.7** is behavioral on top of 2.1’s `first_competition_week`; create-league page copy aligned with week-1 default; story and sprint marked **done**.
+- **2026-04-11** — Implemented Prisma `leagues` / `seasons` / `league_memberships`, POST `/api/leagues`, `/leagues/new` UI, proxy matcher + rate limit for `/api/leagues`, Vitest for Zod + season year helper. Duplicate league name → **409** `DUPLICATE_LEAGUE_NAME`. `first_competition_week` lives on **`Season`** (documented in schema).
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
-_(pending)_
+Composer (Cursor agent)
 
 ### Debug Log References
 
+_(none)_
+
 ### Completion Notes List
 
+- **`Season.first_competition_week`** is the single source of truth for competition start week (1–18); `Season.nfl_season_year` ties the row to the NFL season label, with `getCurrentNflSeasonYear()` + optional `NFL_SEASON_YEAR` env.
+- **CSRF / origin:** `assertCookieSessionMutationOrigin` runs **after** JSON parse per story AC6; **401** unauthenticated, **400** validation, **409** duplicate name, **403** from origin helper.
+- **Creator** is a single `league_memberships` row with `ADMIN` (participant semantics for later FR12/FR13).
+- **Regression:** `npm test`, `npm run lint`, `npm run build` passed.
+
 ### File List
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260411232203_add_leagues_seasons_memberships/migration.sql`
+- `src/lib/league/league-rules.ts`
+- `src/lib/league/nfl-season.ts`
+- `src/lib/league/nfl-season.test.ts`
+- `src/lib/league/create-league-body.ts`
+- `src/lib/league/create-league-body.test.ts`
+- `src/app/api/leagues/route.ts`
+- `src/app/(app)/leagues/new/page.tsx`
+- `src/app/(app)/leagues/new/create-league-form.tsx`
+- `src/components/leagues/create-league-link-button.tsx`
+- `src/app/(app)/dashboard/page.tsx`
+- `src/app/(app)/layout.tsx`
+- `src/proxy.ts`
+- `_bmad-output/implementation-artifacts/2-1-create-league-and-season.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`

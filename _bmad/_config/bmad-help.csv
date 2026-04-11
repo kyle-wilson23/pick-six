@@ -1,4 +1,5 @@
 module,phase,name,code,sequence,workflow-file,command,required,agent-name,agent-command,agent-display-name,agent-title,options,description,output-location,outputs
+Core,_meta,,,,,,false,,,,,,,https://docs.bmad-method.org/llms.txt,
 Core,bmad-brainstorming,Brainstorming,BSP,Use early in ideation or when stuck generating ideas.,,anytime,false,,,,,false,{output_folder}/brainstorming,brainstorming session,
 Core,bmad-distillator,Distillator,DG,Use when you need token-efficient distillates that preserve all information for downstream LLM consumption.,[path],anytime,false,,,,,false,adjacent to source document or specified output_path,distillate markdown file(s),
 Core,bmad-editorial-review-prose,Editorial Review - Prose,EP,Use after drafting to polish written content.,[path],anytime,false,,,,,false,report located with target document,three-column markdown table with suggested fixes,

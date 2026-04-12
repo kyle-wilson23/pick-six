@@ -32,12 +32,15 @@ const RATE_LIMITED_POST_PATHS = new Set([
 ]);
 
 const LEAGUE_INVITATIONS_POST = /^\/api\/leagues\/[^/]+\/invitations\/?$/;
+const LEAGUE_PRE_SEASON_INIT_POST = /^\/api\/leagues\/[^/]+\/pre-season-init\/?$/;
 
 function shouldRateLimitPost(pathname: string): boolean {
   if (RATE_LIMITED_POST_PATHS.has(pathname)) {
     return true;
   }
-  return LEAGUE_INVITATIONS_POST.test(pathname);
+  return (
+    LEAGUE_INVITATIONS_POST.test(pathname) || LEAGUE_PRE_SEASON_INIT_POST.test(pathname)
+  );
 }
 
 /**

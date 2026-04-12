@@ -44,6 +44,7 @@ model League {
 
   seasons     Season[]
   memberships LeagueMembership[]
+  invitations Invitation[]
 
   @@map("leagues")
 }
@@ -123,8 +124,12 @@ model VerificationToken {
 }
 
 /// Single-use invitation for account creation (FR8). Raw token is never stored — only SHA-256 hash.
+/// **`leagueId` null** — legacy dev seed / global invites (Story 1.5). **Set** — league-scoped admin invites (Story 2.2).
+/// **DB partial unique** (migration `20260412140000_invitations_one_pending_per_league_email`): at most one
+/// pending row per `(league_id, invited_email)` when `league_id` is set (not modeled in Prisma).
 model Invitation {
   id           String    @id @default(cuid())
+  leagueId     String?   @map("league_id")
   tokenHash    String    @unique @map("token_hash")
   invitedEmail String    @map("invited_email")
   expiresAt    DateTime  @map("expires_at") @db.Timestamptz
@@ -132,5 +137,8 @@ model Invitation {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
+  league League? @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@index([leagueId, invitedEmail])
   @@map("invitations")
 }

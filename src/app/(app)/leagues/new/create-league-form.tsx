@@ -42,7 +42,11 @@ export function CreateLeagueForm() {
         setErrorMessage(msg ?? "Could not create league");
         return;
       }
-      router.push("/dashboard");
+      if (data && typeof data === "object" && "id" in data && typeof (data as { id: unknown }).id === "string") {
+        router.push(`/leagues/${(data as { id: string }).id}/invites`);
+      } else {
+        router.push("/dashboard");
+      }
       router.refresh();
     } finally {
       setSubmitting(false);

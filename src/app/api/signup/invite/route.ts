@@ -1,3 +1,4 @@
+import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -64,12 +65,27 @@ export async function POST(request: Request) {
       }
 
       const passwordHash = await bcrypt.hash(password, 12);
-      await tx.user.create({
+      const user = await tx.user.create({
         data: {
           email,
           passwordHash,
         },
       });
+
+      if (invitation.leagueId) {
+        await tx.leagueMembership.upsert({
+          where: {
+            userId_leagueId: { userId: user.id, leagueId: invitation.leagueId },
+          },
+          create: {
+            userId: user.id,
+            leagueId: invitation.leagueId,
+            role: LeagueMembershipRole.MEMBER,
+          },
+          update: {},
+        });
+      }
+
       await tx.invitation.update({
         where: { id: invitation.id },
         data: { consumedAt: now },
@@ -79,7 +95,11 @@ export async function POST(request: Request) {
     if (e instanceof Error && e.message === "INVITE_BAD") {
       return NextResponse.json(GENERIC_ERROR, { status: 400 });
     }
-    console.error("POST /api/signup/invite failed", e);
+    const details =
+      e instanceof Error
+        ? { name: e.name, message: e.message, stack: e.stack }
+        : { thrown: typeof e, value: String(e) };
+    console.error("POST /api/signup/invite unexpected failure", details);
     return NextResponse.json(GENERIC_ERROR, { status: 400 });
   }
 

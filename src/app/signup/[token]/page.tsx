@@ -30,6 +30,12 @@ export default async function SignupInvitePage({ params }: PageProps) {
         Create your account
       </Typography>
 
+      {preview.status === "valid" && preview.league ? (
+        <Typography variant="body1" color="text.secondary" align="center" sx={{ maxWidth: 420 }}>
+          You&apos;re joining <strong>{preview.league.name}</strong>.
+        </Typography>
+      ) : null}
+
       {preview.status === "invalid" ? (
         <Alert severity="warning" sx={{ maxWidth: 400 }}>
           This invitation link is invalid or has expired. Ask your league admin for a new invite if

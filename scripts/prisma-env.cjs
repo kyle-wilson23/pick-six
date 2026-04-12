@@ -12,6 +12,12 @@ for (const file of [".env", ".env.local"]) {
   }
 }
 
+// `schema.prisma` requires `DIRECT_URL` for Neon (pooled vs direct). Local / single-URL setups
+// often only set `DATABASE_URL`; mirroring avoids P1012 when using this wrapper.
+if (!process.env.DIRECT_URL?.trim() && process.env.DATABASE_URL?.trim()) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
+
 const args = process.argv.slice(2);
 const result = spawnSync("npx", ["prisma", ...args], {
   stdio: "inherit",

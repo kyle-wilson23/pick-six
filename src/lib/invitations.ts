@@ -53,13 +53,19 @@ export function isInvitationUsable(
 
 export type SignupInvitePreview =
   | { status: "invalid" }
-  | { status: "valid"; invitedEmail: string };
+  | {
+      status: "valid";
+      invitedEmail: string;
+      /** League context for league-scoped invites; **null** for legacy seed invites (Story 1.5). */
+      league: { name: string } | null;
+    };
 
 /** Server-only: resolve invite for signup page (validity for display + form). */
 export async function getSignupInvitePreview(rawToken: string): Promise<SignupInvitePreview> {
   const tokenHash = hashInviteToken(rawToken);
   const invitation = await prisma.invitation.findUnique({
     where: { tokenHash },
+    include: { league: { select: { name: true } } },
   });
   const now = new Date();
   if (!invitation) {
@@ -71,5 +77,7 @@ export async function getSignupInvitePreview(rawToken: string): Promise<SignupIn
   return {
     status: "valid",
     invitedEmail: invitation.invitedEmail,
+    league:
+      invitation.leagueId && invitation.league ? { name: invitation.league.name } : null,
   };
 }

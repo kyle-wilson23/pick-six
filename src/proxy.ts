@@ -31,6 +31,15 @@ const RATE_LIMITED_POST_PATHS = new Set([
   "/api/leagues",
 ]);
 
+const LEAGUE_INVITATIONS_POST = /^\/api\/leagues\/[^/]+\/invitations\/?$/;
+
+function shouldRateLimitPost(pathname: string): boolean {
+  if (RATE_LIMITED_POST_PATHS.has(pathname)) {
+    return true;
+  }
+  return LEAGUE_INVITATIONS_POST.test(pathname);
+}
+
 /**
  * Sets `x-pathname` for matched routes (see `config.matcher`). `src/app/(app)/layout.tsx`
  * uses it for post-login `callbackUrl`. When adding authenticated pages under `(app)` whose
@@ -42,7 +51,7 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  if (request.method === "POST" && RATE_LIMITED_POST_PATHS.has(pathname)) {
+  if (request.method === "POST" && shouldRateLimitPost(pathname)) {
     if (!checkSignInRateLimit(rateLimitClientKey(request))) {
       return NextResponse.json(
         { error: { code: "RATE_LIMITED", message: "Too many requests" } },
@@ -59,6 +68,7 @@ export const config = {
     "/api/auth/callback/credentials",
     "/api/signup/invite",
     "/api/leagues",
+    "/api/leagues/:path*",
     "/dashboard",
     "/dashboard/:path*",
     "/leagues",

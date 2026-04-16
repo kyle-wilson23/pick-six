@@ -14,7 +14,46 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { createLeagueBodySchema } from "@/lib/league/create-league-body";
+import {
+  type AdministeredLeagueWithSeasonRow,
+  listAdministeredLeaguesWithCurrentSeason,
+} from "@/lib/league/list-administered-leagues";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
+
+function serializeAdminLeagueRow(row: AdministeredLeagueWithSeasonRow) {
+  return {
+    id: row.league.id,
+    name: row.league.name,
+    createdAt: row.league.createdAt.toISOString(),
+    currentSeason: row.season
+      ? {
+          id: row.season.id,
+          nflSeasonYear: row.season.nflSeasonYear,
+          firstCompetitionWeek: row.season.firstCompetitionWeek,
+          preSeasonInitializedAt: row.season.preSeasonInitializedAt?.toISOString() ?? null,
+          updatedAt: row.season.updatedAt.toISOString(),
+        }
+      : null,
+  };
+}
+
+/**
+ * GET `/api/leagues` — leagues the caller administers (Story 2.4). **ADMIN** memberships only.
+ */
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: { code: "UNAUTHENTICATED", message: "Sign in required" } },
+      { status: 401 },
+    );
+  }
+
+  const rows = await listAdministeredLeaguesWithCurrentSeason(session.user.id);
+  return NextResponse.json({
+    leagues: rows.map(serializeAdminLeagueRow),
+  });
+}
 
 function isUniqueNameViolation(error: Prisma.PrismaClientKnownRequestError): boolean {
   if (error.code !== "P2002") {

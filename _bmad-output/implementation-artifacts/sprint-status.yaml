@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-04-12'
+last_updated: '2026-04-15'
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -54,7 +54,7 @@ development_status:
   2-1-create-league-and-season: done
   2-2-invite-participants-by-email: done
   2-3-pre-season-league-initialization: done
-  2-4-admin-league-list-and-settings: backlog
+  2-4-admin-league-list-and-settings: done
   2-5-participant-league-home-roster-and-rules-page: backlog
   2-6-admin-as-full-participant: backlog
   # 2.1 persists Season.first_competition_week; 2.7 = immutability / mid-season UX / rules on that field

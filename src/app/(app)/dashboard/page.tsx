@@ -2,6 +2,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
 import { auth } from "@/lib/auth";
+import { AdminLeaguesLinkButton } from "@/components/leagues/admin-leagues-link-button";
 import { CreateLeagueLinkButton } from "@/components/leagues/create-league-link-button";
 import { MyLeaguesLinkButton } from "@/components/leagues/my-leagues-link-button";
 
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
       </Typography>
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap justifyContent="center">
         <MyLeaguesLinkButton />
+        <AdminLeaguesLinkButton />
         <CreateLeagueLinkButton />
       </Stack>
     </Stack>

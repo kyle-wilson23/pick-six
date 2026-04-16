@@ -74,6 +74,8 @@ export const config = {
     "/api/leagues/:path*",
     "/dashboard",
     "/dashboard/:path*",
+    "/my-leagues",
+    "/my-leagues/:path*",
     "/leagues",
     "/leagues/:path*",
   ],

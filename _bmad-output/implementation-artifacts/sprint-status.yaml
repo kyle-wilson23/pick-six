@@ -55,7 +55,7 @@ development_status:
   2-2-invite-participants-by-email: done
   2-3-pre-season-league-initialization: done
   2-4-admin-league-list-and-settings: done
-  2-5-participant-league-home-roster-and-rules-page: backlog
+  2-5-participant-league-home-roster-and-rules-page: done
   2-6-admin-as-full-participant: backlog
   # 2.1 persists Season.first_competition_week; 2.7 = immutability / mid-season UX / rules on that field
   2-7-first-nfl-competition-week-at-league-creation-mid-season-start: backlog

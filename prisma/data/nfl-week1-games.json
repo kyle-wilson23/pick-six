@@ -1,0 +1,82 @@
+[
+  {
+    "awayAbbreviation": "DAL",
+    "homeAbbreviation": "PHI",
+    "kickoffUtc": "2000-09-05T00:20:00.000Z"
+  },
+  {
+    "awayAbbreviation": "KC",
+    "homeAbbreviation": "LAC",
+    "kickoffUtc": "2000-09-06T00:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "TB",
+    "homeAbbreviation": "ATL",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "CIN",
+    "homeAbbreviation": "CLE",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "MIA",
+    "homeAbbreviation": "IND",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "CAR",
+    "homeAbbreviation": "JAX",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "LV",
+    "homeAbbreviation": "NE",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "ARI",
+    "homeAbbreviation": "NO",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "PIT",
+    "homeAbbreviation": "NYJ",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "NYG",
+    "homeAbbreviation": "WAS",
+    "kickoffUtc": "2000-09-07T17:00:00.000Z"
+  },
+  {
+    "awayAbbreviation": "TEN",
+    "homeAbbreviation": "DEN",
+    "kickoffUtc": "2000-09-07T20:05:00.000Z"
+  },
+  {
+    "awayAbbreviation": "SF",
+    "homeAbbreviation": "SEA",
+    "kickoffUtc": "2000-09-07T20:05:00.000Z"
+  },
+  {
+    "awayAbbreviation": "DET",
+    "homeAbbreviation": "GB",
+    "kickoffUtc": "2000-09-07T20:25:00.000Z"
+  },
+  {
+    "awayAbbreviation": "HOU",
+    "homeAbbreviation": "LAR",
+    "kickoffUtc": "2000-09-07T20:25:00.000Z"
+  },
+  {
+    "awayAbbreviation": "BAL",
+    "homeAbbreviation": "BUF",
+    "kickoffUtc": "2000-09-08T00:20:00.000Z"
+  },
+  {
+    "awayAbbreviation": "MIN",
+    "homeAbbreviation": "CHI",
+    "kickoffUtc": "2000-09-09T00:15:00.000Z"
+  }
+]

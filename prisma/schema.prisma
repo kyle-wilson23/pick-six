@@ -5,6 +5,7 @@
 // - Every row scoped to a **league** or **season** MUST use `onDelete: Cascade` on the FK to `League`
 //   or `Season` so `League.delete` removes dependent data atomically (no orphan picks/schedules later).
 // - **`User` → `LeagueMembership`:** `Cascade` so account deletion removes memberships without orphan rows.
+// - **Global NFL rows (`Team`, `NflGame`):** no `League` FK — never cascade from `League` delete.
 // - Prefer **Restrict** only if product explicitly blocks parent delete until children are removed (not
 //   current MVP). Use **SetNull** only when the child row must survive without the parent (optional FK).
 
@@ -72,6 +73,7 @@ model Season {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  picks Pick[]
 
   @@unique([leagueId, nflSeasonYear])
   @@map("seasons")
@@ -87,9 +89,62 @@ model LeagueMembership {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  picks  Pick[]
 
   @@unique([userId, leagueId])
   @@map("league_memberships")
+}
+
+/// Canonical NFL franchise (global — not tied to a `League` row).
+model Team {
+  id           String @id @default(cuid())
+  abbreviation String @unique @map("abbreviation")
+  name         String @map("name")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  homeGames NflGame[] @relation("NflGameHomeTeam")
+  awayGames NflGame[] @relation("NflGameAwayTeam")
+  picks     Pick[]
+
+  @@map("teams")
+}
+
+/// NFL regular-season game (global — keyed by `nfl_season_year`, not `Season.id`).
+model NflGame {
+  id            String   @id @default(cuid())
+  nflSeasonYear Int      @map("nfl_season_year")
+  weekNumber    Int      @map("week_number")
+  homeTeamId    String   @map("home_team_id")
+  awayTeamId    String   @map("away_team_id")
+  kickoffAt     DateTime @map("kickoff_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  homeTeam Team @relation("NflGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
+  awayTeam Team @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
+
+  @@index([nflSeasonYear, weekNumber])
+  @@map("nfl_games")
+}
+
+/// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.
+model Pick {
+  id                 String @id @default(cuid())
+  seasonId           String @map("season_id")
+  leagueMembershipId String @map("league_membership_id")
+  teamId             String @map("team_id")
+  nflWeekNumber      Int    @map("nfl_week_number")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  season           Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  leagueMembership LeagueMembership @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)
+  team             Team             @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  @@unique([leagueMembershipId, seasonId, nflWeekNumber])
+  @@index([seasonId])
+  @@map("picks")
 }
 
 // Auth.js Prisma adapter tables (NFR11). With Credentials + JWT session strategy, `Session` rows

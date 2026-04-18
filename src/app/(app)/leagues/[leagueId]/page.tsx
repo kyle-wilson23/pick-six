@@ -10,6 +10,7 @@ import { AdminLeagueRowActions } from "@/components/leagues/admin-league-row-act
 import { prisma } from "@/lib/db";
 import { describeSeasonForParticipant } from "@/lib/league/list-joined-leagues";
 import { listLeagueRoster } from "@/lib/league/list-league-roster";
+import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 
@@ -29,6 +30,10 @@ export default async function LeagueHomePage({ params }: PageProps) {
   });
 
   if (!membership) {
+    notFound();
+  }
+
+  if (!isLeagueParticipantRole(membership.role)) {
     notFound();
   }
 
@@ -89,6 +94,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
         <Typography variant="subtitle2" color="text.secondary">
           League hub
         </Typography>
+        <Link href={`/leagues/${leagueId}/picks`}>Weekly picks</Link>
         <Link href={`/leagues/${leagueId}/rules`}>League rules</Link>
       </Stack>
 

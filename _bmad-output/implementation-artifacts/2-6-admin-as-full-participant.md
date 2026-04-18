@@ -1,6 +1,6 @@
 # Story 2.6: Admin as full participant
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -38,15 +38,15 @@ so that I compete fairly (**FR12**, **FR13**).
 
 ## Tasks / Subtasks
 
-- [ ] **Participant capability helper** — Add **`src/lib/league/participant-membership.ts`** (name as implemented) exporting pure functions, e.g. **`isLeagueParticipantRole(role: LeagueMembershipRole): boolean`** (returns **`true`** for both **`ADMIN`** and **`MEMBER`**) and **`assertLeagueParticipant(membership: { role } | null)`** (or equivalent) documented as the **only** intended check for “may act as a player in this league.” Add **Vitest** coverage for both roles and a guard that **`MEMBER`-only** pick gates would fail if someone mistakenly compares to **`MEMBER`** only (e.g. test table or comment-driven test).
+- [x] **Participant capability helper** — Add **`src/lib/league/participant-membership.ts`** (name as implemented) exporting pure functions, e.g. **`isLeagueParticipantRole(role: LeagueMembershipRole): boolean`** (returns **`true`** for both **`ADMIN`** and **`MEMBER`**) and **`assertLeagueParticipant(membership: { role } | null)`** (or equivalent) documented as the **only** intended check for “may act as a player in this league.” Add **Vitest** coverage for both roles and a guard that **`MEMBER`-only** pick gates would fail if someone mistakenly compares to **`MEMBER`** only (e.g. test table or comment-driven test).
 
-- [ ] **Refactor existing gates (light touch)** — Where league home, rules, **`/my-leagues`**, and **`GET /api/leagues/joined`** already treat “any **`LeagueMembership`**” as access, **optionally** route the role check through **`isLeagueParticipantRole`** for consistency and grep-friendly future audits. Do **not** change **admin-only** surfaces (**settings**, **invites**, **pre-season init**, **`GET /api/leagues`** administered list)—those remain **`ADMIN`**-only.
+- [x] **Refactor existing gates (light touch)** — Where league home, rules, **`/my-leagues`**, and **`GET /api/leagues/joined`** already treat “any **`LeagueMembership`**” as access, **optionally** route the role check through **`isLeagueParticipantRole`** for consistency and grep-friendly future audits. Do **not** change **admin-only** surfaces (**settings**, **invites**, **pre-season init**, **`GET /api/leagues`** administered list)—those remain **`ADMIN`**-only.
 
-- [ ] **Canonical participant / picks entry (minimal)** — Add **`src/app/(app)/leagues/[leagueId]/picks/page.tsx`** (or **`/participant`**, **pick one** and document in Dev Agent Record) that: **`auth()`** → load membership by **`userId` + `leagueId`** → **`notFound()`** if absent → **`isLeagueParticipantRole(membership.role)`** must pass for both roles. Render short placeholder (**MUI `Stack`**) pointing to Epic **3**; link back to league home. Ensures **FR13** “access participant pick routes” has a real URL in-repo.
+- [x] **Canonical participant / picks entry (minimal)** — Add **`src/app/(app)/leagues/[leagueId]/picks/page.tsx`** (or **`/participant`**, **pick one** and document in Dev Agent Record) that: **`auth()`** → load membership by **`userId` + `leagueId`** → **`notFound()`** if absent → **`isLeagueParticipantRole(membership.role)`** must pass for both roles. Render short placeholder (**MUI `Stack`**) pointing to Epic **3**; link back to league home. Ensures **FR13** “access participant pick routes” has a real URL in-repo.
 
-- [ ] **League home navigation** — From **`src/app/(app)/leagues/[leagueId]/page.tsx`**, add a clear **participant** link to the new route for **all** members (admin and non-admin). Keep existing **admin** links to settings/invites as today.
+- [x] **League home navigation** — From **`src/app/(app)/leagues/[leagueId]/page.tsx`**, add a clear **participant** link to the new route for **all** members (admin and non-admin). Keep existing **admin** links to settings/invites as today.
 
-- [ ] **Regression** — **`npm run lint`**, **`npm test`**, **`npm run build`**.
+- [x] **Regression** — **`npm run lint`**, **`npm test`**, **`npm run build`**.
 
 ## Dev Notes
 
@@ -125,14 +125,33 @@ src/app/(app)/leagues/[leagueId]/page.tsx         # nav link to picks entry
 
 ### Agent Model Used
 
-_(filled at implementation time)_
+Composer (Cursor agent)
 
 ### Debug Log References
 
+_(none)_
+
 ### Completion Notes List
 
+- Added **`isLeagueParticipantRole`** and **`assertLeagueParticipant`** in **`src/lib/league/participant-membership.ts`** with Vitest coverage and a guardrail test that **`MEMBER`**-only equality would exclude **`ADMIN`**.
+- Participant surfaces (**league home**, **rules**, new **`/leagues/[leagueId]/picks`**) gate on **`isLeagueParticipantRole`** after membership resolution; admin-only routes unchanged.
+- **Canonical weekly picks path:** **`/leagues/[leagueId]/picks`** — server placeholder (MUI **`Stack`**) with link back to league home; Epic 3 copy.
+- **`listJoinedLeaguesWithCurrentSeason`** doc clarified: do not filter to **`MEMBER`** only; **`GET /api/leagues/joined`** behavior unchanged.
+- **`npm run lint`**, **`npm test`**, **`npm run build`** passed.
+
 ### File List
+
+- `src/lib/league/participant-membership.ts` (new)
+- `src/lib/league/participant-membership.test.ts` (new)
+- `src/lib/league/list-joined-leagues.ts` (docstring)
+- `src/app/(app)/leagues/[leagueId]/picks/page.tsx` (new)
+- `src/app/(app)/leagues/[leagueId]/page.tsx` (participant gate + Weekly picks link)
+- `src/app/(app)/leagues/[leagueId]/rules/page.tsx` (participant gate)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (story status)
+- `_bmad-output/implementation-artifacts/2-6-admin-as-full-participant.md` (this file)
 
 ## Change Log
 
 - **2026-04-16** — Story authored from `epics.md`, `sprint-status.yaml`, Prisma schema, Story **2.5** patterns. Status **ready-for-dev**.
+- **2026-04-16** — Implemented participant helper, **`/picks`** placeholder, league home link, light participant gates, tests; status **review**.
+- **2026-04-18** — Review complete; status **done**.

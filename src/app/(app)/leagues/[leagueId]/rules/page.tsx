@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isLeagueParticipantRole } from '@/lib/league/participant-membership';
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -22,6 +23,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
   });
 
   if (!membership) {
+    notFound();
+  }
+
+  if (!isLeagueParticipantRole(membership.role)) {
     notFound();
   }
 

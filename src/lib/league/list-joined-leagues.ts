@@ -35,7 +35,8 @@ export function mapMembershipsToJoinedRows(
 
 /**
  * Leagues the user belongs to (**ADMIN** or **MEMBER**), with the current NFL season row when
- * present (Story 2.5). Sorted by league name ascending.
+ * present (Story 2.5). Sorted by league name ascending. Both roles are participant roles for
+ * authorization (`isLeagueParticipantRole` in Story 2.6); do not filter to **MEMBER** only here.
  */
 export async function listJoinedLeaguesWithCurrentSeason(
   userId: string,

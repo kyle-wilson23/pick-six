@@ -1,5 +1,12 @@
 // Primary keys: `User.id` uses cuid(); reuse for future models (architecture.md).
 // Email: normalize to lowercase in the app layer when Auth lands (Story 1.3).
+//
+// **Referential actions (league delete / FR61):**
+// - Every row scoped to a **league** or **season** MUST use `onDelete: Cascade` on the FK to `League`
+//   or `Season` so `League.delete` removes dependent data atomically (no orphan picks/schedules later).
+// - **`User` → `LeagueMembership`:** `Cascade` so account deletion removes memberships without orphan rows.
+// - Prefer **Restrict** only if product explicitly blocks parent delete until children are removed (not
+//   current MVP). Use **SetNull** only when the child row must survive without the parent (optional FK).
 
 generator client {
   provider = "prisma-client-js"
@@ -34,6 +41,7 @@ enum LeagueMembershipRole {
 }
 
 /// FR1 league container. **Name is globally unique** in MVP (one tenant namespace).
+/// Children (`Season`, `LeagueMembership`, `Invitation`) use `onDelete: Cascade` from `League`.
 model League {
   id        String   @id @default(cuid())
   name      String   @unique

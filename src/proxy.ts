@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { checkSignInRateLimit } from "@/lib/rate-limit";
+import { checkLeagueDeleteRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
 
 function rateLimitClientKey(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -33,6 +33,8 @@ const RATE_LIMITED_POST_PATHS = new Set([
 
 const LEAGUE_INVITATIONS_POST = /^\/api\/leagues\/[^/]+\/invitations\/?$/;
 const LEAGUE_PRE_SEASON_INIT_POST = /^\/api\/leagues\/[^/]+\/pre-season-init\/?$/;
+/** `DELETE /api/leagues/[leagueId]` only — not `/api/leagues/x/invitations` or other subresources. */
+const LEAGUE_SINGLE_DELETE = /^\/api\/leagues\/[^/]+\/?$/;
 
 function shouldRateLimitPost(pathname: string): boolean {
   if (RATE_LIMITED_POST_PATHS.has(pathname)) {
@@ -56,6 +58,15 @@ export function proxy(request: NextRequest) {
 
   if (request.method === "POST" && shouldRateLimitPost(pathname)) {
     if (!checkSignInRateLimit(rateLimitClientKey(request))) {
+      return NextResponse.json(
+        { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+        { status: 429 },
+      );
+    }
+  }
+
+  if (request.method === "DELETE" && LEAGUE_SINGLE_DELETE.test(pathname)) {
+    if (!checkLeagueDeleteRateLimit(rateLimitClientKey(request))) {
       return NextResponse.json(
         { error: { code: "RATE_LIMITED", message: "Too many requests" } },
         { status: 429 },

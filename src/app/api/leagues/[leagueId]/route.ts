@@ -4,8 +4,8 @@
  * - **CSRF / same-origin:** `assertCookieSessionMutationOrigin` before `auth()` (NFR15); no body on DELETE.
  * - **Response:** **204 No Content** on success (empty body).
  * - **Idempotency:** second delete (or unknown id) returns **404** `LEAGUE_NOT_FOUND`, not 500.
- * - **Rate limiting:** `src/proxy.ts` only rate-limits selected **POST** paths; **DELETE** is not
- *   rate-limited for MVP — abuse is bounded by auth + admin membership + origin check.
+ * - **Rate limiting:** `src/proxy.ts` applies a stricter sliding window to **DELETE** on this path
+ *   (5 / 15 min per client key — see `checkLeagueDeleteRateLimit`); same JSON **429** shape as other limits.
  */
 
 import { NextResponse } from "next/server";

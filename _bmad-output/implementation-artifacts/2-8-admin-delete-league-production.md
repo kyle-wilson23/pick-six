@@ -68,7 +68,7 @@ So that I can remove a mistaken or obsolete league without contacting support (*
 
 - [x] **Settings page** — Update **`src/app/(app)/leagues/[leagueId]/settings/page.tsx`**: pass **`league.name`** and **`leagueId`** into the delete section; tighten or remove the placeholder copy that says destructive actions arrive in later stories.
 
-- [x] **Rate limiting** — **`src/proxy.ts`** currently rate-limits specific **POST** paths only. Either **document** that **DELETE** is intentionally not rate-limited for MVP, or add a **`LEAGUE_DELETE`** path pattern if product wants parity — **document the decision** in the route handler comment.
+- [x] **Rate limiting** — **`src/proxy.ts`** rate-limits **`DELETE /api/leagues/[leagueId]`** via **`checkLeagueDeleteRateLimit`** (5 / 15 min per client key; namespace `league-delete`). **`src/app/api/leagues/[leagueId]/route.ts`** documents this; **`429`** uses the standard **`RATE_LIMITED`** JSON shape.
 
 - [x] **Regression** — **`npm run lint`**, **`npm test`**, **`npm run build`**.
 
@@ -183,3 +183,4 @@ _(none)_
 - **2026-04-18** — Story authored from **`epics.md`**, **`sprint-status.yaml`**, **`ux-design-specification.md`**, **`prisma/schema.prisma`**, and Epic **2** API patterns. Status **ready-for-dev**.
 - **2026-04-18** — Implemented FR61 admin delete (API, settings UI, unit tests for authorization helper). Status **review**.
 - **2026-04-18** — Story marked **done** in sprint-status; header aligned (Epic 2 status sweep).
+- **2026-04-18** — Proxy rate limit for league **DELETE**; Prisma **`onDelete: Cascade`** convention documented at top of **`schema.prisma`** (see Epic 2 retro “Post-retro updates”).

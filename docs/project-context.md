@@ -41,6 +41,8 @@ Pin versions in `package.json` at implementation time; do not invent version num
 
 8. **League season start is not always Week 1.** Persist **first NFL competition week** (1–18) on league/season when configured at creation (`epics.md` Story 2.7). Schedule, “current week,” picks, and scoring must respect it—never assume every league starts at Week 1.
 
+9. **Sensitive routes: rate limit in `src/proxy.ts`.** Sign-in and selected league **POST** paths use the sliding-window helper in `src/lib/rate-limit.ts`; **`DELETE /api/leagues/[leagueId]`** (league delete, FR61) is limited separately (**5 / 15 min** per client key). Add new patterns there when introducing high-risk mutators. **Production / multi-instance:** buckets are in-memory per instance until a shared store (e.g. Redis) is wired (see `rate-limit.ts`).
+
 ## Planning supplements (see `epics.md`)
 
 Detailed **user stories and acceptance criteria** live in **`_bmad-output/planning-artifacts/epics.md`**. It extends PRD scope with: **mid-season league start** (Story 2.7), **pre-season Week 1 odds/weather preview** for API validation (Stories 3.1–3.2, 3.6), **real team logos** (Story 3.8), **admin delete production league** (**FR61**, Story 2.8), **test/rehearsal leagues** and deletion (Epic 8), and **simulation mode** for pre-season dry runs. Prefer epics for implementation ordering; keep PRD FRs/NFRs as the requirement baseline.

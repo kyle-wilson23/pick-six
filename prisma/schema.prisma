@@ -60,6 +60,8 @@ model Season {
   firstCompetitionWeek Int @default(1) @map("first_competition_week")
   /// **FR3** (Story 2.3): when non-null, admin marked this season ready for weekly operations; Epic 3+ gates picks and automation on this flag.
   preSeasonInitializedAt DateTime? @map("pre_season_initialized_at") @db.Timestamptz
+  /// **Story 2.7 / Epic 3:** when non-null, `first_competition_week` is immutable (first pick saved or competition-week deadline passed). Writers land in Epic 3.
+  firstCompetitionWeekLockedAt DateTime? @map("first_competition_week_locked_at") @db.Timestamptz
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

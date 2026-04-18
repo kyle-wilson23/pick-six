@@ -9,6 +9,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 
+import { FirstCompetitionWeekSettings } from "./first-competition-week-settings";
+
 type PageProps = {
   params: Promise<{ leagueId: string }>;
 };
@@ -65,7 +67,8 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
         League settings
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Read-only summary. Editing and destructive actions will arrive in later stories.
+        Read-only summary for most fields. You can adjust the first competition week below until competition has
+        started for this season; other editing and destructive actions will arrive in later stories.
       </Typography>
 
       <Stack spacing={1} sx={{ "& dt": { fontWeight: 600 }, "& dd": { margin: 0 } }}>
@@ -94,12 +97,23 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
           </Typography>
         </div>
         <div>
-          <Typography component="dt" variant="subtitle2">
+          <Typography
+            component="dt"
+            variant="subtitle2"
+            gutterBottom
+            id="first-competition-week-settings-label"
+          >
             First competition week
           </Typography>
-          <Typography component="dd" variant="body1">
-            {season ? season.firstCompetitionWeek : "— (no season row for this year)"}
-          </Typography>
+          <FirstCompetitionWeekSettings
+            key={`fcw-${season?.firstCompetitionWeek ?? "none"}-${season?.firstCompetitionWeekLockedAt?.toISOString() ?? "open"}`}
+            leagueId={leagueId}
+            hasSeason={season !== null}
+            initialFirstCompetitionWeek={season?.firstCompetitionWeek ?? 1}
+            initialFirstCompetitionWeekLockedAt={
+              season?.firstCompetitionWeekLockedAt?.toISOString() ?? null
+            }
+          />
         </div>
         <div>
           <Typography component="dt" variant="subtitle2">

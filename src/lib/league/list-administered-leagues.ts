@@ -14,6 +14,7 @@ export type AdministeredLeagueWithSeasonRow = {
     id: string;
     nflSeasonYear: number;
     firstCompetitionWeek: number;
+    firstCompetitionWeekLockedAt: Date | null;
     preSeasonInitializedAt: Date | null;
     updatedAt: Date;
   };
@@ -28,6 +29,7 @@ export type LeagueWithCurrentSeasonChunk = {
     id: string;
     nflSeasonYear: number;
     firstCompetitionWeek: number;
+    firstCompetitionWeekLockedAt: Date | null;
     preSeasonInitializedAt: Date | null;
     updatedAt: Date;
   }>;

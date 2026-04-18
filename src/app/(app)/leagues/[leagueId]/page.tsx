@@ -55,6 +55,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
           id: seasonRow.id,
           nflSeasonYear: seasonRow.nflSeasonYear,
           firstCompetitionWeek: seasonRow.firstCompetitionWeek,
+          firstCompetitionWeekLockedAt: seasonRow.firstCompetitionWeekLockedAt,
           preSeasonInitializedAt: seasonRow.preSeasonInitializedAt,
           updatedAt: seasonRow.updatedAt,
         };

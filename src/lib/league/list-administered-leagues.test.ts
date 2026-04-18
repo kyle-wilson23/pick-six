@@ -34,6 +34,7 @@ describe("toAdministeredLeagueRows", () => {
             id: "season-1",
             nflSeasonYear: 2026,
             firstCompetitionWeek: 2,
+            firstCompetitionWeekLockedAt: null,
             preSeasonInitializedAt: null,
             updatedAt,
           },
@@ -44,6 +45,7 @@ describe("toAdministeredLeagueRows", () => {
       id: "season-1",
       nflSeasonYear: 2026,
       firstCompetitionWeek: 2,
+      firstCompetitionWeekLockedAt: null,
       preSeasonInitializedAt: null,
       updatedAt,
     });

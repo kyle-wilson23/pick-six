@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isLeagueParticipantRole } from '@/lib/league/participant-membership';
+import { getCurrentNflSeasonYear } from '@/lib/league/nfl-season';
+import { resolveCurrentSeasonForLeague } from '@/lib/league/resolve-current-season';
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -38,6 +40,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
   if (!league) {
     notFound();
   }
+
+  const nflSeasonYear = getCurrentNflSeasonYear();
+  const season = await resolveCurrentSeasonForLeague(prisma.season, leagueId, nflSeasonYear);
+  const firstWeek = season?.firstCompetitionWeek ?? 1;
 
   return (
     <Stack
@@ -73,6 +79,19 @@ export default async function LeagueRulesPage({ params }: PageProps) {
         spacing={2}
         sx={{ '& h2': { mt: 0 } }}
       >
+        {firstWeek > 1 ? (
+          <section>
+            <Typography variant='h6' component='h2' gutterBottom>
+              Season start
+            </Typography>
+            <Typography variant='body1' component='p'>
+              Competition for this league begins at <strong>NFL Week {firstWeek}</strong>. NFL regular-season weeks
+              before that week are not part of this league’s competition: no picks, no points, and no retroactive
+              scoring for those weeks.
+            </Typography>
+          </section>
+        ) : null}
+
         <section>
           <Typography
             variant='h6'

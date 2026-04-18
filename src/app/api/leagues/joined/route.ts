@@ -21,6 +21,7 @@ function serializeJoinedLeagueRow(row: JoinedLeagueWithCurrentSeasonRow) {
           id: row.season.id,
           nflSeasonYear: row.season.nflSeasonYear,
           firstCompetitionWeek: row.season.firstCompetitionWeek,
+          firstCompetitionWeekLockedAt: row.season.firstCompetitionWeekLockedAt?.toISOString() ?? null,
           preSeasonInitializedAt: row.season.preSeasonInitializedAt?.toISOString() ?? null,
           updatedAt: row.season.updatedAt.toISOString(),
         }

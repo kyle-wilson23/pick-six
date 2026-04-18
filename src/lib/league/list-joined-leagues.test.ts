@@ -44,6 +44,7 @@ describe("mapMembershipsToJoinedRows", () => {
               id: "season-1",
               nflSeasonYear: 2026,
               firstCompetitionWeek: 3,
+              firstCompetitionWeekLockedAt: null,
               preSeasonInitializedAt: null,
               updatedAt,
             },
@@ -55,6 +56,7 @@ describe("mapMembershipsToJoinedRows", () => {
       id: "season-1",
       nflSeasonYear: 2026,
       firstCompetitionWeek: 3,
+      firstCompetitionWeekLockedAt: null,
       preSeasonInitializedAt: null,
       updatedAt,
     });
@@ -76,10 +78,26 @@ describe("describeSeasonForParticipant", () => {
         id: "s1",
         nflSeasonYear: 2026,
         firstCompetitionWeek: 5,
+        firstCompetitionWeekLockedAt: null,
         preSeasonInitializedAt: null,
         updatedAt: new Date(),
       },
     });
     expect(line).toContain("Competition starts NFL Week 5");
+  });
+
+  it("notes when competition start is locked", () => {
+    const line = describeSeasonForParticipant({
+      nflSeasonYear: 2026,
+      season: {
+        id: "s1",
+        nflSeasonYear: 2026,
+        firstCompetitionWeek: 1,
+        firstCompetitionWeekLockedAt: new Date("2026-09-15T00:00:00.000Z"),
+        preSeasonInitializedAt: null,
+        updatedAt: new Date(),
+      },
+    });
+    expect(line).toContain("Competition start is locked");
   });
 });

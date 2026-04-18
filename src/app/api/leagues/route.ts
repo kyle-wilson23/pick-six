@@ -30,6 +30,7 @@ function serializeAdminLeagueRow(row: AdministeredLeagueWithSeasonRow) {
           id: row.season.id,
           nflSeasonYear: row.season.nflSeasonYear,
           firstCompetitionWeek: row.season.firstCompetitionWeek,
+          firstCompetitionWeekLockedAt: row.season.firstCompetitionWeekLockedAt?.toISOString() ?? null,
           preSeasonInitializedAt: row.season.preSeasonInitializedAt?.toISOString() ?? null,
           updatedAt: row.season.updatedAt.toISOString(),
         }
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
         id: season.id,
         nflSeasonYear: season.nflSeasonYear,
         firstCompetitionWeek: season.firstCompetitionWeek,
+        firstCompetitionWeekLockedAt: season.firstCompetitionWeekLockedAt?.toISOString() ?? null,
       },
     });
   } catch (e) {

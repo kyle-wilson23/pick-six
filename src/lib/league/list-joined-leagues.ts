@@ -15,6 +15,7 @@ export type JoinedLeagueWithCurrentSeasonRow = {
     id: string;
     nflSeasonYear: number;
     firstCompetitionWeek: number;
+    firstCompetitionWeekLockedAt: Date | null;
     preSeasonInitializedAt: Date | null;
     updatedAt: Date;
   };
@@ -76,5 +77,8 @@ export function describeSeasonForParticipant(args: {
   const init = season.preSeasonInitializedAt
     ? "Pre-season initialized"
     : "Pre-season not yet initialized";
-  return `${weekNote}Current season: ${season.nflSeasonYear} · First competition week ${season.firstCompetitionWeek} · ${init}`;
+  const lockNote = season.firstCompetitionWeekLockedAt
+    ? " Competition start is locked (week cannot be changed)."
+    : "";
+  return `${weekNote}Current season: ${season.nflSeasonYear} · First competition week ${season.firstCompetitionWeek} · ${init}.${lockNote}`;
 }

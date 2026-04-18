@@ -511,6 +511,7 @@ So that jailed team and displays are stable (**NFR29–NFR31**, **NFR26**).
 **Then** odds for the active week are stored and used for all reads until next snapshot (**FR31**)
 **And** if the API fails, admin can enter or correct odds per **NFR26**, **NFR30** (documented path)
 **And** **Off-season / pre-kickoff (e.g. July–August, league created before the season):** the integration still supports **fetching and storing or serving** odds for **NFL regular season Week 1** (early lines or live as the provider exposes them)—via **admin-triggered fetch**, optional **scheduled** refresh, or documented **on-demand** path—so third-party odds can be **validated before** picks officially open; in-season **Tuesday snapshot** rules remain unchanged once the league week is live
+**And** **Schedule vs odds (maintenance):** this story **investigates** whether the **same** third-party integration can supply **both** (a) moneyline/spread odds and (b) **NFL regular-season schedule** data (matchups, kickoff instants, weeks 1–18) to populate or refresh `NflGame` (see Story 3.1). **Document the decision**—single provider vs separate schedule source—and **implement** the chosen approach here (or explicitly defer schedule sync to a follow-up only if the spike proves it must be split).
 
 ---
 

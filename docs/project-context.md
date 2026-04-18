@@ -76,3 +76,5 @@ Keep domain logic in **`lib/domain`** testable; Route Handlers orchestrate I/O.
 Product requirements: **`_bmad-output/planning-artifacts/prd.md`**. UX: **`_bmad-output/planning-artifacts/ux-design-specification.md`**. Architecture decisions: **`_bmad-output/planning-artifacts/architecture.md`**. **Epics and stories:** **`_bmad-output/planning-artifacts/epics.md`**.
 
 When in doubt, align with the architecture doc and PRD — do not introduce a second pattern. For story-level scope and ordering, use **`epics.md`**.
+
+**NFL schedule + odds:** Story **3.2** owns **investigating and deciding** whether one provider can supply **both** odds and **full schedule** data (vs maintaining JSON/seed or a second integration). See **`epics.md` Story 3.2** acceptance criteria.

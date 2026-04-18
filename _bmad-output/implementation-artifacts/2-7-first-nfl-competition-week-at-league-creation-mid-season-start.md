@@ -1,6 +1,6 @@
 # Story 2.7: First NFL competition week at league creation (mid-season start)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -186,3 +186,4 @@ _(none)_
 
 - **2026-04-18** — Story authored from `epics.md`, `sprint-status.yaml`, Prisma **`Season`**, Stories **2.1** / **2.5** / **2.6** patterns. Status **ready-for-dev**.
 - **2026-04-18** — Implemented schema, PATCH API, settings + rules UI, serializers, tests; status **review**.
+- **2026-04-18** — Code review passed; status **done**.

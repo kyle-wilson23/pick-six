@@ -58,7 +58,7 @@ development_status:
   2-5-participant-league-home-roster-and-rules-page: done
   2-6-admin-as-full-participant: done
   # 2.1 persists Season.first_competition_week; 2.7 = immutability / mid-season UX / rules on that field
-  2-7-first-nfl-competition-week-at-league-creation-mid-season-start: review
+  2-7-first-nfl-competition-week-at-league-creation-mid-season-start: done
   2-8-admin-delete-league-production: backlog
   epic-2-retrospective: optional
 

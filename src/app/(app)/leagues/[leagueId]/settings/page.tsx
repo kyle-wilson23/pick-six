@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 
+import { DeleteLeagueDialog } from "./delete-league-dialog";
 import { FirstCompetitionWeekSettings } from "./first-competition-week-settings";
 
 type PageProps = {
@@ -68,10 +69,10 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
       </Typography>
       <Typography variant="body2" color="text.secondary">
         Read-only summary for most fields. You can adjust the first competition week below until competition has
-        started for this season; other editing and destructive actions will arrive in later stories.
+        started for this season. Permanent league deletion is available below.
       </Typography>
 
-      <Stack spacing={1} sx={{ "& dt": { fontWeight: 600 }, "& dd": { margin: 0 } }}>
+      <Stack spacing={2.5} sx={{ "& dt": { fontWeight: 600 }, "& dd": { margin: 0 } }}>
         <div>
           <Typography component="dt" variant="subtitle2">
             League name
@@ -145,6 +146,10 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
               : "—"}
           </Typography>
         </div>
+      </Stack>
+
+      <Stack sx={{ mt: 6, pt: 1 }}>
+        <DeleteLeagueDialog leagueId={leagueId} leagueName={league.name} />
       </Stack>
     </Stack>
   );

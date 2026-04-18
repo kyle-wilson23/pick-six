@@ -15,10 +15,31 @@ for (const file of [".env", ".env.local"]) {
 
 const crypto = require("node:crypto");
 
+const { PrismaPg } = require("@prisma/adapter-pg");
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
-const prisma = new PrismaClient();
+/** Keep in sync with `src/lib/normalize-pg-connection-string.ts`. */
+function normalizePgConnectionString(connectionString) {
+  try {
+    const url = new URL(connectionString);
+    const sslmode = url.searchParams.get("sslmode");
+    if (sslmode === "require" || sslmode === "prefer" || sslmode === "verify-ca") {
+      url.searchParams.set("sslmode", "verify-full");
+      return url.toString();
+    }
+    return connectionString;
+  } catch {
+    return connectionString;
+  }
+}
+
+const rawUrl = process.env.DATABASE_URL?.trim();
+if (!rawUrl) {
+  throw new Error("DATABASE_URL is not set");
+}
+const connectionString = normalizePgConnectionString(rawUrl);
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 async function main() {
   const email = "dev@example.com";

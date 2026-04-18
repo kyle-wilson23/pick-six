@@ -2,7 +2,7 @@ import Alert from "@mui/material/Alert";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
-import { getSignupInvitePreview } from "@/lib/invitations";
+import { getSignupInvitePreview } from "@/lib/signup-invite-preview";
 
 import { SignupForm } from "./signup-form";
 

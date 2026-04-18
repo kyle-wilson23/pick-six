@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import { prisma } from "@/lib/db";
-
 /**
  * Opaque invitation tokens are stored as **SHA-256 hex** of the raw URL token (never store raw).
  * Lookup: `hashInviteToken(presentedToken)` → `Invitation.tokenHash`.
@@ -59,25 +57,3 @@ export type SignupInvitePreview =
       /** League context for league-scoped invites; **null** for legacy seed invites (Story 1.5). */
       league: { name: string } | null;
     };
-
-/** Server-only: resolve invite for signup page (validity for display + form). */
-export async function getSignupInvitePreview(rawToken: string): Promise<SignupInvitePreview> {
-  const tokenHash = hashInviteToken(rawToken);
-  const invitation = await prisma.invitation.findUnique({
-    where: { tokenHash },
-    include: { league: { select: { name: true } } },
-  });
-  const now = new Date();
-  if (!invitation) {
-    return { status: "invalid" };
-  }
-  if (!isInvitationUsable(invitation, now)) {
-    return { status: "invalid" };
-  }
-  return {
-    status: "valid",
-    invitedEmail: invitation.invitedEmail,
-    league:
-      invitation.leagueId && invitation.league ? { name: invitation.league.name } : null,
-  };
-}

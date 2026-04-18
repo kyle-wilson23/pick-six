@@ -1,6 +1,6 @@
 # Story 2.3: Pre-season league initialization
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -138,6 +138,7 @@ src/proxy.ts
 
 - **2026-04-12** — Story authored from `epics.md`, `sprint-status.yaml`, Prisma `League`/`Season` model, Stories **2.1–2.2** patterns. Status **ready-for-dev**.
 - **2026-04-12** — Implemented: `Season.pre_season_initialized_at`, `POST /api/leagues/[leagueId]/pre-season-init` (AC6: **404** + `SEASON_NOT_FOUND` when no season row), invites UI + proxy rate limit, tests. Status **review**.
+- **2026-04-18** — Story header synced to **done** with `sprint-status.yaml` (Epic 2 status sweep).
 
 ## Dev Agent Record
 

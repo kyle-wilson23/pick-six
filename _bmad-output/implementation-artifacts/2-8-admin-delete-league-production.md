@@ -1,6 +1,6 @@
 # Story 2.8: Admin delete league (production)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -182,3 +182,4 @@ _(none)_
 
 - **2026-04-18** — Story authored from **`epics.md`**, **`sprint-status.yaml`**, **`ux-design-specification.md`**, **`prisma/schema.prisma`**, and Epic **2** API patterns. Status **ready-for-dev**.
 - **2026-04-18** — Implemented FR61 admin delete (API, settings UI, unit tests for authorization helper). Status **review**.
+- **2026-04-18** — Story marked **done** in sprint-status; header aligned (Epic 2 status sweep).

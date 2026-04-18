@@ -36,7 +36,7 @@ The app lives under `src/` (App Router).
 
    - Optional: `npm run db:studio` opens Prisma Studio.
 
-   - **Invitation links (dev / QA):** Until the admin invite flow exists (Epic 2), create test invitations with **`npm run db:seed`** — the script prints a full signup URL for a seeded invite email.
+   - **Invitation links (dev / QA):** You can invite via the app; for a quick test user, **`npm run db:seed`** still prints a full signup URL for a seeded invite email.
 
 3. **Run locally**
 
@@ -52,14 +52,18 @@ The app lives under `src/` (App Router).
 
 - **Done ✅** Planning (brief, PRD, UX, architecture, epics) and a **Next.js + MUI** shell (dark theme, emerald / gold, Inter).
 - **Done ✅** **Data:** Prisma + Postgres (Neon-ready URLs), `User` model & migrations, singleton `src/lib/db.ts`, `db:*` scripts — set `.env.local` and migrate per **Database** above.
-- **Done ✅** **Epic 1 — Foundations:** email/password login and logout with secure sessions, rolling session persistence, invitation tokens and signup via invite link, protected app routes, and CSRF baseline for cookie-backed mutations.
-- **Next 🚀** **Epic 2 — League setup:** create league and season, invite participants by email, pre-season initialization, admin league list/settings, participant league home, and related stories (see sprint status and PRD).
+- **Done ✅** **Epic 1 — Foundations:** email/password auth, rolling sessions, invite signup, protected routes, CSRF baseline for cookie-backed mutations.
+- **Done ✅** **Epic 2 — League setup:** create league/season, email invites, pre-season init, admin league list/settings, participant home (roster + rules), admin as participant, first competition week (incl. mid-season), production-ready league delete.
+
+**Next 🚀** **Epic 3 — Weekly picks:** NFL schedule model, odds snapshot, jailed team logic, pick API/validation, deadlines, picks UI, and related stories — see [`sprint-status.yaml`](_bmad-output/implementation-artifacts/sprint-status.yaml) and the PRD.
 
 **Stack 📦** Next.js / React, MUI; email, odds, and backend choices live in the architecture doc.
 
 ## Docs 📚
 
 Planning outputs live under [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/) — start with [`prd.md`](_bmad-output/planning-artifacts/prd.md) for scope and requirements.
+
+Sprint and story status: [`_bmad-output/implementation-artifacts/sprint-status.yaml`](_bmad-output/implementation-artifacts/sprint-status.yaml) (per-story notes in the same folder).
 
 **BMAD in this repo (v6):** Install and config live under [`_bmad/`](_bmad/) (manifest, `core` / `bmm` module settings, skill index).
 

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "fixture-game-1",
+    "sport_key": "americanfootball_nfl",
+    "commence_time": "2025-09-07T17:00:00Z",
+    "home_team": "Kansas City Chiefs",
+    "away_team": "Las Vegas Raiders",
+    "bookmakers": [
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              { "name": "Kansas City Chiefs", "price": -250 },
+              { "name": "Las Vegas Raiders", "price": 210 }
+            ]
+          },
+          {
+            "key": "spreads",
+            "outcomes": [
+              { "name": "Kansas City Chiefs", "price": -110, "point": -7.5 },
+              { "name": "Las Vegas Raiders", "price": -110, "point": 7.5 }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

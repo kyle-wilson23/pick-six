@@ -11,6 +11,7 @@ import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-seas
 
 import { DeleteLeagueDialog } from "./delete-league-dialog";
 import { FirstCompetitionWeekSettings } from "./first-competition-week-settings";
+import { NflOddsAdminPanel } from "./nfl-odds-admin-panel";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -96,6 +97,15 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
           <Typography component="dd" variant="body1">
             {nflSeasonYear}
           </Typography>
+        </div>
+        <div>
+          <Typography component="dt" variant="subtitle2" gutterBottom id="nfl-odds-admin-label">
+            NFL odds (global)
+          </Typography>
+          <NflOddsAdminPanel
+            defaultNflSeasonYear={nflSeasonYear}
+            firstCompetitionWeek={season?.firstCompetitionWeek ?? null}
+          />
         </div>
         <div>
           <Typography

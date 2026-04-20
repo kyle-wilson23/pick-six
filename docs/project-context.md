@@ -77,4 +77,4 @@ Product requirements: **`_bmad-output/planning-artifacts/prd.md`**. UX: **`_bmad
 
 When in doubt, align with the architecture doc and PRD — do not introduce a second pattern. For story-level scope and ordering, use **`epics.md`**.
 
-**NFL schedule + odds:** Story **3.2** owns **investigating and deciding** whether one provider can supply **both** odds and **full schedule** data (vs maintaining JSON/seed or a second integration). See **`epics.md` Story 3.2** acceptance criteria.
+**NFL schedule + odds:** Provider and mapping choices are recorded in **`docs/nfl-odds-integration.md`** (The Odds API for moneyline/spread snapshots; `NflGame` schedule remains seed/JSON until a follow-up). See **`epics.md`** Story 3.2 for acceptance criteria.

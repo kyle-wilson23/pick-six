@@ -480,7 +480,7 @@ So that I can remove a mistaken or obsolete league without contacting support (*
 
 ## Epic 3: Study matchups and submit validated weekly picks
 
-**Goal:** Complete weekly pick experience with odds snapshot, jailed logic, validation, deadline enforcement, and season long constraints. **Pre-season:** Week 1 odds and weather remain fetchable/displayable in the off-season so APIs can be validated before the season (see 3.1–3.2, 3.6).
+**Goal:** Complete weekly pick experience with odds snapshot, jailed logic, validation, deadline enforcement, and season long constraints. **Pre-season:** Week 1 odds and weather remain fetchable/displayable in the off-season so APIs can be validated before the season (see 3.1–3.2, 3.6). **Schedule automation:** Story **3.9** adds evaluated **live schedule sync** so **`NflGame`** is not seed-only long term.
 
 ### Story 3.1: NFL schedule, teams, and 18-week season model
 
@@ -609,6 +609,27 @@ So that the UI matches the UX spec’s visual hierarchy and feels familiar—wit
 **And** `TeamLogo` (and any email-safe variants if required) renders real logos for **sm** / **md** / **lg** per UX, with **abbreviation + colored circle** as fallback (same states: default, disabled, jailed desaturation)
 **And** images use `next/image` (or equivalent) with dimensions and caching appropriate for **NFR1–NFR3**; each logo has meaningful **alt text** (team name) for **NFR42**
 **And** no API keys or hotlinking rules are violated; if only static assets are viable, repo documents update process for new seasons/teams
+
+---
+
+### Story 3.9: NFL schedule provider — spike, choice, and `NflGame` sync
+
+As the system,
+I want an **evaluated and implemented** path to **populate or refresh** regular-season **`NflGame`** rows from a **schedule-first** third-party API (not the odds-only feed),
+So that we are not permanently dependent on **seed JSON** for matchups and kickoffs (**follow-up from Story 3.2** and **`docs/nfl-odds-integration.md`**) and **`Pick`/deadline** flows always target **real games** for the active season.
+
+**Acceptance Criteria:**
+
+**Given** Story **3.1** **`Team`** / **`NflGame`** shape and Story **3.2** split-provider decision  
+**When** this story completes  
+**Then** at least **two** credible schedule providers (e.g. **API-Sports**, **SportsDataIO**, or others justified in writing) are **compared** on: **cost/limits** with **preference for zero recurring cost** (free tier / MVP-scale usage), **NFL regular-season coverage**, **kickoff time quality (UTC)**, **week indexing vs our `weekNumber` 1–18**, **mapping to `Team`**, and **operational fit** (self-serve vs sales)  
+**And** **one** provider is **selected** and **documented** in **`docs/nfl-odds-integration.md`** (or a sibling doc) with **fallback** if the vendor changes or tier is insufficient — and if the choice is **paid**, the doc **explains why** no acceptable **free** option worked  
+**And** an **idempotent** sync **upserts** **`NflGame`** for the **current `nflSeasonYear`** (full **1–18** or clearly documented phased rollout) without breaking **`Pick`** uniqueness or FKs  
+**And** secrets are **server-only** (`docs/project-context.md` #1); **no** `NEXT_PUBLIC_*` for keys  
+**And** a **manual or admin-triggered** sync path exists (Route Handler and/or **`scripts/`**), with structured errors and logs on failure (**NFR45**)  
+**And** **Vitest** covers mapping/fixtures **without** live network in default **`npm test`**
+
+**Priority:** Schedule **high** in Epic 3 delivery order (after **3.2** is stable; may proceed in parallel with **3.3** where dependencies allow). **Cost:** **Free of recurring cost** is a product priority; prefer **free-tier** providers and batch sync patterns before paid subscriptions.
 
 ---
 

@@ -123,9 +123,55 @@ model NflGame {
 
   homeTeam Team @relation("NflGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
   awayTeam Team @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
+  oddsLines NflGameOddsLine[]
 
   @@index([nflSeasonYear, weekNumber])
   @@map("nfl_games")
+}
+
+enum OddsSnapshotStatus {
+  PENDING
+  COMPLETED
+  FAILED
+
+  @@map("odds_snapshot_status")
+}
+
+/// One fetch or manual correction run for a given NFL season week (Story 3.2). Reads use the latest
+/// `COMPLETED` line **per game**, not only the latest run — so partial API matches and one-game
+/// manual patches stay composable.
+model OddsSnapshotRun {
+  id            String             @id @default(cuid())
+  nflSeasonYear Int                @map("nfl_season_year")
+  weekNumber    Int                @map("week_number")
+  status        OddsSnapshotStatus
+  /// Provider id, e.g. `the_odds_api`, or `manual` for admin-entered lines.
+  source        String             @map("source")
+  errorMessage  String?            @map("error_message") @db.Text
+  startedAt     DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  completedAt   DateTime?          @map("completed_at") @db.Timestamptz
+
+  lines NflGameOddsLine[]
+
+  @@index([nflSeasonYear, weekNumber, status])
+  @@map("odds_snapshot_runs")
+}
+
+model NflGameOddsLine {
+  id                    String @id @default(cuid())
+  nflGameId             String @map("nfl_game_id")
+  oddsSnapshotRunId     String @map("odds_snapshot_run_id")
+  homeMoneylineAmerican Int?   @map("home_moneyline_american")
+  awayMoneylineAmerican Int?   @map("away_moneyline_american")
+  /// Point spread from the **home** team’s perspective (negative = home favored). Provider h2h/spreads mapped in `lib/integrations`.
+  homeSpreadPoints      Decimal? @map("home_spread_points") @db.Decimal(5, 1)
+
+  nflGame         NflGame         @relation(fields: [nflGameId], references: [id], onDelete: Cascade)
+  oddsSnapshotRun OddsSnapshotRun @relation(fields: [oddsSnapshotRunId], references: [id], onDelete: Cascade)
+
+  @@unique([oddsSnapshotRunId, nflGameId])
+  @@index([nflGameId])
+  @@map("nfl_game_odds_lines")
 }
 
 /// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.

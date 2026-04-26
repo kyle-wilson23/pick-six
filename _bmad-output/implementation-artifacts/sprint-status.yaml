@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-04-20'
+last_updated: '2026-04-25'  # 3-3 → done after code review
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -65,7 +65,7 @@ development_status:
   epic-3: in-progress
   3-1-nfl-schedule-teams-and-18-week-season-model: done
   3-2-odds-fetch-tuesday-snapshot-and-week-long-consistency: done
-  3-3-jailed-team-identification-and-tie-breakers: backlog
+  3-3-jailed-team-identification-and-tie-breakers: done
   3-4-pick-api-with-server-side-validation: backlog
   3-5-deadline-enforcement-server-authority: backlog
   3-6-picks-ui-matchups-odds-spread-weather-optional: backlog

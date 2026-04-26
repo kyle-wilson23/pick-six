@@ -124,9 +124,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             component='p'
           >
             Each week, one NFL team is the <strong>jailed team</strong>: the
-            biggest favorite by moneyline at the league&apos;s weekly odds
-            snapshot. Picks are evaluated against that designation for
-            anti-jailed bonuses and validation.
+            biggest favorite by <strong>American moneyline</strong> among
+            favorites in that week&apos;s games, using the same weekly effective
+            odds snapshot for every league. Picks are evaluated against that
+            designation for anti-jailed bonuses and validation.
           </Typography>
         </section>
 
@@ -142,8 +143,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            Order is: <strong>spread-based resolution</strong> first, then a{' '}
-            <strong>seeded random</strong> process with an{' '}
+            Order is: <strong>moneyline</strong> first (the biggest favorite
+            among all game favorites at the snapshot), then{' '}
+            <strong>point spread</strong> in the favorite&apos;s favor, then a{' '}
+            <strong>seeded random</strong> pick with a stored seed and an{' '}
             <strong>audit trail</strong> so results can be verified later.
           </Typography>
         </section>

@@ -59,21 +59,21 @@ model League {
 /// One row per league per NFL season year. **`first_competition_week`** (1–18) is the single
 /// source of truth for when in-season competition starts for this league+season (Stories 2.1, 2.7; Epic 3+).
 model Season {
-  id       String @id @default(cuid())
-  leagueId String @map("league_id")
+  id                           String    @id @default(cuid())
+  leagueId                     String    @map("league_id")
   /// NFL season label year (see `getCurrentNflSeasonYear` in app layer).
-  nflSeasonYear Int @map("nfl_season_year")
+  nflSeasonYear                Int       @map("nfl_season_year")
   /// First NFL regular season week when this league’s picks begin (1–18; default 1).
-  firstCompetitionWeek Int @default(1) @map("first_competition_week")
+  firstCompetitionWeek         Int       @default(1) @map("first_competition_week")
   /// **FR3** (Story 2.3): when non-null, admin marked this season ready for weekly operations; Epic 3+ gates picks and automation on this flag.
-  preSeasonInitializedAt DateTime? @map("pre_season_initialized_at") @db.Timestamptz
+  preSeasonInitializedAt       DateTime? @map("pre_season_initialized_at") @db.Timestamptz
   /// **Story 2.7 / Epic 3:** when non-null, `first_competition_week` is immutable (first pick saved or competition-week deadline passed). Writers land in Epic 3.
   firstCompetitionWeekLockedAt DateTime? @map("first_competition_week_locked_at") @db.Timestamptz
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  picks Pick[]
+  picks  Pick[]
 
   @@unique([leagueId, nflSeasonYear])
   @@map("seasons")
@@ -97,15 +97,16 @@ model LeagueMembership {
 
 /// Canonical NFL franchise (global — not tied to a `League` row).
 model Team {
-  id           String @id @default(cuid())
-  abbreviation String @unique @map("abbreviation")
-  name         String @map("name")
+  id           String   @id @default(cuid())
+  abbreviation String   @unique @map("abbreviation")
+  name         String   @map("name")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  homeGames NflGame[] @relation("NflGameHomeTeam")
-  awayGames NflGame[] @relation("NflGameAwayTeam")
-  picks     Pick[]
+  homeGames           NflGame[]           @relation("NflGameHomeTeam")
+  awayGames           NflGame[]           @relation("NflGameAwayTeam")
+  picks               Pick[]
+  nflWeekJailedAsTeam NflWeekJailedTeam[]
 
   @@map("teams")
 }
@@ -118,11 +119,11 @@ model NflGame {
   homeTeamId    String   @map("home_team_id")
   awayTeamId    String   @map("away_team_id")
   kickoffAt     DateTime @map("kickoff_at") @db.Timestamptz
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  homeTeam Team @relation("NflGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
-  awayTeam Team @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
+  homeTeam  Team              @relation("NflGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
+  awayTeam  Team              @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
   oddsLines NflGameOddsLine[]
 
   @@index([nflSeasonYear, weekNumber])
@@ -158,11 +159,11 @@ model OddsSnapshotRun {
 }
 
 model NflGameOddsLine {
-  id                    String @id @default(cuid())
-  nflGameId             String @map("nfl_game_id")
-  oddsSnapshotRunId     String @map("odds_snapshot_run_id")
-  homeMoneylineAmerican Int?   @map("home_moneyline_american")
-  awayMoneylineAmerican Int?   @map("away_moneyline_american")
+  id                    String   @id @default(cuid())
+  nflGameId             String   @map("nfl_game_id")
+  oddsSnapshotRunId     String   @map("odds_snapshot_run_id")
+  homeMoneylineAmerican Int?     @map("home_moneyline_american")
+  awayMoneylineAmerican Int?     @map("away_moneyline_american")
   /// Point spread from the **home** team’s perspective (negative = home favored). Provider h2h/spreads mapped in `lib/integrations`.
   homeSpreadPoints      Decimal? @map("home_spread_points") @db.Decimal(5, 1)
 
@@ -174,15 +175,45 @@ model NflGameOddsLine {
   @@map("nfl_game_odds_lines")
 }
 
+/// Global NFL result: one row per **(NFL season year, week)** for the jailed franchise (Story 3.3; FR50–FR52).
+/// Not league-scoped — all leagues use the same snapshot.
+enum NflJailedResolutionMethod {
+  MONEYLINE
+  SPREAD
+  RANDOM
+
+  @@map("nfl_jailed_resolution_method")
+}
+
+model NflWeekJailedTeam {
+  id                 String                    @id @default(cuid())
+  nflSeasonYear      Int                       @map("nfl_season_year")
+  weekNumber         Int                       @map("week_number")
+  jailedTeamId       String                    @map("jailed_team_id")
+  resolvedBy         NflJailedResolutionMethod @map("resolved_by")
+  /// Present only when `resolvedBy` is RANDOM; hex string for audit (FR52).
+  /// Enforced by DB CHECK `nfl_week_jailed_teams_random_seed_iff_random` — see migration SQL.
+  randomSeed         String?                   @map("random_seed") @db.Text
+  auditJson          Json                      @map("audit_json")
+  computedAt         DateTime                  @default(now()) @map("computed_at") @db.Timestamptz
+  oddsLineSourceNote String?                   @map("odds_line_source_note") @db.Text
+
+  jailedTeam Team @relation(fields: [jailedTeamId], references: [id], onDelete: Restrict)
+
+  @@unique([nflSeasonYear, weekNumber])
+  @@index([jailedTeamId])
+  @@map("nfl_week_jailed_teams")
+}
+
 /// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.
 model Pick {
-  id                 String @id @default(cuid())
-  seasonId           String @map("season_id")
-  leagueMembershipId String @map("league_membership_id")
-  teamId             String @map("team_id")
-  nflWeekNumber      Int    @map("nfl_week_number")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                 String   @id @default(cuid())
+  seasonId           String   @map("season_id")
+  leagueMembershipId String   @map("league_membership_id")
+  teamId             String   @map("team_id")
+  nflWeekNumber      Int      @map("nfl_week_number")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   season           Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   leagueMembership LeagueMembership @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)

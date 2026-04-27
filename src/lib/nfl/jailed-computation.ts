@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { NflJailedResolutionMethod, Prisma, type PrismaClient } from "@prisma/client";
 
+import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { resolveJailedTeam, type JailedFailure } from "@/lib/domain/jailed";
 import { getEffectiveOddsLinesForWeek } from "@/lib/nfl/effective-odds";
 
@@ -40,7 +41,14 @@ function toNflJailedMethod(
   }
 }
 
-export type ComputeJailedError = JailedFailure & { httpStatus: number };
+export type ComputeJailedDeadlineError = {
+  ok: false;
+  code: "WEEK_PICK_WINDOW_CLOSED";
+  message: string;
+  httpStatus: 409;
+};
+
+export type ComputeJailedError = (JailedFailure & { httpStatus: number }) | ComputeJailedDeadlineError;
 
 /**
  * Load games + effective odds, resolve jailed (pure), upsert the global `NflWeekJailedTeam` row.
@@ -61,9 +69,47 @@ export async function computeAndPersistNflWeekJailed(
       id: true,
       homeTeamId: true,
       awayTeamId: true,
+      kickoffAt: true,
     },
     orderBy: { kickoffAt: "asc" },
   });
+
+  const gamesForDeadline: { kickoffAt: Date }[] = games
+    .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
+    .map((g) => ({ kickoffAt: g.kickoffAt }));
+
+  // Partial schedule: cannot determine the deadline when some games are missing kickoffAt.
+  // Refuse recompute rather than silently bypassing the deadline guard.
+  if (games.length > 0 && gamesForDeadline.length !== games.length) {
+    return {
+      ok: false as const,
+      error: {
+        ok: false,
+        code: "NO_GAMES_FOR_WEEK",
+        message:
+          "Schedule data is incomplete (some games are missing kickoff times); jailed recompute is not allowed until the schedule is fully ingested.",
+        httpStatus: 400,
+      } satisfies JailedFailure & { httpStatus: number },
+    };
+  }
+
+  // Capture `now` after the DB round-trip so the check reflects the actual moment of comparison.
+  const now = new Date();
+  if (
+    gamesForDeadline.length > 0 &&
+    isNflWeekPickWindowClosedByDeadline({ at: now, games: gamesForDeadline })
+  ) {
+    return {
+      ok: false as const,
+      error: {
+        ok: false as const,
+        code: "WEEK_PICK_WINDOW_CLOSED" as const,
+        message:
+          "The NFL week pick window has closed; jailed recompute is not allowed after the pick deadline.",
+        httpStatus: 409 as const,
+      } satisfies ComputeJailedDeadlineError,
+    };
+  }
 
   const lineMap = await getEffectiveOddsLinesForWeek(prisma, nflSeasonYear, weekNumber);
   const randomSeed = randomBytes(32).toString("hex");

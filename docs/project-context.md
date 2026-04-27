@@ -29,7 +29,7 @@ Pin versions in `package.json` at implementation time; do not invent version num
 
 2. **One Prisma client.** Export a singleton from `src/lib/db.ts` (or equivalent); do not `new PrismaClient()` all over the codebase.
 
-3. **League rules and deadlines are server-authoritative.** Compare deadlines using **UTC** in storage and **America/New_York** (or documented league TZ) for business rules — never the user’s local machine timezone on the server.
+3. **League rules and deadlines are server-authoritative.** Compare deadlines using **UTC** in storage and **America/New_York** (or documented league TZ) for business rules — never the user’s local machine timezone on the server. `POST /api/leagues/[leagueId]/picks` is deadline-enforced on the server (Epic 3, Story 3.5).
 
 4. **Pick visibility (FR48–FR49).** Participants must not see other participants’ picks until the Tuesday standings reveal; **admins** can see all. Enforce in **queries and server-rendered data**, not only in the UI.
 

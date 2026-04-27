@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-04-26'  # 3-4 → done after code review
+last_updated: '2026-04-26'  # 3-5 done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -67,7 +67,7 @@ development_status:
   3-2-odds-fetch-tuesday-snapshot-and-week-long-consistency: done
   3-3-jailed-team-identification-and-tie-breakers: done
   3-4-pick-api-with-server-side-validation: done
-  3-5-deadline-enforcement-server-authority: backlog
+  3-5-deadline-enforcement-server-authority: done
   3-6-picks-ui-matchups-odds-spread-weather-optional: backlog
   3-7-jailed-and-already-picked-ux-with-countdown-and-status: backlog
   3-8-nfl-team-logos-discovery-and-implementation: backlog

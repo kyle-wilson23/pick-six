@@ -5,7 +5,7 @@
  * - **201** first create for that membership+season+week, **200** on update; same body is idempotent.
  * - **Transaction scope:** membership is checked *outside* the transaction as a pre-guard (same pattern as `pre-season-init`;
  *   TOCTOU window on mid-flight membership revocation is accepted). Validation + pick upsert run inside `prisma.$transaction`.
- * - **Story 3.5** will add deadline/lock checks to `assertPickMutationAllowed`.
+ * - **Story 3.5** — `checkPickMutationDeadline` (single `now` in `runPickMutation`) after games load.
  */
 
 import { NextResponse } from "next/server";
@@ -19,7 +19,7 @@ import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/leag
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { isWeekInLeagueCompetition } from "@/lib/nfl/nfl-regular-season";
-import { assertPickMutationAllowed } from "@/lib/picks/assert-pick-mutation-allowed";
+import { checkPickMutationDeadline } from "@/lib/picks/assert-pick-mutation-allowed";
 import { postPickBodySchema } from "@/lib/picks/post-pick-body";
 import type { Prisma } from "@prisma/client";
 
@@ -162,6 +162,7 @@ async function runPickMutation(
   },
 ): Promise<RouteErr | RouteOk> {
   const { leagueId, leagueMembershipId, teamId, nflWeekNumber, antiJailedBonus } = args;
+  const now = new Date();
 
   const season = await resolveCurrentSeasonForLeague(tx.season, leagueId);
   if (!season) {
@@ -198,7 +199,7 @@ async function runPickMutation(
 
   const games = await tx.nflGame.findMany({
     where: { nflSeasonYear: season.nflSeasonYear, weekNumber: nflWeekNumber },
-    select: { homeTeamId: true, awayTeamId: true },
+    select: { homeTeamId: true, awayTeamId: true, kickoffAt: true },
   });
   if (games.length === 0) {
     return err(
@@ -207,18 +208,36 @@ async function runPickMutation(
       "No game schedule data is available for this NFL week. Ensure the schedule has been ingested.",
     );
   }
+  const gamesWithKickoff: Array<{
+    homeTeamId: string;
+    awayTeamId: string;
+    kickoffAt: Date;
+  }> = [];
+  for (const g of games) {
+    if (g.kickoffAt == null) {
+      return err(
+        400,
+        "GAMES_NOT_LOADED",
+        "No game schedule data is available for this NFL week. Ensure the schedule has been ingested.",
+      );
+    }
+    gamesWithKickoff.push({
+      homeTeamId: g.homeTeamId,
+      awayTeamId: g.awayTeamId,
+      kickoffAt: g.kickoffAt,
+    });
+  }
 
-  assertPickMutationAllowed({
-    seasonId: season.id,
-    leagueId,
-    nflWeekNumber,
-  });
+  const deadlineBlock = checkPickMutationDeadline({ now, games: gamesWithKickoff });
+  if (deadlineBlock) {
+    return err(deadlineBlock.status, deadlineBlock.code, deadlineBlock.message);
+  }
 
   const lineup = validateJailedLineupAndBonus({
     teamId,
     jailedTeamId: jailed.jailedTeamId,
     antiJailedBonus,
-    games,
+    games: gamesWithKickoff,
   });
   if (!lineup.ok) {
     const { code, message } = lineup.error;

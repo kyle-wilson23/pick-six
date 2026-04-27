@@ -41,7 +41,7 @@ Pin versions in `package.json` at implementation time; do not invent version num
 
 8. **League season start is not always Week 1.** Persist **first NFL competition week** (1–18) on league/season when configured at creation (`epics.md` Story 2.7). Schedule, “current week,” picks, and scoring must respect it—never assume every league starts at Week 1.
 
-9. **Sensitive routes: rate limit in `src/proxy.ts`.** Sign-in and selected league **POST** paths use the sliding-window helper in `src/lib/rate-limit.ts`; **`DELETE /api/leagues/[leagueId]`** (league delete, FR61) is limited separately (**5 / 15 min** per client key). Add new patterns there when introducing high-risk mutators. **Production / multi-instance:** buckets are in-memory per instance until a shared store (e.g. Redis) is wired (see `rate-limit.ts`).
+9. **Sensitive routes: rate limit in `src/proxy.ts`.** Sign-in and selected league **POST** paths use the sliding-window helper in `src/lib/rate-limit.ts` — including **`POST /api/leagues/[leagueId]/picks`** (Story 3.4); **`DELETE /api/leagues/[leagueId]`** (league delete, FR61) is limited separately (**5 / 15 min** per client key). Add new patterns there when introducing high-risk mutators. **Production / multi-instance:** buckets are in-memory per instance until a shared store (e.g. Redis) is wired (see `rate-limit.ts`).
 
 ## Planning supplements (see `epics.md`)
 

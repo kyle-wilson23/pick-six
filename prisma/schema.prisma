@@ -212,6 +212,8 @@ model Pick {
   leagueMembershipId String   @map("league_membership_id")
   teamId             String   @map("team_id")
   nflWeekNumber      Int      @map("nfl_week_number")
+  /// **FR20 / FR54:** 2-point underdog when true and rules match; scoring is Epic 5.
+  antiJailedBonus    Boolean  @default(false) @map("anti_jailed_bonus")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -220,6 +222,8 @@ model Pick {
   team             Team             @relation(fields: [teamId], references: [id], onDelete: Restrict)
 
   @@unique([leagueMembershipId, seasonId, nflWeekNumber])
+  /// FR53: prevents the same team being picked in two different weeks by the same member in one season, even under concurrent requests.
+  @@unique([leagueMembershipId, seasonId, teamId])
   @@index([seasonId])
   @@map("picks")
 }

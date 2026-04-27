@@ -33,6 +33,7 @@ const RATE_LIMITED_POST_PATHS = new Set([
 
 const LEAGUE_INVITATIONS_POST = /^\/api\/leagues\/[^/]+\/invitations\/?$/;
 const LEAGUE_PRE_SEASON_INIT_POST = /^\/api\/leagues\/[^/]+\/pre-season-init\/?$/;
+const LEAGUE_PICKS_POST = /^\/api\/leagues\/[^/]+\/picks\/?$/;
 /** `DELETE /api/leagues/[leagueId]` only — not `/api/leagues/x/invitations` or other subresources. */
 const LEAGUE_SINGLE_DELETE = /^\/api\/leagues\/[^/]+\/?$/;
 
@@ -41,7 +42,9 @@ function shouldRateLimitPost(pathname: string): boolean {
     return true;
   }
   return (
-    LEAGUE_INVITATIONS_POST.test(pathname) || LEAGUE_PRE_SEASON_INIT_POST.test(pathname)
+    LEAGUE_INVITATIONS_POST.test(pathname) ||
+    LEAGUE_PRE_SEASON_INIT_POST.test(pathname) ||
+    LEAGUE_PICKS_POST.test(pathname)
   );
 }
 

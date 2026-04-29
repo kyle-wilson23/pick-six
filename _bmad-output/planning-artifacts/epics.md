@@ -633,6 +633,34 @@ So that we are not permanently dependent on **seed JSON** for matchups and kicko
 
 ---
 
+### Story 3.10: Kickoff-time weather forecast (upgrade from current conditions)
+
+As a **participant**,
+I want the weather badge on each matchup card to reflect **forecast conditions at kickoff time** rather than conditions at page-load time,
+So that I have accurate strategic context for games days before they are played.
+
+**Acceptance Criteria:**
+
+**Given** Story **3.6** weather integration (`fetchWeatherForTeam`, `WEATHER_API_KEY`) and Story **3.9** real UTC `kickoffAt` per `NflGame`  
+**When** the picks page loads  
+**Then** each matchup's weather chip reflects **forecast conditions at the game's `kickoffAt`** (temperature, condition, wind), not current conditions at the moment of the page request
+
+**And** if `kickoffAt` is **outside the provider's forecast horizon** (e.g. game is 8+ days away and provider only forecasts 5 days), the weather chip is **silently omitted** — no error surface, no stale current-conditions fallback shown as a forecast
+
+**And** if `WEATHER_API_KEY` is absent, the API call fails, or a quota limit is hit, weather is still silently omitted — same fail-soft behavior as Story 3.6
+
+**And** the provider selection is evaluated and documented (free-tier preference): **OWM `/data/2.5/forecast`** (3h steps, 5 days, free) vs **OWM One Call 3.0** (hourly, 8 days, free tier w/ credit card) vs alternatives; choice recorded in `docs/` alongside the odds/schedule provider decisions
+
+**And** secrets are **server-only**; no `NEXT_PUBLIC_*` for weather keys
+
+**And** `npm test` covers the forecast-path logic with a fixture (no live network)
+
+**Blocked by:** Story **3.9** (real UTC `kickoffAt` for all weeks — seed-only Week 1 games are a limited pilot but not adequate for full 18-week forecast accuracy).
+
+**Code surface area (small):** rename `fetchWeatherForTeam(abbr)` → `fetchWeatherForGame(abbr, kickoffAt)` in `src/lib/integrations/weather/client.ts`; update one call site in `src/lib/picks/build-league-picks-week-view.ts`. `WeatherData` shape unchanged.
+
+---
+
 ## Epic 4: Admin oversight, overrides, and auditability
 
 **Goal:** Admins supervise the week, intervene when needed, and every override is visible and logged.

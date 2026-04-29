@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-04-26'  # 3-5 done
+last_updated: '2026-04-28'  # 3-6 done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -68,10 +68,12 @@ development_status:
   3-3-jailed-team-identification-and-tie-breakers: done
   3-4-pick-api-with-server-side-validation: done
   3-5-deadline-enforcement-server-authority: done
-  3-6-picks-ui-matchups-odds-spread-weather-optional: backlog
+  3-6-picks-ui-matchups-odds-spread-weather-optional: done
   3-7-jailed-and-already-picked-ux-with-countdown-and-status: backlog
   3-8-nfl-team-logos-discovery-and-implementation: backlog
   3-9-nfl-schedule-provider-spike-and-sync: backlog
+  # 3-10 depends on 3-9 (real kickoffAt per game) + 3-6 weather client; upgrades current-conditions to kickoff-time forecast
+  3-10-kickoff-time-weather-forecast: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog

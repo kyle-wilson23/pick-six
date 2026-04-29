@@ -21,7 +21,9 @@ import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-seas
 import { isWeekInLeagueCompetition } from "@/lib/nfl/nfl-regular-season";
 import { checkPickMutationDeadline } from "@/lib/picks/assert-pick-mutation-allowed";
 import { postPickBodySchema } from "@/lib/picks/post-pick-body";
-import type { Prisma } from "@prisma/client";
+import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
+import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
+import { NFL_REGULAR_SEASON_WEEK_MIN, NFL_REGULAR_SEASON_WEEK_MAX } from "@/lib/nfl/nfl-regular-season";
 
 async function readJsonObject(
   request: NextRequest,
@@ -62,6 +64,59 @@ type RouteOk = {
 
 function err(status: number, code: string, message: string): RouteErr {
   return { type: "err", status, code, message };
+}
+
+/**
+ * GET — week matchup list for picks UI (Story 3.6). JSON only; caller must supply session cookie.
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ leagueId: string }> },
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: { code: "UNAUTHENTICATED", message: "Sign in required" } },
+      { status: 401 },
+    );
+  }
+
+  const { leagueId } = await context.params;
+  const weekParsed = parseWeekNumberSearchParam(request.nextUrl.searchParams.get("weekNumber"));
+  if (weekParsed === null) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: `weekNumber must be an integer ${NFL_REGULAR_SEASON_WEEK_MIN}–${NFL_REGULAR_SEASON_WEEK_MAX}`,
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const outcome = await buildLeaguePicksWeekView({
+      leagueId,
+      sessionUserId: session.user.id,
+      explicitWeekNumber: weekParsed ?? null,
+    });
+
+    if (!outcome.ok) {
+      return NextResponse.json(
+        { error: { code: outcome.code, message: outcome.message } },
+        { status: outcome.status },
+      );
+    }
+
+    return NextResponse.json(outcome.payload);
+  } catch (e) {
+    console.error("GET /api/leagues/[leagueId]/picks failed", e);
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Something went wrong" } },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(

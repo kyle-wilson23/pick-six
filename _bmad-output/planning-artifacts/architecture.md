@@ -149,7 +149,7 @@ Interactive prompts typically cover TypeScript, ESLint, Tailwind CSS, `src/` dir
 - Prefer **self-hosted auth** (sessions in your app + Neon) over **paid IDaaS** (e.g. Clerk past free limits).
 - Prefer **transactional email** providers with a **generous free tier** (e.g. Resend, SendGrid, Mailgun—compare current free limits at implementation time).
 - **Odds and results APIs:** choose providers with a **free tier**, **trial**, or **low fixed cost**, or accept rare manual admin fallback (PRD already allows admin override when APIs fail).
-- **Weather (UX):** use a **free-tier** weather API or static/optional display if quotas are tight.
+- **Weather (UX):** use a **free-tier** weather API or static/optional display if quotas are tight. **Two-phase plan:** Story **3.6** ships **current-conditions** (`/data/2.5/weather`) as a fail-soft optional chip — accurate enough for same-day preview. Story **3.10** upgrades to **forecast at `kickoffAt`** (OWM `/forecast` or One Call 3.0), using the UTC kickoff already stored on `NflGame`; silently omits the chip when the game is outside the provider's forecast horizon. Story **3.10** is blocked on **3.9** (real `kickoffAt` for all weeks). Integration is isolated behind `fetchWeatherForGame()` in `src/lib/integrations/weather/client.ts` — the UI and route layers are unaffected.
 - **Vercel Hobby + Neon free:** sufficient for MVP scale if usage stays within published limits; **monitor** usage dashboards and plan a paid jump only if limits bite.
 
 **Caveat:** “Free forever” depends on vendor terms; re-check pricing when you ship and each season.

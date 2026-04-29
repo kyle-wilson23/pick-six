@@ -1,19 +1,24 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { LeagueMembershipRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
+import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
+import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
+import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
+
+import { PicksPreviewBanner } from "@/components/picks/PicksPreviewBanner";
+import { WeekMatchupList } from "@/components/picks/WeekMatchupList";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-/** Canonical participant weekly-picks entry (Story 2.6); full UI lands in Epic 3. */
-export default async function LeaguePicksPlaceholderPage({ params }: PageProps) {
+export default async function LeaguePicksPage({ params, searchParams }: PageProps) {
   const { leagueId } = await params;
   const session = await auth();
   if (!session?.user?.id) {
@@ -37,16 +42,40 @@ export default async function LeaguePicksPlaceholderPage({ params }: PageProps) 
     notFound();
   }
 
+  const sp = await searchParams;
+  const explicitWeekParsed = parseWeekNumberSearchParam(sp?.weekNumber);
+  if (explicitWeekParsed === null) {
+    notFound();
+  }
+
+  let picksView: BuildLeaguePicksWeekViewOutcome;
+  try {
+    picksView = await buildLeaguePicksWeekView({
+      leagueId,
+      sessionUserId: session.user.id,
+      explicitWeekNumber: explicitWeekParsed ?? null,
+    });
+  } catch {
+    notFound();
+  }
+
+  if (!picksView.ok) {
+    notFound();
+  }
+
+  const { payload } = picksView;
+
   return (
     <Stack
       component="main"
       spacing={3}
       sx={{
         minHeight: "100vh",
-        px: 2,
-        py: 4,
-        maxWidth: 560,
+        px: { xs: 1.5, sm: 2 },
+        py: { xs: 3, md: 4 },
+        maxWidth: 640,
         mx: "auto",
+        alignItems: "stretch",
       }}
     >
       <Typography variant="body2">
@@ -57,11 +86,14 @@ export default async function LeaguePicksPlaceholderPage({ params }: PageProps) 
         Weekly picks
       </Typography>
 
-      <Typography variant="body1" color="text.secondary">
-        Weekly picks, matchups, and odds will be available here in a future release (Epic 3). You
-        have full participant access to this league as{" "}
-        {membership.role === LeagueMembershipRole.ADMIN ? "an admin" : "a member"}.
-      </Typography>
+      {payload.isPreview ? <PicksPreviewBanner /> : null}
+
+      <WeekMatchupList
+        weekLabel={payload.weekNumber}
+        matchups={payload.matchups}
+        pickDeadlineUtc={payload.pickDeadlineUtc}
+        jailedTeamId={payload.jailedTeamId}
+      />
     </Stack>
   );
 }

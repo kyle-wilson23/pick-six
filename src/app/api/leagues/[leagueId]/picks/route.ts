@@ -24,6 +24,7 @@ import { postPickBodySchema } from "@/lib/picks/post-pick-body";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
 import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
 import { NFL_REGULAR_SEASON_WEEK_MIN, NFL_REGULAR_SEASON_WEEK_MAX } from "@/lib/nfl/nfl-regular-season";
+import type { Prisma } from "@prisma/client";
 
 async function readJsonObject(
   request: NextRequest,

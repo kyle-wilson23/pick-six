@@ -15,6 +15,7 @@ import {
   resolvePicksWeekNumber,
 } from "@/lib/nfl/resolve-picks-week";
 import type { MinimalNflGameForPicksWeek, MinimalSeasonForPicksWeek } from "@/lib/nfl/resolve-picks-week";
+import { mapCurrentPick, mapSeasonPickedTeams } from "@/lib/picks/map-current-pick";
 import type { PicksWeekMatchupJson, PicksWeekViewPayload } from "@/lib/picks/picks-week-view-types";
 
 type Err = { ok: false; status: number; code: string; message: string };
@@ -137,6 +138,30 @@ export async function buildLeaguePicksWeekView(
     select: { jailedTeamId: true },
   });
 
+  // Story 3.7 — caller's own pick context. Always filtered by `leagueMembershipId`; never returns
+  // other participants' pick data (NFR17 / project-context #4).
+  const [currentPickRow, otherWeekPickRows] = await Promise.all([
+    db.pick.findUnique({
+      where: {
+        leagueMembershipId_seasonId_nflWeekNumber: {
+          leagueMembershipId: membership.id,
+          seasonId: season.id,
+          nflWeekNumber: targetWeek,
+        },
+      },
+      select: { teamId: true, antiJailedBonus: true, updatedAt: true },
+    }),
+    db.pick.findMany({
+      where: {
+        leagueMembershipId: membership.id,
+        seasonId: season.id,
+        nflWeekNumber: { not: targetWeek },
+      },
+      select: { teamId: true, nflWeekNumber: true },
+      orderBy: { nflWeekNumber: "asc" },
+    }),
+  ]);
+
   const firstKickoff = getFirstKickoffUtc(gamesForWeek);
   const pickDeadlineUtc =
     firstKickoff != null ? computePickDeadlineUtc(firstKickoff).toISOString() : null;
@@ -174,6 +199,8 @@ export async function buildLeaguePicksWeekView(
       pickDeadlineUtc,
       jailedTeamId: jailedRow?.jailedTeamId ?? null,
       matchups,
+      currentPick: mapCurrentPick(currentPickRow),
+      seasonPickedTeams: mapSeasonPickedTeams(otherWeekPickRows),
     },
   };
 }

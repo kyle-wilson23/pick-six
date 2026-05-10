@@ -10,6 +10,8 @@ import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-vi
 import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
 import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
 
+import { DeadlineCountdown } from "@/components/picks/DeadlineCountdown";
+import { JailedTeamCallout } from "@/components/picks/JailedTeamCallout";
 import { PicksPreviewBanner } from "@/components/picks/PicksPreviewBanner";
 import { WeekMatchupList } from "@/components/picks/WeekMatchupList";
 
@@ -64,6 +66,26 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
   }
 
   const { payload } = picksView;
+  const showActiveWeekChrome = !payload.isPreview;
+
+  // Locate the jailed team's metadata in the matchup list (so we can render the callout without
+  // a second DB query).
+  let jailedTeam: { id: string; abbreviation: string; name: string } | null = null;
+  let jailedTeamMl: number | null = null;
+  if (showActiveWeekChrome && payload.jailedTeamId != null) {
+    for (const m of payload.matchups) {
+      if (m.homeTeam.id === payload.jailedTeamId) {
+        jailedTeam = m.homeTeam;
+        jailedTeamMl = m.homeMoneylineAmerican;
+        break;
+      }
+      if (m.awayTeam.id === payload.jailedTeamId) {
+        jailedTeam = m.awayTeam;
+        jailedTeamMl = m.awayMoneylineAmerican;
+        break;
+      }
+    }
+  }
 
   return (
     <Stack
@@ -88,11 +110,24 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
 
       {payload.isPreview ? <PicksPreviewBanner /> : null}
 
+      {showActiveWeekChrome && payload.pickDeadlineUtc != null ? (
+        <DeadlineCountdown pickDeadlineUtc={payload.pickDeadlineUtc} />
+      ) : null}
+
+      {showActiveWeekChrome && jailedTeam != null ? (
+        <JailedTeamCallout team={jailedTeam} moneylineAmerican={jailedTeamMl} />
+      ) : null}
+
       <WeekMatchupList
         weekLabel={payload.weekNumber}
+        weekNumber={payload.weekNumber}
+        leagueId={leagueId}
         matchups={payload.matchups}
         pickDeadlineUtc={payload.pickDeadlineUtc}
         jailedTeamId={payload.jailedTeamId}
+        isPreview={payload.isPreview}
+        currentPick={payload.currentPick}
+        seasonPickedTeams={payload.seasonPickedTeams}
       />
     </Stack>
   );

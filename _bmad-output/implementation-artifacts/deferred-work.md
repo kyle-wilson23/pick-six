@@ -52,6 +52,11 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **Weather caching** — `cache: "no-store"` on every SSR render will exhaust the OpenWeatherMap free-tier quota under any meaningful traffic. Spec open questions explicitly defer caching to performance testing. Add `next: { revalidate }` or an in-process TTL cache in a future iteration.
 - **Domed stadium weather display** — Weather conditions are fetched and shown for fully-enclosed stadiums (Allegiant/LV, US Bank/MIN, SoFi/LAC+LAR, Lucas Oil/IND, Ford Field/DET, NRG/HOU). Showing temperature and wind for a climate-controlled game is misleading. Add a `dome: true` flag to `NFL_STADIUM_BY_TEAM_ABBR` and skip weather fetch for dome stadiums. Product decision required before implementing.
 
+## Deferred from: code review of 3-7-jailed-and-already-picked-ux-with-countdown-and-status (2026-05-09)
+
+- **Prisma patch-level bump + seed session note** — `package.json` / `package-lock.json` move `@prisma/client` and `prisma` from 7.7.x to 7.8.x; `prisma/seed.cjs` adds a console reminder to re-auth after migrate reset. Unrelated to 3.7 acceptance criteria; treat as repo hygiene when convenient.
+- **44×44 touch target for anti-jailed “2 PTS” chip** — `MatchupCard` uses MUI `Chip` `size="small"`, which may be under NFR8. Defer sizing pass until a11y QA or explicit design direction.
+
 ## Deferred from: code review of 3-5-deadline-enforcement-server-authority (2026-04-26)
 
 - **`GAMES_NOT_LOADED` message misleading for null-`kickoffAt` case** — `src/app/api/leagues/[leagueId]/picks/route.ts`. When games exist but one has a null kickoff, the message says "No game schedule data is available" — implying no ingestion occurred. A distinct message or code for the partial-ingestion case would be clearer, but the spec sanctions reusing this validation.

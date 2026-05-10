@@ -7,9 +7,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import type { MouseEventHandler } from "react";
+import { useMemo, type KeyboardEvent } from "react";
 
 import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
+import {
+  computeMatchupSideState,
+  type MatchupSideState,
+} from "@/lib/picks/matchup-card-state";
 
 import type { PicksWeekMatchupJson } from "@/lib/picks/picks-week-view-types";
 
@@ -31,35 +35,74 @@ function formatAmericanMl(value: number | null): string {
   return `${value}`;
 }
 
+export type SelectionReason =
+  | "JAILED_TEAM_PICK"
+  | "DUPLICATE_TEAM"
+  | "LOCKED";
+
+export type SelectionEvent =
+  | { kind: "select"; antiJailedBonus: boolean }
+  | { kind: "blocked"; reason: SelectionReason; pickedInWeek?: number };
+
 export type MatchupCardProps = {
   matchup: PicksWeekMatchupJson;
-  onTeamSelect?: (teamId: string) => void;
+  /** Story 3.7 — when present, each clickable side gets `role="radio"` and keyboard support. */
+  onTeamSelect?: (teamId: string, event: SelectionEvent) => void;
   selectedTeamId?: string | null;
   jailedTeamId?: string | null;
-  pickedTeamIds?: string[];
+  /** Set of team ids the participant picked in **other** weeks. */
+  pickedTeamIds?: ReadonlySet<string>;
+  /** `teamId → otherWeekNumber` for "PICKED WK X" overlay. */
+  pickedWeekByTeamId?: Record<string, number>;
+  /** When true, the active-week deadline has passed → no `select` events fire. */
+  isLocked?: boolean;
+  /** Anti-jailed eligible opponent (precomputed by the controller). */
+  antiJailedOpponentTeamId?: string | null;
 };
 
 export function MatchupCard(props: MatchupCardProps) {
-  const { matchup, onTeamSelect } = props;
+  const {
+    matchup,
+    onTeamSelect,
+    selectedTeamId = null,
+    jailedTeamId = null,
+    pickedTeamIds,
+    pickedWeekByTeamId,
+    isLocked = false,
+    antiJailedOpponentTeamId = null,
+  } = props;
   const { homeTeam, awayTeam } = matchup;
   const weather = matchup.weather;
   const homeSpreadPts = matchup.homeSpreadPoints;
 
-  const homeSpreadStr =
-    homeSpreadPts !== null ? fmtSpread.format(homeSpreadPts) : null;
+  const homeSpreadStr = homeSpreadPts !== null ? fmtSpread.format(homeSpreadPts) : null;
   const awaySpreadStr =
     homeSpreadPts !== null ? fmtSpread.format(homeSpreadPts === 0 ? 0 : -homeSpreadPts) : null;
 
-  const clickable = typeof onTeamSelect === "function";
+  const interactive = typeof onTeamSelect === "function";
 
-  const mkTeamHandlers = (teamId: string): { onClick?: MouseEventHandler } =>
-    clickable
-      ? {
-          onClick: () => {
-            onTeamSelect?.(teamId);
-          },
-        }
-      : {};
+  const pickedTeamIdsSet = useMemo<ReadonlySet<string>>(
+    () => pickedTeamIds ?? new Set<string>(),
+    [pickedTeamIds],
+  );
+
+  const homeState = computeMatchupSideState({
+    teamId: homeTeam.id,
+    jailedTeamId,
+    pickedTeamIds: pickedTeamIdsSet,
+    selectedTeamId,
+    isLocked,
+  });
+  const awayState = computeMatchupSideState({
+    teamId: awayTeam.id,
+    jailedTeamId,
+    pickedTeamIds: pickedTeamIdsSet,
+    selectedTeamId,
+    isLocked,
+  });
+
+  const cardHasSelected = homeState === "selected" || awayState === "selected";
+  const cardHasJailed = homeState === "jailed" || awayState === "jailed";
 
   let kickDisplay = "—";
   try {
@@ -71,10 +114,167 @@ export function MatchupCard(props: MatchupCardProps) {
     kickDisplay = "—";
   }
 
+  function handleTeamActivate(
+    teamId: string,
+    state: MatchupSideState,
+    opts: { antiJailedBonus: boolean } = { antiJailedBonus: false },
+  ) {
+    if (!interactive) return;
+    if (state === "jailed") {
+      onTeamSelect?.(teamId, { kind: "blocked", reason: "JAILED_TEAM_PICK" });
+      return;
+    }
+    if (state === "alreadyPicked") {
+      const pickedInWeek = pickedWeekByTeamId?.[teamId];
+      onTeamSelect?.(teamId, {
+        kind: "blocked",
+        reason: "DUPLICATE_TEAM",
+        pickedInWeek,
+      });
+      return;
+    }
+    if (state === "locked") {
+      onTeamSelect?.(teamId, { kind: "blocked", reason: "LOCKED" });
+      return;
+    }
+    onTeamSelect?.(teamId, { kind: "select", antiJailedBonus: opts.antiJailedBonus });
+  }
+
+  function renderTeamSide(args: {
+    team: { id: string; abbreviation: string; name: string };
+    state: MatchupSideState;
+    moneylineAmerican: number | null;
+    spreadStr: string | null;
+  }) {
+    const { team, state, moneylineAmerican, spreadStr } = args;
+    const isSelected = state === "selected";
+    const isJailed = state === "jailed";
+    const isAlreadyPicked = state === "alreadyPicked";
+    const isDisabled = isJailed || isAlreadyPicked || isLocked;
+    const isAntiJailedEligible =
+      !isLocked && !isJailed && !isAlreadyPicked &&
+      antiJailedOpponentTeamId != null && team.id === antiJailedOpponentTeamId;
+
+    const otherWeek = isAlreadyPicked ? pickedWeekByTeamId?.[team.id] : undefined;
+
+    const ariaLabel = `${team.name}, moneyline ${formatAmericanMl(moneylineAmerican)}`;
+
+    const role = interactive ? "radio" : undefined;
+    const tabIndex = interactive ? (isDisabled ? -1 : 0) : undefined;
+    const ariaChecked = interactive ? isSelected : undefined;
+    const ariaDisabled = interactive ? isDisabled : undefined;
+
+    function onClick() {
+      handleTeamActivate(team.id, state);
+    }
+    function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+      if (!interactive) return;
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        handleTeamActivate(team.id, state);
+      }
+    }
+
+    return (
+      <Stack
+        spacing={0.75}
+        alignItems="flex-start"
+        role={role}
+        tabIndex={tabIndex}
+        aria-checked={ariaChecked}
+        aria-disabled={ariaDisabled}
+        aria-label={ariaLabel}
+        onClick={interactive ? onClick : undefined}
+        onKeyDown={interactive ? onKeyDown : undefined}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 44,
+          py: 0.5,
+          pl: 0.5,
+          borderRadius: 1,
+          cursor: interactive && !isDisabled ? "pointer" : "default",
+          color: isAlreadyPicked ? "text.disabled" : "inherit",
+          outline: "none",
+          "&:focus-visible": {
+            outline: (t) => `2px solid ${t.palette.primary.main}`,
+            outlineOffset: 2,
+          },
+        }}
+      >
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TeamLogo
+            abbreviation={team.abbreviation}
+            teamName={team.name}
+            size="md"
+            jailed={isJailed}
+            disabled={isAlreadyPicked}
+            pickedWeekTag={otherWeek}
+          />
+          <Typography
+            variant="subtitle1"
+            component="span"
+            fontWeight={600}
+            sx={{ color: isAlreadyPicked || isJailed ? "text.disabled" : "inherit" }}
+          >
+            {team.name}
+          </Typography>
+        </Stack>
+        <Typography variant="body2" fontWeight={500} sx={{ ml: 5 }}>
+          ML {formatAmericanMl(moneylineAmerican)}
+          {spreadStr ? ` · ${spreadStr}` : ""}
+        </Typography>
+        {isAntiJailedEligible ? (
+          <Chip
+            size="small"
+            label="2 PTS"
+            onClick={interactive ? (e) => {
+              e.stopPropagation();
+              handleTeamActivate(team.id, state, { antiJailedBonus: true });
+            } : undefined}
+            onKeyDown={interactive ? (e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleTeamActivate(team.id, state, { antiJailedBonus: true });
+              }
+            } : undefined}
+            tabIndex={interactive ? 0 : -1}
+            aria-label={`Pick ${team.name} for 2-point anti-jailed bonus`}
+            sx={{
+              ml: 5,
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              bgcolor: (t) => t.palette.accent.gold,
+              color: (t) => t.palette.getContrastText(t.palette.accent.gold),
+              "&:hover": {
+                bgcolor: (t) => t.palette.accent.goldDark,
+              },
+              cursor: interactive ? "pointer" : "default",
+            }}
+          />
+        ) : null}
+      </Stack>
+    );
+  }
+
   return (
     <Card
       variant="outlined"
-      sx={{ width: "100%", maxWidth: 560, px: { xs: 1.25, sm: 2 }, py: { xs: 1.25, sm: 1.5 } }}
+      sx={{
+        width: "100%",
+        maxWidth: 560,
+        px: { xs: 1.25, sm: 2 },
+        py: { xs: 1.25, sm: 1.5 },
+        bgcolor: cardHasSelected ? "action.selected" : "background.paper",
+        borderWidth: cardHasJailed ? 2 : cardHasSelected ? 2 : 1,
+        borderStyle: "solid",
+        borderColor: cardHasJailed
+          ? "warning.main"
+          : cardHasSelected
+            ? "primary.main"
+            : "divider",
+      }}
     >
       <Stack spacing={1.5}>
         <Stack
@@ -106,30 +306,12 @@ export function MatchupCard(props: MatchupCardProps) {
           alignItems={{ xs: "stretch", sm: "flex-start" }}
           justifyContent="space-between"
         >
-          <Stack
-            {...mkTeamHandlers(awayTeam.id)}
-            spacing={0.75}
-            alignItems="flex-start"
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              cursor: clickable ? "pointer" : "default",
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <TeamLogo
-                abbreviation={awayTeam.abbreviation}
-                teamName={awayTeam.name}
-                size="md"
-              />
-              <Typography variant="subtitle1" component="span" fontWeight={600}>
-                {awayTeam.name}
-              </Typography>
-            </Stack>
-            <Typography variant="body2" fontWeight={500} sx={{ ml: 5 }}>
-              ML {formatAmericanMl(matchup.awayMoneylineAmerican)}
-            </Typography>
-          </Stack>
+          {renderTeamSide({
+            team: awayTeam,
+            state: awayState,
+            moneylineAmerican: matchup.awayMoneylineAmerican,
+            spreadStr: awaySpreadStr,
+          })}
 
           <Typography
             variant="subtitle2"
@@ -142,30 +324,12 @@ export function MatchupCard(props: MatchupCardProps) {
             @
           </Typography>
 
-          <Stack
-            {...mkTeamHandlers(homeTeam.id)}
-            spacing={0.75}
-            alignItems="flex-start"
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              cursor: clickable ? "pointer" : "default",
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <TeamLogo
-                abbreviation={homeTeam.abbreviation}
-                teamName={homeTeam.name}
-                size="md"
-              />
-              <Typography variant="subtitle1" component="span" fontWeight={600}>
-                {homeTeam.name}
-              </Typography>
-            </Stack>
-            <Typography variant="body2" fontWeight={500} sx={{ ml: 5 }}>
-              ML {formatAmericanMl(matchup.homeMoneylineAmerican)}
-            </Typography>
-          </Stack>
+          {renderTeamSide({
+            team: homeTeam,
+            state: homeState,
+            moneylineAmerican: matchup.homeMoneylineAmerican,
+            spreadStr: homeSpreadStr,
+          })}
         </Stack>
 
         <Typography variant="body2" color="text.secondary" component="p">

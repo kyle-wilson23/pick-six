@@ -136,6 +136,10 @@ async function main() {
   });
 
   console.log(`Seeded user: ${email} (password: ${password})`);
+  console.log(
+    "If you had an active browser session before migrate reset: sign out and sign in again — " +
+      "JWT sessions still hold the old user id until you do, and API calls (e.g. create league) will fail with a user FK error.",
+  );
 
   await seedNflSchedule();
 

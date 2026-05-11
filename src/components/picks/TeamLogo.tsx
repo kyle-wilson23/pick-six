@@ -3,8 +3,12 @@
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Image from "next/image";
+import { useState } from "react";
 
-const sizePx = { sm: 28, md: 36, lg: 44 };
+import { resolveNflLogoSrc } from "@/lib/nfl/resolve-nfl-logo-src";
+
+const sizePx = { sm: 24, md: 32, lg: 40 };
 
 function hashHue(abbreviation: string): number {
   let h = 0;
@@ -12,6 +16,78 @@ function hashHue(abbreviation: string): number {
     h = (h * 31 + abbreviation.charCodeAt(i)) % 360;
   }
   return h;
+}
+
+type LogoMarkProps = {
+  abbreviation: string;
+  teamName: string;
+  size: "sm" | "md" | "lg";
+  disabled?: boolean;
+  jailed?: boolean;
+};
+
+/**
+ * Holds logo load-error state. Parent sets `key` to `abbr` + resolved src so remount clears errors
+ * when the team (or asset path) changes — avoids setState in useEffect.
+ */
+function LogoMark({ abbreviation, teamName, size, disabled, jailed }: LogoMarkProps) {
+  const px = sizePx[size];
+  const abbr = abbreviation.trim().toUpperCase().slice(0, 4);
+  const hue = hashHue(abbr);
+  const aria = `${abbr}: ${teamName}`;
+  const alt = `${abbr}: ${teamName}`;
+  const logoSrc = resolveNflLogoSrc({ abbreviation });
+  const [imageFailed, setImageFailed] = useState(false);
+
+  // Filter precedence: jailed (50% desat) is overridden by disabled/already-picked (70% gray + dim).
+  const filter = disabled
+    ? "grayscale(70%) saturate(0.5)"
+    : jailed
+      ? "grayscale(50%) saturate(0.5)"
+      : "none";
+
+  const showImage = logoSrc !== null && !imageFailed;
+
+  return showImage ? (
+    <Box
+      sx={{
+        width: px,
+        height: px,
+        position: "relative",
+        borderRadius: "50%",
+        overflow: "hidden",
+        opacity: disabled ? 0.5 : 1,
+        filter,
+      }}
+    >
+      <Image
+        src={logoSrc}
+        alt={alt}
+        width={px}
+        height={px}
+        sizes={`${px}px`}
+        onError={() => setImageFailed(true)}
+        draggable={false}
+        style={{ objectFit: "cover" }}
+      />
+    </Box>
+  ) : (
+    <Avatar
+      sx={{
+        width: px,
+        height: px,
+        fontSize: size === "lg" ? "0.8rem" : "0.7rem",
+        fontWeight: 700,
+        bgcolor: `hsla(${hue}, 45%, 42%, 1)`,
+        color: "common.white",
+        opacity: disabled ? 0.5 : 1,
+        filter,
+      }}
+      aria-label={aria}
+    >
+      {abbr}
+    </Avatar>
+  );
 }
 
 export type TeamLogoProps = {
@@ -37,35 +113,20 @@ export function TeamLogo({
   jailed,
   pickedWeekTag,
 }: TeamLogoProps) {
-  const px = sizePx[size];
   const abbr = abbreviation.trim().toUpperCase().slice(0, 4);
-  const hue = hashHue(abbr);
-  const aria = `${abbr}: ${teamName}`;
-
-  // Filter precedence: jailed (50% desat) is overridden by disabled/already-picked (70% gray + dim).
-  const filter = disabled
-    ? "grayscale(70%) saturate(0.5)"
-    : jailed
-      ? "grayscale(50%) saturate(0.5)"
-      : "none";
+  const logoSrc = resolveNflLogoSrc({ abbreviation });
+  const markKey = `${abbr}-${logoSrc ?? "abbr-only"}`;
 
   return (
     <Box sx={{ position: "relative", display: "inline-flex" }}>
-      <Avatar
-        sx={{
-          width: px,
-          height: px,
-          fontSize: size === "lg" ? "1rem" : "0.85rem",
-          fontWeight: 700,
-          bgcolor: `hsla(${hue}, 45%, 42%, 1)`,
-          color: "common.white",
-          opacity: disabled ? 0.5 : 1,
-          filter,
-        }}
-        aria-label={aria}
-      >
-        {abbr}
-      </Avatar>
+      <LogoMark
+        key={markKey}
+        abbreviation={abbreviation}
+        teamName={teamName}
+        size={size}
+        disabled={disabled}
+        jailed={jailed}
+      />
       {jailed ? (
         <Typography
           component="span"

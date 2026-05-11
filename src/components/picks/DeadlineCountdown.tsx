@@ -47,7 +47,7 @@ export function DeadlineCountdown({ pickDeadlineUtc }: DeadlineCountdownProps) {
     }
 
     let cancelled = false;
-    let timeoutId: ReturnType<typeof window.setTimeout>;
+    let timeoutId: number | undefined;
 
     const step = () => {
       if (cancelled) return;
@@ -60,7 +60,7 @@ export function DeadlineCountdown({ pickDeadlineUtc }: DeadlineCountdownProps) {
 
     const remainingInitial = deadlineMs - Date.now();
     if (remainingInitial <= 0) {
-      setNow(Date.now());
+      // Initial `now` from useState is already current; no timer needed when the deadline passed.
       return () => {
         cancelled = true;
       };
@@ -71,7 +71,7 @@ export function DeadlineCountdown({ pickDeadlineUtc }: DeadlineCountdownProps) {
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, [deadlineMs]);
 

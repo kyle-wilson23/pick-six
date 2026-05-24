@@ -1,0 +1,48 @@
+{
+  "get": "games",
+  "parameters": { "league": "1", "season": "2026" },
+  "errors": [],
+  "results": 3,
+  "response": [
+    {
+      "game": {
+        "id": 10001,
+        "stage": "Regular Season",
+        "week": "1",
+        "date": { "timezone": "UTC", "timestamp": 1757289600 }
+      },
+      "league": {},
+      "teams": {
+        "home": { "id": 1, "name": "Kansas City Chiefs", "code": "KC" },
+        "away": { "id": 2, "name": "Buffalo Bills", "code": "BUF" }
+      },
+      "scores": {}
+    },
+    {
+      "game": {
+        "id": 10002,
+        "stage": "Pre Season",
+        "week": "2",
+        "date": { "timezone": "UTC", "timestamp": 1757376000 }
+      },
+      "teams": {
+        "home": { "name": "Chicago Bears", "code": "CHI" },
+        "away": { "name": "Cincinnati Bengals", "code": "CIN" }
+      },
+      "scores": {}
+    },
+    {
+      "game": {
+        "id": 10003,
+        "stage": "Regular Season",
+        "week": "Wild card",
+        "date": { "timezone": "UTC", "timestamp": 1757462400 }
+      },
+      "teams": {
+        "home": { "name": "Dallas Cowboys", "code": "DAL" },
+        "away": { "name": "Philadelphia Eagles", "code": "PHI" }
+      },
+      "scores": {}
+    }
+  ]
+}

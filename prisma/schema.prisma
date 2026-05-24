@@ -126,6 +126,8 @@ model NflGame {
   awayTeam  Team              @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
   oddsLines NflGameOddsLine[]
 
+  /// Natural key for idempotent schedule upserts (Story 3.9). Stable `id` preserves `NflGameOddsLine` FKs on refresh.
+  @@unique([nflSeasonYear, weekNumber, homeTeamId, awayTeamId])
   @@index([nflSeasonYear, weekNumber])
   @@map("nfl_games")
 }

@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "nfl_games_nfl_season_year_week_number_home_team_id_away_team_id" RENAME TO "nfl_games_nfl_season_year_week_number_home_team_id_away_tea_key";

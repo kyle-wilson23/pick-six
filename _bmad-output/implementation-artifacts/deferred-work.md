@@ -68,3 +68,10 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of 3-8-nfl-team-logos-discovery-and-implementation.md (2026-05-10)
 
 - **`resolveNflLogoSrc` imports full `nfl-teams.json` into the client bundle** via `TeamLogo` — file is small (~32 teams); acceptable MVP tradeoff. Optional follow-up: codegen or a static uppercase `Set` so the client never imports full JSON metadata.
+
+## Deferred from: code review of 3-9-nfl-schedule-provider-spike-and-sync.md (2026-05-23)
+
+- **Serial `for-await` upserts inside `$transaction`** (`src/lib/nfl/sync-nfl-schedule.ts`) — N sequential DB round-trips for up to 280+ games; `Promise.all` or a batch upsert strategy would improve throughput. Admin-only low-frequency operation; acceptable at MVP scale.
+- **Overly permissive Zod schemas** (`src/lib/integrations/api-sports-nfl/schemas.ts`) — all team/date fields are optional; validation errors surface only at the mapping layer with less precise messages. Consistent with existing `the-odds-api` integration pattern; revisit if schema drift causes mapping noise.
+- **Rename migration adds noise** (`prisma/migrations/20260511022811_2026_first_games_migration/migration.sql`) — only truncates an index name to fit Postgres identifier limits; already applied to DB; no functional change.
+- **All 32 teams loaded from DB on every sync call** (`src/lib/nfl/sync-nfl-schedule.ts`) — negligible at current scale; worth caching or narrowing if team table ever grows meaningfully.

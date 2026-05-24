@@ -5,8 +5,8 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
 /**
- * NFL odds routes are **global** (not league-scoped) but gated so only **league admins** (any league)
- * or **`Authorization: Bearer ODDS_SNAPSHOT_SECRET`** (automation) can run them (Story 3.2, NFR16 pattern).
+ * Global NFL admin routes (**odds** Story 3.2, **schedule sync** Story 3.9): only **league admins**
+ * (any league) or **`Authorization: Bearer ODDS_SNAPSHOT_SECRET`** (automation) (NFR16 pattern).
  */
 export async function assertAuthorizedForNflOddsOps(
   request: NextRequest,

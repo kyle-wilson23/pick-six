@@ -4,6 +4,7 @@ import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -73,6 +74,7 @@ export function MatchupCard(props: MatchupCardProps) {
   } = props;
   const { homeTeam, awayTeam } = matchup;
   const weather = matchup.weather;
+  const stadiumRoof = matchup.stadiumRoof;
   const homeSpreadPts = matchup.homeSpreadPoints;
 
   const homeSpreadStr = homeSpreadPts !== null ? fmtSpread.format(homeSpreadPts) : null;
@@ -289,12 +291,41 @@ export function MatchupCard(props: MatchupCardProps) {
             {kickDisplay}
           </Typography>
           {weather ? (
+            stadiumRoof === "retractable" ? (
+              <Tooltip title="Retractable roof — may be open or closed on game day">
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color="info"
+                  label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
+                  sx={{ maxWidth: "100%", cursor: "default" }}
+                />
+              </Tooltip>
+            ) : (
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
+                sx={{ maxWidth: "100%" }}
+              />
+            )
+          ) : stadiumRoof === "dome" ? (
             <Chip
               size="small"
               variant="outlined"
-              label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
+              label="Indoor"
               sx={{ maxWidth: "100%" }}
             />
+          ) : stadiumRoof === "retractable" ? (
+            <Tooltip title="Retractable roof — may be open or closed on game day">
+              <Chip
+                size="small"
+                variant="outlined"
+                color="info"
+                label="Retractable Roof"
+                sx={{ maxWidth: "100%", cursor: "default" }}
+              />
+            </Tooltip>
           ) : null}
         </Stack>
 

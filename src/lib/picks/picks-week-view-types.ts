@@ -1,4 +1,5 @@
 import type { WeatherData } from "@/lib/integrations/weather/client";
+import type { StadiumRoof } from "@/lib/integrations/weather/stadium-locations";
 
 /** Serializable matchup row for picks UI / GET `/api/leagues/[leagueId]/picks` (Story 3.6). */
 export type PicksWeekMatchupJson = {
@@ -10,6 +11,8 @@ export type PicksWeekMatchupJson = {
   awayMoneylineAmerican: number | null;
   homeSpreadPoints: number | null;
   weather: WeatherData | null;
+  /** Roof type of the home team's stadium — `null` for outdoor venues. */
+  stadiumRoof: StadiumRoof | null;
 };
 
 /**

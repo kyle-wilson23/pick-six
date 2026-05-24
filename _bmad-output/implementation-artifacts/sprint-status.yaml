@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-05-24'  # Story 3-9 → done (code review complete)
+  last_updated: '2026-05-24'  # Story 3-10 → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -62,7 +62,7 @@ development_status:
   2-8-admin-delete-league-production: done
   epic-2-retrospective: done
 
-  epic-3: in-progress
+  epic-3: done
   3-1-nfl-schedule-teams-and-18-week-season-model: done
   3-2-odds-fetch-tuesday-snapshot-and-week-long-consistency: done
   3-3-jailed-team-identification-and-tie-breakers: done
@@ -73,7 +73,7 @@ development_status:
   3-8-nfl-team-logos-discovery-and-implementation: done
   3-9-nfl-schedule-provider-spike-and-sync: done
   # 3-10 depends on 3-9 (real kickoffAt per game) + 3-6 weather client; upgrades current-conditions to kickoff-time forecast
-  3-10-kickoff-time-weather-forecast: backlog
+  3-10-kickoff-time-weather-forecast: done
   epic-3-retrospective: optional
 
   epic-4: backlog

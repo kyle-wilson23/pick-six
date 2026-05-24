@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma as prismaSingleton } from "@/lib/db";
-import { fetchWeatherForTeam } from "@/lib/integrations/weather/client";
+import { fetchWeatherForGame } from "@/lib/integrations/weather/client";
+import { getStadiumRoof } from "@/lib/integrations/weather/stadium-locations";
 import type { WeatherData } from "@/lib/integrations/weather/client";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
@@ -115,14 +116,15 @@ export async function buildLeaguePicksWeekView(
 
   const oddsLines = await getEffectiveOddsLinesForWeek(db, nflSeasonYear, targetWeek);
 
-  const homesUnique = [...new Set(gamesForWeek.map((g) => g.homeTeam.abbreviation))];
   const weatherResults = await Promise.all(
-    homesUnique.map(async (abbr) =>
-      ({
-        abbreviation: abbr,
-        weather: await fetchWeatherForTeam(abbr),
-      }) as const
-    ),
+    gamesForWeek
+      .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
+      .map(async (g) => ({
+        abbreviation: g.homeTeam.abbreviation,
+        weather: getStadiumRoof(g.homeTeam.abbreviation) === "dome"
+          ? null
+          : await fetchWeatherForGame(g.homeTeam.abbreviation, g.kickoffAt),
+      })),
   );
   const weatherByHomeAbbrev = new Map<string, WeatherData>();
   for (const { abbreviation, weather } of weatherResults) {
@@ -171,6 +173,7 @@ export async function buildLeaguePicksWeekView(
     .map((g) => {
     const line = oddsLines.get(g.id);
     const homeAbbrev = g.homeTeam.abbreviation.toUpperCase();
+    const stadiumRoof = getStadiumRoof(g.homeTeam.abbreviation);
     return {
       gameId: g.id,
       kickoffAt: g.kickoffAt.toISOString(),
@@ -188,6 +191,7 @@ export async function buildLeaguePicksWeekView(
       awayMoneylineAmerican: line?.awayMoneylineAmerican ?? null,
       homeSpreadPoints: spreadToNullableNumber(line?.homeSpreadPoints ?? null),
       weather: weatherByHomeAbbrev.get(homeAbbrev) ?? null,
+      stadiumRoof,
     };
   });
 

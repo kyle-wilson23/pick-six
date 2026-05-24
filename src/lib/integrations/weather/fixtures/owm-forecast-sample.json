@@ -1,0 +1,16 @@
+{
+  "list": [
+    {
+      "dt": 1752350400,
+      "main": { "temp": 68.2 },
+      "weather": [{ "main": "Clouds", "description": "overcast clouds" }],
+      "wind": { "speed": 7.5 }
+    },
+    {
+      "dt": 1752361200,
+      "main": { "temp": 74.5 },
+      "weather": [{ "main": "Clear", "description": "clear sky" }],
+      "wind": { "speed": 4.2 }
+    }
+  ]
+}

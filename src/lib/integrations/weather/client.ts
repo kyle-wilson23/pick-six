@@ -6,17 +6,33 @@ export type WeatherData = {
   windMph: number;
 };
 
-type OwmWeatherResponse = {
-  main?: { temp?: number };
-  wind?: { speed?: number };
-  weather?: Array<{ description?: string; main?: string }>;
+type OwmForecastResponse = {
+  list?: Array<{
+    dt?: number;
+    main?: { temp?: number };
+    wind?: { speed?: number };
+    weather?: Array<{ description?: string; main?: string }>;
+  }>;
 };
 
+/** 5-day horizon in seconds for OWM /data/2.5/forecast free tier. */
+const FORECAST_HORIZON_SECONDS = 5 * 24 * 60 * 60;
+
 /**
- * Current conditions near the home team's stadium (OpenWeatherMap Current Weather).
- * Returns `null` on any failure — never throws to callers.
+ * Forecast conditions near the home team's stadium at kickoff time (OpenWeatherMap Forecast).
+ *
+ * Returns `null` when:
+ * - `WEATHER_API_KEY` is absent
+ * - `kickoffAt` is beyond the ~5-day free-tier forecast horizon
+ * - The API call fails or returns a non-OK status
+ * - The response contains no usable data
+ *
+ * Never throws to callers.
  */
-export async function fetchWeatherForTeam(abbreviation: string): Promise<WeatherData | null> {
+export async function fetchWeatherForGame(
+  abbreviation: string,
+  kickoffAt: Date,
+): Promise<WeatherData | null> {
   const key = process.env.WEATHER_API_KEY?.trim();
   if (!key) {
     return null;
@@ -28,7 +44,23 @@ export async function fetchWeatherForTeam(abbreviation: string): Promise<Weather
     return null;
   }
 
-  const url = new URL("https://api.openweathermap.org/data/2.5/weather");
+  const nowSeconds = Date.now() / 1000;
+  const kickoffSeconds = kickoffAt.getTime() / 1000;
+
+  if (!isFinite(kickoffSeconds)) {
+    return null;
+  }
+
+  if (kickoffSeconds < nowSeconds) {
+    return null;
+  }
+
+  // Return null early — no network call — when outside the forecast horizon.
+  if (kickoffSeconds - nowSeconds > FORECAST_HORIZON_SECONDS) {
+    return null;
+  }
+
+  const url = new URL("https://api.openweathermap.org/data/2.5/forecast");
   url.searchParams.set("lat", String(coords.lat));
   url.searchParams.set("lon", String(coords.lon));
   url.searchParams.set("appid", key);
@@ -54,25 +86,42 @@ export async function fetchWeatherForTeam(abbreviation: string): Promise<Weather
     return null;
   }
 
-  const data = body as OwmWeatherResponse;
-  const tempF = data.main?.temp;
+  const data = body as OwmForecastResponse;
+  const list = data.list;
+  if (!list || list.length === 0) {
+    return null;
+  }
+
+  // Pick the forecast entry whose `dt` is closest to the kickoff timestamp.
+  let best = list[0];
+  let bestDiff = Math.abs((best.dt ?? 0) - kickoffSeconds);
+  for (let i = 1; i < list.length; i++) {
+    const entry = list[i];
+    const diff = Math.abs((entry.dt ?? 0) - kickoffSeconds);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = entry;
+    }
+  }
+
+  const tempF = best.main?.temp;
   if (typeof tempF !== "number" || !Number.isFinite(tempF)) {
     return null;
   }
 
-  const rawWind = data.wind?.speed;
+  const rawWind = best.wind?.speed;
   const windMph = typeof rawWind === "number" && Number.isFinite(rawWind) ? rawWind : 0;
 
   const desc =
-    typeof data.weather?.[0]?.description === "string" && data.weather[0].description.length > 0
-      ? data.weather[0].description.replace(/\b\w/g, (c) => c.toUpperCase())
-      : typeof data.weather?.[0]?.main === "string"
-        ? data.weather[0].main
+    typeof best.weather?.[0]?.description === "string" && best.weather[0].description.length > 0
+      ? best.weather[0].description.replace(/\b\w/g, (c) => c.toUpperCase())
+      : typeof best.weather?.[0]?.main === "string"
+        ? best.weather[0].main.replace(/\b\w/g, (c) => c.toUpperCase())
         : "Conditions";
 
   return {
     tempF: Math.round(tempF),
-    windMph: Math.round(windMph),
+    windMph: Math.max(0, Math.round(windMph)),
     condition: desc,
   };
 }

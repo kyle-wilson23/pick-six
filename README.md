@@ -55,7 +55,9 @@ The app lives under `src/` (App Router).
 - **Done ✅** **Epic 1 — Foundations:** email/password auth, rolling sessions, invite signup, protected routes, CSRF baseline for cookie-backed mutations.
 - **Done ✅** **Epic 2 — League setup:** create league/season, email invites, pre-season init, admin league list/settings, participant home (roster + rules), admin as participant, first competition week (incl. mid-season), production-ready league delete.
 
-**Next 🚀** **Epic 3 — Weekly picks:** NFL schedule model, odds snapshot, jailed team logic, pick API/validation, deadlines, picks UI, and related stories — see [`sprint-status.yaml`](_bmad-output/implementation-artifacts/sprint-status.yaml) and the PRD.
+- **Done ✅** **Epic 3 — Weekly picks:** NFL schedule sync, live odds snapshot, jailed team logic, pick API with deadline enforcement, picks UI (matchup cards with odds/spread/weather/roof), and kickoff-time weather forecasts.
+
+**Next 🚀** **Epic 4 — Admin picks tools:** pick submission status dashboard, submit/change picks on behalf of participants (including post-deadline overrides), admin audit trail, and jailed team verification view.
 
 **Stack 📦** Next.js / React, MUI; email, odds, and backend choices live in the architecture doc.
 

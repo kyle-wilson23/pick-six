@@ -59,6 +59,7 @@ validation-rules:
 
 - [ ] **Story Status Updated:** Story Status set to "review"
 - [ ] **Sprint Status Updated:** Sprint status updated to "review" (when sprint tracking is used)
+- [ ] **Post-review closure reminder:** When code review is complete and sprint-status is moved to `done`, update this story file's `Status:` line to `done` in the same edit — never update one without the other.
 - [ ] **Quality Gates Passed:** All quality checks and validations completed successfully
 - [ ] **No HALT Conditions:** No blocking issues or incomplete work remaining
 - [ ] **User Communication Ready:** Implementation summary prepared for user review

@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-05-24'  # Story 3-10 → done
+  last_updated: '2026-05-24'  # Epic 3 retrospective → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -74,7 +74,7 @@ development_status:
   3-9-nfl-schedule-provider-spike-and-sync: done
   # 3-10 depends on 3-9 (real kickoffAt per game) + 3-6 weather client; upgrades current-conditions to kickoff-time forecast
   3-10-kickoff-time-weather-forecast: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   epic-4: backlog
   4-1-pick-submission-status-dashboard: backlog

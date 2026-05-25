@@ -1,5 +1,5 @@
 ---
-description: Avoid passing functions/components from Server to Client Components (Next.js App Router); MUI + next/link patterns with valid HTML/a11y
+description: Avoid passing functions/components from Server to Client Components (Next.js App Router); MUI sx callbacks, next/link, and when to add "use client"
 globs: src/**/*.tsx
 alwaysApply: false
 ---
@@ -10,9 +10,29 @@ alwaysApply: false
 
 `Functions cannot be passed directly to Client Components unless you explicitly expose it by marking it with "use server"`
 
-This appears when a **Server Component** passes a **function** (including another **React component** type like `next/link`’s `Link`) across the server/client boundary—often as `component={Link}`, `icon={SomeIcon}`, or a callback. React serializes Server Component output; **functions are not serializable**.
+This appears when a **Server Component** passes a **function** across the server/client boundary—often as `component={Link}`, `icon={SomeIcon}`, an event handler, or an **`sx` theme callback**. React serializes Server Component output; **functions are not serializable**.
 
-**MUI is involved often:** Many `@mui/material` components are **Client Components**. A **Server** `page.tsx` / `layout.tsx` that does `import Link from "next/link"` and `<Button component={Link} href="…">` passes the `Link` **constructor** into MUI’s client `Button` → error.
+**MUI is involved often:** Most `@mui/material` exports are **Client Components**. Common triggers:
+
+- `component={Link}` on `Button`, `ListItemButton`, etc.
+- **`sx` with a function:** `sx={{ bgcolor: (t) => t.palette.success.main }}` on `Chip`, `Paper`, `Stack`, etc.
+- Passing a **component type** as a prop: `component={Link}`, `slots={{ root: SomeComponent }}`
+
+A Server `page.tsx` that renders `<Chip sx={{ color: (t) => … }} />` directly (or via a server-only wrapper) still crosses the boundary at the MUI client leaf → same error.
+
+## When to add `"use client"` (proactive checklist)
+
+Before shipping a new component under `src/components/**`, ask:
+
+1. **Does it import from `@mui/material` (or `@mui/icons-material`) and use function props?** → **`"use client"`** on that file.
+2. **Does it use MUI `sx` / `style` with `(theme) => …` callbacks?** → **`"use client"`** (even if the UI is “display only”).
+3. **Does it use `component={Link}` or any `component={…}` prop?** → **`"use client"`**.
+4. **Does it need hooks, browser APIs, or event handlers?** → **`"use client"`**.
+5. **Is it a pure presentational wrapper with only serializable props and no MUI function props?** → can stay a **Server Component** (rare with MUI in this project).
+
+**Default for MUI leaf components in this codebase:** if the file imports MUI and styles with theme-aware `sx`, start with **`"use client"`** unless you have verified every prop is serializable. Examples: `PickStatusBanner`, `AdminSubmissionCard`, `AdminLeagueRowActions`.
+
+Keep **pages** (`src/app/**/page.tsx`) as **Server Components** when they need `auth()`, Prisma, or server data fetching; extract styled MUI subtrees into client components and pass **strings / numbers / plain objects** only.
 
 ## Rules of thumb
 
@@ -20,15 +40,17 @@ This appears when a **Server Component** passes a **function** (including anothe
 2. **Do not** fix this by marking random helpers with `"use server"`—that is for **Server Actions**, not for fixing this error.
 3. **Prefer one interactive root** for “button that navigates”: MUI **`Button`** with **`component={Link}`** and **`href`** renders as a **single `<a>`** with button styles—valid HTML, one tab stop, screen readers see a link. Match existing components: `LoginLinkButton`, `DashboardLinkButton`.
 4. **Avoid** `<Link><Button></Button></Link>` (nested interactive / confusing roles) **unless** the inner control is explicitly **non-interactive** (e.g. `component="span"`)—even then, prefer a **client** `Button component={Link}` for consistency and clarity.
-5. **Same boundary rule for other props:** do not pass component references or inline functions from a Server Component into imported **Client** children; **colocate** that subtree in a Client Component or pass **serializable props only** (strings, numbers, plain objects).
+5. **Same boundary rule for all function props:** do not pass component references, event handlers, or **`sx` theme callbacks** from a Server Component into imported **Client** children; **colocate** that subtree in a Client Component or use **serializable-only** styling on the server (plain strings, no `(theme) =>`).
 
 ## Quick reference
 
 | Situation | Approach |
 |-----------|----------|
 | Server page needs a styled link-as-button | Small **`"use client"`** wrapper; **`Button component={Link} href={...}`** inside it |
+| Server page needs MUI status chip/card with theme `sx` | **`"use client"`** component (e.g. `AdminSubmissionCard`); page passes serializable props |
 | Need `auth()` on the server + nav buttons | Server `page.tsx` calls **`auth()`**; render **client** link buttons as siblings/children |
 | Passing icons into client MUI | Prefer **`"use client"`** parent for that subtree, or pass **element rendered inside client**—not `Icon={MdFoo}` from server if it crosses incorrectly |
+| “Display only” MUI with `sx={(t) => …}` | Still needs **`"use client"`** — not interactive, but function props still cross the boundary |
 
 ## Anti-patterns
 
@@ -40,11 +62,19 @@ import Button from "@mui/material/Button";
 ```
 
 ```tsx
+// ❌ Server Component — theme callback in sx crosses into client MUI Chip
+import Chip from "@mui/material/Chip";
+// <Chip sx={{ bgcolor: (t) => `${t.palette.success.main}26` }} />
+```
+
+```tsx
 // ❌ Wrapping real <button> inside <a> (invalid / a11y issues)
 // <Link href="…"><Button type="button">…</Button></Link>
 ```
 
-## Preferred pattern (client module)
+## Preferred patterns
+
+**Client module for navigation + MUI:**
 
 ```tsx
 "use client";
@@ -61,4 +91,38 @@ export function ExampleNavButton() {
 }
 ```
 
-Keep server data flow **down** via props (strings/ids); keep **navigation + MUI + Link** in client wrappers when `component={Link}` is required.
+**Client module for themed MUI display (no interactivity required):**
+
+```tsx
+"use client";
+
+import Chip from "@mui/material/Chip";
+
+export function StatusChip({ submitted }: { submitted: boolean }) {
+  const key = submitted ? "success" : "warning";
+  return (
+    <Chip
+      label={submitted ? "SUBMITTED" : "PENDING"}
+      size="small"
+      sx={{
+        bgcolor: (t) => `${t.palette[key].main}26`,
+        color: (t) => t.palette[key].main,
+      }}
+    />
+  );
+}
+```
+
+**Server page stays server — passes data only:**
+
+```tsx
+// page.tsx — no "use client"
+import { StatusChip } from "@/components/admin/StatusChip";
+
+export default async function Page() {
+  const rows = await loadRows();
+  return rows.map((r) => <StatusChip key={r.id} submitted={r.submitted} />);
+}
+```
+
+Keep server data flow **down** via props (strings/ids/booleans/plain objects); keep **MUI + Link + theme `sx`** in client wrappers.

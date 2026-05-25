@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-05-24'  # Epic 3 retrospective → done
+  last_updated: '2026-05-24'  # Story 4.1 → done (code review)
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -76,8 +76,8 @@ development_status:
   3-10-kickoff-time-weather-forecast: done
   epic-3-retrospective: done
 
-  epic-4: backlog
-  4-1-pick-submission-status-dashboard: backlog
+  epic-4: in-progress
+  4-1-pick-submission-status-dashboard: done
   4-2-submit-or-change-pick-on-behalf-including-post-deadline: backlog
   4-3-audit-trail-for-overrides-and-admin-pick-visibility: backlog
   4-4-jailed-team-verification-view: backlog

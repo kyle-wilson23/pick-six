@@ -15,6 +15,14 @@ export function AdminLeagueRowActions({ leagueId }: AdminLeagueRowActionsProps) 
         size="small"
         variant="outlined"
         component={Link}
+        href={`/leagues/${leagueId}/admin`}
+      >
+        Admin dashboard
+      </Button>
+      <Button
+        size="small"
+        variant="outlined"
+        component={Link}
         href={`/leagues/${leagueId}/settings`}
       >
         Settings

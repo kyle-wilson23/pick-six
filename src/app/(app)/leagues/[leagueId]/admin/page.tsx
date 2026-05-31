@@ -4,8 +4,10 @@ import { LeagueMembershipRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { auth } from "@/lib/auth";
+import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import {
   buildSubmissionStatus,
   type AdminSubmissionStatusPayload,
@@ -45,13 +47,18 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   }
 
   let payload: AdminSubmissionStatusPayload;
+  let overrideData: Awaited<ReturnType<typeof buildAdminOverrideData>>;
   try {
-    payload = await buildSubmissionStatus({ leagueId });
+    [payload, overrideData] = await Promise.all([
+      buildSubmissionStatus({ leagueId }),
+      buildAdminOverrideData({ leagueId }),
+    ]);
   } catch {
     notFound();
   }
 
   const { weekNumber, participants } = payload;
+  const showOverrideUi = overrideData != null && weekNumber != null;
 
   return (
     <Stack
@@ -82,6 +89,13 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
         <Typography variant="body2" color="text.secondary">
           No participants found for this league.
         </Typography>
+      ) : showOverrideUi && overrideData != null ? (
+        <AdminDashboardClient
+          leagueId={leagueId}
+          weekNumber={overrideData.weekNumber}
+          participants={participants}
+          overrideData={overrideData}
+        />
       ) : (
         <Stack spacing={1.5} aria-label="Participant submission status">
           {participants.map((participant) => (

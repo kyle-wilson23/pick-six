@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -12,6 +13,7 @@ export type AdminSubmissionCardProps = {
     antiJailedBonus: boolean;
     updatedAt: string;
   } | null;
+  onOverride?: () => void;
 };
 
 const ANTI_JAILED_BONUS_LABEL = "+2";
@@ -35,7 +37,7 @@ function buildDetailLine(
   return `${teamLabel} — submitted ${formatSubmittedTimestamp(submittedPick.updatedAt)}`;
 }
 
-export function AdminSubmissionCard({ displayName, submittedPick }: AdminSubmissionCardProps) {
+export function AdminSubmissionCard({ displayName, submittedPick, onOverride }: AdminSubmissionCardProps) {
   const isSubmitted = submittedPick != null;
   const statusLabel = isSubmitted ? "SUBMITTED" : "PENDING";
   const paletteKey = isSubmitted ? "success" : "warning";
@@ -65,6 +67,13 @@ export function AdminSubmissionCard({ displayName, submittedPick }: AdminSubmiss
         <Typography variant="body2" color="text.secondary">
           {buildDetailLine(submittedPick)}
         </Typography>
+        {onOverride != null && (
+          <Stack direction="row" justifyContent="flex-end">
+            <Button variant="outlined" size="small" onClick={onOverride}>
+              {submittedPick == null ? "Override pick" : "Change pick"}
+            </Button>
+          </Stack>
+        )}
       </Stack>
     </Paper>
   );

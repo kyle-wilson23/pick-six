@@ -74,6 +74,8 @@ describe("resolveJailedTeam", () => {
       expect(r.result.jailedTeamId).toBe("tC");
       expect(r.result.resolvedBy).toBe("MONEYLINE");
       expect(r.result.randomSeed).toBeUndefined();
+      expect(r.result.audit.afterMoneyline).toEqual([]);
+      expect(r.result.audit.afterSpread).toEqual([]);
     }
   });
 
@@ -103,6 +105,8 @@ describe("resolveJailedTeam", () => {
     if (r.ok) {
       expect(r.result.jailedTeamId).toBe("tC");
       expect(r.result.resolvedBy).toBe("SPREAD");
+      expect(r.result.audit.afterMoneyline).toHaveLength(2);
+      expect(r.result.audit.afterSpread).toEqual([]);
     }
   });
 
@@ -130,6 +134,8 @@ describe("resolveJailedTeam", () => {
     if (r1.ok) {
       expect(r1.result.resolvedBy).toBe("RANDOM");
       expect(r1.result.randomSeed).toBe("00deadbeefcafebabe" + "0".repeat(40));
+      expect(r1.result.audit.afterMoneyline.length).toBeGreaterThan(0);
+      expect(r1.result.audit.afterSpread.length).toBeGreaterThan(0);
       const ids = ["team-aaa", "team-bbb"].sort();
       const idx = deterministicIndexFromSeed(r1.result.randomSeed!, 2);
       expect(r1.result.jailedTeamId).toBe(ids[idx]);

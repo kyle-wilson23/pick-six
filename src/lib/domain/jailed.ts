@@ -52,6 +52,10 @@ export type JailedResult = {
     candidates: JailedCandidateAudit[];
     winningMoneylineAmerican: number;
     tieLevel: "MONEYLINE" | "SPREAD" | "RANDOM";
+    /** Candidates that tied for best moneyline (≥1 when tieLevel is SPREAD or RANDOM). */
+    afterMoneyline: JailedCandidateAudit[];
+    /** Candidates that tied for best spread after ML stage (≥1 when tieLevel is RANDOM). */
+    afterSpread: JailedCandidateAudit[];
   };
 };
 
@@ -136,6 +140,8 @@ export function resolveJailedTeam(
         candidates,
         winningMoneylineAmerican: bestMl,
         tieLevel: "MONEYLINE",
+        afterMoneyline: [],
+        afterSpread: [],
       }),
     };
   }
@@ -152,6 +158,8 @@ export function resolveJailedTeam(
         candidates,
         winningMoneylineAmerican: bestMl,
         tieLevel: "SPREAD",
+        afterMoneyline: afterMl,
+        afterSpread: [],
       }),
     };
   }
@@ -179,6 +187,8 @@ export function resolveJailedTeam(
       candidates,
       winningMoneylineAmerican: bestMl,
       tieLevel: "RANDOM",
+      afterMoneyline: afterMl,
+      afterSpread,
     }),
   };
 }
@@ -204,6 +214,8 @@ function buildResult(
     candidates: JailedCandidateAudit[];
     winningMoneylineAmerican: number;
     tieLevel: "MONEYLINE" | "SPREAD" | "RANDOM";
+    afterMoneyline?: JailedCandidateAudit[];
+    afterSpread?: JailedCandidateAudit[];
   },
 ): JailedResult {
   return {
@@ -216,6 +228,8 @@ function buildResult(
       candidates: args.candidates,
       winningMoneylineAmerican: args.winningMoneylineAmerican,
       tieLevel: args.tieLevel,
+      afterMoneyline: args.afterMoneyline ?? [],
+      afterSpread: args.afterSpread ?? [],
     },
   };
 }

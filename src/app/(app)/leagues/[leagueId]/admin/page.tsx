@@ -6,10 +6,12 @@ import { notFound } from "next/navigation";
 
 import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
 import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
+import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import { getAuditLog } from "@/lib/admin/get-audit-log";
+import { getJailedVerification } from "@/lib/admin/get-jailed-verification";
 import {
   buildSubmissionStatus,
   type AdminSubmissionStatusPayload,
@@ -61,6 +63,8 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
     notFound();
   }
 
+  const jailedVerification = await getJailedVerification({ leagueId }).catch(() => null);
+
   const { weekNumber, participants } = payload;
   const showOverrideUi = overrideData != null && weekNumber != null;
 
@@ -111,6 +115,11 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
           ))}
         </Stack>
       )}
+
+      <AdminJailedVerification
+        verification={jailedVerification}
+        weekNumber={weekNumber}
+      />
 
       <AdminAuditLog entries={auditEntries} />
     </Stack>

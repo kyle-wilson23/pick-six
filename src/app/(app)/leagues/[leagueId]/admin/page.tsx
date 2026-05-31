@@ -4,10 +4,12 @@ import { LeagueMembershipRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
 import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
+import { getAuditLog } from "@/lib/admin/get-audit-log";
 import {
   buildSubmissionStatus,
   type AdminSubmissionStatusPayload,
@@ -48,10 +50,12 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
 
   let payload: AdminSubmissionStatusPayload;
   let overrideData: Awaited<ReturnType<typeof buildAdminOverrideData>>;
+  let auditEntries: Awaited<ReturnType<typeof getAuditLog>>;
   try {
-    [payload, overrideData] = await Promise.all([
+    [payload, overrideData, auditEntries] = await Promise.all([
       buildSubmissionStatus({ leagueId }),
       buildAdminOverrideData({ leagueId }),
+      getAuditLog({ leagueId }),
     ]);
   } catch {
     notFound();
@@ -107,6 +111,8 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
           ))}
         </Stack>
       )}
+
+      <AdminAuditLog entries={auditEntries} />
     </Stack>
   );
 }

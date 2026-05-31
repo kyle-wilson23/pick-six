@@ -9,6 +9,7 @@ const mockPickFindMany = vi.fn();
 const mockPickFindUnique = vi.fn();
 const mockPickUpsert = vi.fn();
 const mockSeasonUpdateMany = vi.fn();
+const mockAuditLogCreate = vi.fn();
 
 function createTx() {
   return {
@@ -22,6 +23,7 @@ function createTx() {
       findUnique: mockPickFindUnique,
       upsert: mockPickUpsert,
     },
+    auditLogEntry: { create: mockAuditLogCreate },
   };
 }
 
@@ -99,11 +101,28 @@ describe("submitPickOnBehalf", () => {
         create: expect.objectContaining({ leagueMembershipId: "target-mem" }),
       }),
     );
+    expect(mockAuditLogCreate).toHaveBeenCalledOnce();
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: {
+        leagueId: "league-1",
+        adminMembershipId: "admin-mem",
+        targetMembershipId: "target-mem",
+        nflWeekNumber: 1,
+        beforeTeamId: null,
+        afterTeamId: "team-home",
+        beforeAntiJailed: null,
+        afterAntiJailed: false,
+      },
+    });
   });
 
   it("updates existing pick → 200", async () => {
     setupHappyPath();
-    mockPickFindUnique.mockResolvedValue({ id: "pick-existing" });
+    mockPickFindUnique.mockResolvedValue({
+      id: "pick-existing",
+      teamId: "team-away",
+      antiJailedBonus: false,
+    });
     mockPickUpsert.mockResolvedValue({
       id: "pick-existing",
       teamId: "team-away",
@@ -119,6 +138,19 @@ describe("submitPickOnBehalf", () => {
     });
 
     expect(result).toMatchObject({ type: "ok", status: 200 });
+    expect(mockAuditLogCreate).toHaveBeenCalledOnce();
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: {
+        leagueId: "league-1",
+        adminMembershipId: "admin-mem",
+        targetMembershipId: "target-mem",
+        nflWeekNumber: 1,
+        beforeTeamId: "team-away",
+        afterTeamId: "team-away",
+        beforeAntiJailed: false,
+        afterAntiJailed: false,
+      },
+    });
   });
 
   it("rejects duplicate team from another week → 409 DUPLICATE_TEAM", async () => {
@@ -132,6 +164,7 @@ describe("submitPickOnBehalf", () => {
       status: 409,
       code: "DUPLICATE_TEAM",
     });
+    expect(mockAuditLogCreate).not.toHaveBeenCalled();
   });
 
   it("rejects jailed team direct pick → 400 JAILED_TEAM_PICK", async () => {
@@ -147,6 +180,7 @@ describe("submitPickOnBehalf", () => {
       status: 400,
       code: "JAILED_TEAM_PICK",
     });
+    expect(mockAuditLogCreate).not.toHaveBeenCalled();
   });
 
   it("allows anti-jailed path (opponent of jailed team) → 201", async () => {
@@ -159,6 +193,19 @@ describe("submitPickOnBehalf", () => {
     });
 
     expect(result).toMatchObject({ type: "ok", status: 201 });
+    expect(mockAuditLogCreate).toHaveBeenCalledOnce();
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: {
+        leagueId: "league-1",
+        adminMembershipId: "admin-mem",
+        targetMembershipId: "target-mem",
+        nflWeekNumber: 1,
+        beforeTeamId: null,
+        afterTeamId: "team-opponent",
+        beforeAntiJailed: null,
+        afterAntiJailed: true,
+      },
+    });
   });
 
   it("succeeds post-deadline (no deadline check)", async () => {
@@ -172,6 +219,19 @@ describe("submitPickOnBehalf", () => {
     const result = await submitPickOnBehalf(createTx() as never, baseArgs);
 
     expect(result).toMatchObject({ type: "ok", status: 201 });
+    expect(mockAuditLogCreate).toHaveBeenCalledOnce();
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: {
+        leagueId: "league-1",
+        adminMembershipId: "admin-mem",
+        targetMembershipId: "target-mem",
+        nflWeekNumber: 1,
+        beforeTeamId: null,
+        afterTeamId: "team-home",
+        beforeAntiJailed: null,
+        afterAntiJailed: false,
+      },
+    });
   });
 
   it("returns 404 when target membership not in league", async () => {
@@ -185,6 +245,7 @@ describe("submitPickOnBehalf", () => {
       status: 404,
       code: "MEMBER_NOT_FOUND",
     });
+    expect(mockAuditLogCreate).not.toHaveBeenCalled();
   });
 
   it("returns 400 when week not in competition window", async () => {
@@ -216,5 +277,18 @@ describe("submitPickOnBehalf", () => {
         where: { id: "season-1", firstCompetitionWeekLockedAt: null },
       }),
     );
+    expect(mockAuditLogCreate).toHaveBeenCalledOnce();
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: {
+        leagueId: "league-1",
+        adminMembershipId: "admin-mem",
+        targetMembershipId: "target-mem",
+        nflWeekNumber: 1,
+        beforeTeamId: null,
+        afterTeamId: "team-home",
+        beforeAntiJailed: null,
+        afterAntiJailed: false,
+      },
+    });
   });
 });

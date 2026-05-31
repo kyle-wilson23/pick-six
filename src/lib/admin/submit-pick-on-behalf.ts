@@ -42,7 +42,7 @@ export async function submitPickOnBehalf(
     antiJailedBonus: boolean;
   },
 ): Promise<SubmitPickOnBehalfErr | SubmitPickOnBehalfOk> {
-  const { leagueId, targetMembershipId, teamId, nflWeekNumber, antiJailedBonus } = args;
+  const { leagueId, adminMembershipId, targetMembershipId, teamId, nflWeekNumber, antiJailedBonus } = args;
 
   const season = await resolveCurrentSeasonForLeague(tx.season, leagueId);
   if (!season) {
@@ -155,7 +155,7 @@ export async function submitPickOnBehalf(
         nflWeekNumber,
       },
     },
-    select: { id: true },
+    select: { id: true, teamId: true, antiJailedBonus: true },
   });
   const isCreate = !existing;
 
@@ -192,6 +192,20 @@ export async function submitPickOnBehalf(
       antiJailedBonus: true,
       createdAt: true,
       updatedAt: true,
+    },
+  });
+
+  // Story 4.3: immutable audit log in same transaction (NFR14, NFR50). No update/delete API exists.
+  await tx.auditLogEntry.create({
+    data: {
+      leagueId,
+      adminMembershipId,
+      targetMembershipId,
+      nflWeekNumber,
+      beforeTeamId: existing?.teamId ?? null,
+      afterTeamId: teamId,
+      beforeAntiJailed: existing?.antiJailedBonus ?? null,
+      afterAntiJailed: antiJailedBonus,
     },
   });
 

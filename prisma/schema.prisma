@@ -52,6 +52,7 @@ model League {
   seasons     Season[]
   memberships LeagueMembership[]
   invitations Invitation[]
+  auditLogEntries AuditLogEntry[]
 
   @@map("leagues")
 }
@@ -90,6 +91,8 @@ model LeagueMembership {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   picks  Pick[]
+  auditEntriesAsAdmin  AuditLogEntry[] @relation("AuditAdmin")
+  auditEntriesAsTarget AuditLogEntry[] @relation("AuditTarget")
 
   @@unique([userId, leagueId])
   @@map("league_memberships")
@@ -107,6 +110,8 @@ model Team {
   awayGames           NflGame[]           @relation("NflGameAwayTeam")
   picks               Pick[]
   nflWeekJailedAsTeam NflWeekJailedTeam[]
+  auditEntriesAsBefore AuditLogEntry[] @relation("AuditBeforeTeam")
+  auditEntriesAsAfter  AuditLogEntry[] @relation("AuditAfterTeam")
 
   @@map("teams")
 }
@@ -228,6 +233,35 @@ model Pick {
   @@unique([leagueMembershipId, seasonId, teamId])
   @@index([seasonId])
   @@map("picks")
+}
+
+/// Immutable record of every admin pick override (Story 4.3; FR32, NFR14, NFR50).
+/// Written in the same transaction as the pick upsert inside submitPickOnBehalf.
+/// No UPDATE/DELETE endpoints exist — tamper-evidence at the application layer.
+model AuditLogEntry {
+  id                 String   @id @default(cuid())
+  leagueId           String   @map("league_id")
+  adminMembershipId  String   @map("admin_membership_id")
+  targetMembershipId String   @map("target_membership_id")
+  nflWeekNumber      Int      @map("nfl_week_number")
+  /// Null if this override created the pick for the week (no prior pick existed)
+  beforeTeamId       String?  @map("before_team_id")
+  afterTeamId        String   @map("after_team_id")
+  /// Null if this override created the pick (no prior pick existed)
+  beforeAntiJailed   Boolean? @map("before_anti_jailed")
+  afterAntiJailed    Boolean  @map("after_anti_jailed")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  league           League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  /// onDelete: Restrict — no member removal stories in MVP; prevents orphan audit rows
+  adminMembership  LeagueMembership @relation("AuditAdmin", fields: [adminMembershipId], references: [id], onDelete: Restrict)
+  targetMembership LeagueMembership @relation("AuditTarget", fields: [targetMembershipId], references: [id], onDelete: Restrict)
+  /// Team relations — Restrict: team rows are global and never deleted in MVP
+  beforeTeam       Team?            @relation("AuditBeforeTeam", fields: [beforeTeamId], references: [id], onDelete: Restrict)
+  afterTeam        Team             @relation("AuditAfterTeam", fields: [afterTeamId], references: [id], onDelete: Restrict)
+
+  @@index([leagueId, createdAt(sort: Desc)])
+  @@map("audit_log_entries")
 }
 
 // Auth.js Prisma adapter tables (NFR11). With Credentials + JWT session strategy, `Session` rows

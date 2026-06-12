@@ -11,6 +11,11 @@ import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
 
 export const PICK_DEADLINE_PASSED_USER_MESSAGE = "The pick window for this week has closed.";
 
+/** FR26: Thursday pick-window close time — 8:10 PM in the league business timezone. */
+export const THURSDAY_LOCK_HOUR = 20;
+/** FR26: Thursday pick-window close time — 8:10 PM in the league business timezone. */
+export const THURSDAY_LOCK_MINUTE = 10;
+
 /**
  * Earliest `kickoffAt` in the week, or `null` if any are missing or the list is empty.
  */
@@ -56,7 +61,7 @@ export function lockByThursdayDefaultUtc(firstKickoff: Date, timeZone: string): 
 
   const thYmd = formatInTimeZone(cursor, timeZone, "yyyy-MM-dd");
   const [ty, tm, td] = thYmd.split("-").map((x) => parseInt(x, 10) as number);
-  return fromZonedTime(new Date(ty, tm - 1, td, 20, 10, 0), timeZone);
+  return fromZonedTime(new Date(ty, tm - 1, td, THURSDAY_LOCK_HOUR, THURSDAY_LOCK_MINUTE, 0), timeZone);
 }
 
 /**

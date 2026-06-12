@@ -4,6 +4,8 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
 
 import {
+  THURSDAY_LOCK_HOUR,
+  THURSDAY_LOCK_MINUTE,
   computePickDeadlineUtc,
   getFirstKickoffUtc,
   isNflWeekPickWindowClosedByDeadline,
@@ -17,6 +19,25 @@ const TZ = LEAGUE_BUSINESS_TIMEZONE;
 function easternLocal(y: number, m0: number, d: number, h: number, min: number): Date {
   return fromZonedTime(new Date(y, m0, d, h, min, 0), TZ);
 }
+
+describe("Thursday lockout constants", () => {
+  it("THURSDAY_LOCK_HOUR and THURSDAY_LOCK_MINUTE encode 8:10 PM (FR26)", () => {
+    expect(THURSDAY_LOCK_HOUR).toBe(20);
+    expect(THURSDAY_LOCK_MINUTE).toBe(10);
+  });
+
+  it("lockByThursdayDefaultUtc returns a date at THURSDAY_LOCK_HOUR:THURSDAY_LOCK_MINUTE in the league timezone", () => {
+    // Oct 10 2024 is a Thursday
+    const thuKickoff = easternLocal(2024, 9, 10, 20, 20);
+    const lock = lockByThursdayDefaultUtc(thuKickoff, TZ);
+    const h = parseInt(formatInTimeZone(lock, TZ, "H"), 10);
+    const min = parseInt(formatInTimeZone(lock, TZ, "m"), 10);
+    expect(h).not.toBeNaN();
+    expect(min).not.toBeNaN();
+    expect(h).toBe(THURSDAY_LOCK_HOUR);
+    expect(min).toBe(THURSDAY_LOCK_MINUTE);
+  });
+});
 
 describe("getFirstKickoffUtc", () => {
   it("returns the minimum kickoff and null when any is missing or empty", () => {

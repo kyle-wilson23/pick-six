@@ -1,6 +1,6 @@
 # Pre-Epic 5: Extract Thursday Lockout Constant
 
-Status: ready-for-dev
+Status: done
 
 ## Context
 
@@ -44,16 +44,26 @@ The Thursday 8:10 PM pick deadline cutoff is represented as magic literals `20` 
 
 ## Tasks / Subtasks
 
-- [ ] **Add named constants to `src/lib/domain/pick-deadline.ts`**
-  - [ ] Add `export const THURSDAY_LOCK_HOUR = 20;`
-  - [ ] Add `export const THURSDAY_LOCK_MINUTE = 10;`
-  - [ ] Replace all inline `20` and `10` literal usages in the file with the constants
+- [x] **Add named constants to `src/lib/domain/pick-deadline.ts`**
+  - [x] Add `export const THURSDAY_LOCK_HOUR = 20;`
+  - [x] Add `export const THURSDAY_LOCK_MINUTE = 10;`
+  - [x] Replace all inline `20` and `10` literal usages in the file with the constants
 
-- [ ] **Update test file(s) for `pick-deadline.ts`**
-  - [ ] Import `THURSDAY_LOCK_HOUR` and `THURSDAY_LOCK_MINUTE`
-  - [ ] Replace hardcoded hour/minute literals used in Thursday deadline time construction with the named imports
+- [x] **Update test file(s) for `pick-deadline.ts`**
+  - [x] Import `THURSDAY_LOCK_HOUR` and `THURSDAY_LOCK_MINUTE`
+  - [x] Replace hardcoded hour/minute literals used in Thursday deadline time construction with the named imports
 
-- [ ] **`npm test` green; `npm run lint`; `npm run build`** before closing
+- [x] **`npm test` green; `npm run lint`; `npm run build`** before closing
+
+### Review Findings
+
+- [x] [Review][Patch] JSDoc missing on `THURSDAY_LOCK_MINUTE` [`src/lib/domain/pick-deadline.ts`]
+- [x] [Review][Patch] Test fixture date not documented as Thursday [`src/lib/domain/pick-deadline.test.ts`]
+- [x] [Review][Patch] `parseInt` NaN guard missing before value assertions [`src/lib/domain/pick-deadline.test.ts`]
+- [x] [Review][Defer] Magic `0` for seconds survives in `lockByThursdayDefaultUtc` call site [`src/lib/domain/pick-deadline.ts`] — deferred, pre-existing
+- [x] [Review][Defer] No DST-boundary test for Thursday lockout hour [`src/lib/domain/pick-deadline.test.ts`] — deferred, pre-existing gap
+- [x] [Review][Defer] Exported constants create implicit public API with no deprecation path [`src/lib/domain/pick-deadline.ts`] — deferred, pre-existing design concern
+- [x] [Review][Defer] Kickoff exactly at `THURSDAY_LOCK_HOUR:THURSDAY_LOCK_MINUTE` untested in `computePickDeadlineUtc` [`src/lib/domain/pick-deadline.test.ts`] — deferred, pre-existing gap
 
 ## Dev Notes
 
@@ -71,3 +81,34 @@ The values `20` and `10` are correct. This is a naming change only — no change
 - [Source: `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: code review of 3-5", item: "Thursday 8:10 PM cutoff is a magic literal, not a named constant"]
 - [Source: `_bmad-output/implementation-artifacts/epic-3-retro-2026-05-24.md` — Action item 3: "Extract magic literal to a named export in `pick-deadline.ts`"]
 - [Source: `_bmad-output/implementation-artifacts/epic-4-retro-2026-06-11.md` — Critical path item before Epic 5]
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Pure rename refactor touching exactly two files as scoped:
+
+1. Added `THURSDAY_LOCK_HOUR = 20` and `THURSDAY_LOCK_MINUTE = 10` as named exports immediately after `PICK_DEADLINE_PASSED_USER_MESSAGE` in `pick-deadline.ts`.
+2. Replaced the `new Date(ty, tm - 1, td, 20, 10, 0)` literal in `lockByThursdayDefaultUtc` with the named constants.
+3. In the test file: imported both constants; added a new `"Thursday lockout constants"` describe block with two tests — one asserting the constant values directly (20 / 10), and one asserting that `lockByThursdayDefaultUtc` returns a time whose hour/minute in the league timezone matches the constants. This exercises the import in a meaningful way and locks in the expected values.
+4. No other callers modified; no behavior change; no new dependencies.
+
+### Completion Notes
+
+- ✅ `THURSDAY_LOCK_HOUR` and `THURSDAY_LOCK_MINUTE` exported from `pick-deadline.ts`
+- ✅ Magic literals `20, 10` replaced with named constants in `lockByThursdayDefaultUtc`
+- ✅ Constants imported and used in test via two new tests in `"Thursday lockout constants"` describe block
+- ✅ `npm test` — 234 tests pass (8 in pick-deadline.test.ts, up from 6), 0 failures
+- ✅ `npm run build` — passes cleanly
+- ✅ `npm run lint` — 2 pre-existing errors in `AdminPickOverrideDialog.tsx` (confirmed present before this story); no new errors introduced
+
+## File List
+
+- `src/lib/domain/pick-deadline.ts` (modified)
+- `src/lib/domain/pick-deadline.test.ts` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — status tracking)
+- `_bmad-output/implementation-artifacts/pre-epic-5-thursday-lockout-constant.md` (modified — this file)
+
+## Change Log
+
+- 2026-06-11: Extracted `THURSDAY_LOCK_HOUR` and `THURSDAY_LOCK_MINUTE` constants from magic literals in `pick-deadline.ts`; added constant-verification tests to `pick-deadline.test.ts`

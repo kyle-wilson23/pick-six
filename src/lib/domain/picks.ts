@@ -48,10 +48,15 @@ export type JailedAndLineupInput = {
   games: NflGameTeamPair[];
 };
 
+export const ANTI_JAILED_UNAVAILABLE_MESSAGE =
+  "The anti-jailed bonus is unavailable this week. Please contact your league admin if you need assistance submitting your pick.";
+
 /**
- * - Rejects picking the jailed team.
- * - If `antiJailedBonus` is true, `teamId` must be the jailed team’s opponent that week.
+ * - Rejects picking the jailed team unconditionally.
  * - `teamId` must be home or away in some game in `games`.
+ * - If `antiJailedBonus` is true, also requires the jailed team to have an opponent in `games`
+ *   and `teamId` must be that opponent. Returns `JAILED_NOT_IN_WEEK_GAMES` if no opponent is
+ *   found (data anomaly — jailed team absent from schedule after computation ran).
  */
 export function validateJailedLineupAndBonus(input: JailedAndLineupInput): { ok: true } | { ok: false; error: PickDomainError } {
   const { teamId, jailedTeamId, antiJailedBonus, games } = input;
@@ -76,25 +81,27 @@ export function validateJailedLineupAndBonus(input: JailedAndLineupInput): { ok:
     };
   }
 
-  const opponent = getOpponentOfJailedInWeek(jailedTeamId, games);
-  if (!opponent.ok) {
-    return {
-      ok: false,
-      error: {
-        code: "JAILED_NOT_IN_WEEK_GAMES",
-        message: "Jailed team is not on the schedule for this week (data may be out of date).",
-      },
-    };
-  }
+  if (antiJailedBonus) {
+    const opponent = getOpponentOfJailedInWeek(jailedTeamId, games);
+    if (!opponent.ok) {
+      return {
+        ok: false,
+        error: {
+          code: "JAILED_NOT_IN_WEEK_GAMES",
+          message: ANTI_JAILED_UNAVAILABLE_MESSAGE,
+        },
+      };
+    }
 
-  if (antiJailedBonus && teamId !== opponent.opponentTeamId) {
-    return {
-      ok: false,
-      error: {
-        code: "ANTI_JAILED_BONUS_INVALID",
-        message: "Anti-jailed bonus only applies when picking the jailed team’s opponent in that game.",
-      },
-    };
+    if (teamId !== opponent.opponentTeamId) {
+      return {
+        ok: false,
+        error: {
+          code: "ANTI_JAILED_BONUS_INVALID",
+          message: "Anti-jailed bonus only applies when picking the jailed team’s opponent in that game.",
+        },
+      };
+    }
   }
 
   return { ok: true };

@@ -97,6 +97,13 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **TOCTOU role check outside transaction** — `route.ts:78-90`. Admin role fetched before the transaction opens; a membership role change between the check and the write would not be caught. Pre-existing pattern across all admin routes; fix when the codebase adopts a middleware-level role guard.
 - **`allSeasonPicks` over-fetch in `buildAdminOverrideData`** — `build-admin-override-data.ts:101-108`. Loads all picks for the season across all participants. For large leagues late in an 18-week season this grows O(participants × weeks). Add pagination or a `leagueId`-scoped filter joining through `LeagueMembership` if performance degrades.
 
+## Deferred from: code review of pre-epic-5-fix-jailed-lineup-bonus-bug (2026-06-11)
+
+- **Third new test redundant to AC3 / bye-scenario precondition mismatch** — `picks.test.ts`. The "rejects direct jailed pick even when jailed team has no game in week games" test exercises the `teamId === jailedTeamId` guard (unchanged code). AC3 requires a jailed-team-in-game precondition; existing pre-diff tests already cover that. The new test adds bye-scenario confidence but is not a strict AC3 test.
+- **Test assertions on exact user-facing copy are brittle** — `picks.test.ts`. New tests assert the full 140-char message string inline rather than against a named constant. Fragile to copywriting; revisit when a shared error-constants module is introduced.
+- **`JAILED_NOT_IN_WEEK_GAMES` error code name semantically misleading** — `picks.ts:85`. Code name implies a general schedule-data anomaly but is now only reachable on the `antiJailedBonus: true` path. Rename (e.g. `ANTI_JAILED_UNAVAILABLE`) when the API error contract can be versioned and all callers updated.
+- **No determinism test for `getOpponentOfJailedInWeek` with duplicate game rows** — `picks.ts`. If `jailedTeamId` appeared in two games (data corruption), the helper returns the first match silently. Test should live in `getOpponentOfJailedInWeek`'s own unit coverage, not in the validator.
+
 ## Deferred from: code review of 4-4-jailed-team-verification-view (2026-05-30)
 
 - **`jailed.randomSeed` (DB) vs `audit.randomSeed` (JSON) not cross-validated** — `src/lib/admin/get-jailed-verification.ts`. The route returns `jailed.randomSeed` (the DB column) rather than `audit.randomSeed` (the value inside `auditJson`). If they diverge, the FR52 audit display shows the wrong seed. Fix when FR52 audit compliance is hardened.

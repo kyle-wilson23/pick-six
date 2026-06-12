@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ANTI_JAILED_UNAVAILABLE_MESSAGE,
   getOpponentOfJailedInWeek,
   teamPlaysInWeek,
   validateDuplicateTeamAcrossSeason,
@@ -11,6 +12,8 @@ const GAMES = [
   { homeTeamId: "h1", awayTeamId: "a1" },
   { homeTeamId: "h2", awayTeamId: "a2" },
 ];
+
+const JAILED_TEAM_ON_BYE_ID = "jailed-on-bye";
 
 describe("teamPlaysInWeek", () => {
   it("is true for home and away", () => {
@@ -80,6 +83,62 @@ describe("validateJailedLineupAndBonus", () => {
       teamId: "lonely",
       jailedTeamId: "h1",
       antiJailedBonus: false,
+      games: GAMES,
+    });
+    expect(r).toMatchObject({ ok: false, error: { code: "TEAM_NOT_IN_WEEK" } });
+  });
+
+  it("allows regular pick when jailed team has no game in week games", () => {
+    const r = validateJailedLineupAndBonus({
+      teamId: "a1",
+      jailedTeamId: JAILED_TEAM_ON_BYE_ID,
+      antiJailedBonus: false,
+      games: GAMES,
+    });
+    expect(r).toEqual({ ok: true });
+  });
+
+  it("rejects anti-jailed pick when jailed team has no game in week games", () => {
+    const r = validateJailedLineupAndBonus({
+      teamId: "a1",
+      jailedTeamId: JAILED_TEAM_ON_BYE_ID,
+      antiJailedBonus: true,
+      games: GAMES,
+    });
+    expect(r).toMatchObject({
+      ok: false,
+      error: {
+        code: "JAILED_NOT_IN_WEEK_GAMES",
+        message: ANTI_JAILED_UNAVAILABLE_MESSAGE,
+      },
+    });
+  });
+
+  it("rejects direct jailed pick even when jailed team has no game in week games", () => {
+    const r = validateJailedLineupAndBonus({
+      teamId: JAILED_TEAM_ON_BYE_ID,
+      jailedTeamId: JAILED_TEAM_ON_BYE_ID,
+      antiJailedBonus: false,
+      games: GAMES,
+    });
+    expect(r).toMatchObject({ ok: false, error: { code: "JAILED_TEAM_PICK" } });
+  });
+
+  it("rejects jailed team pick even when antiJailedBonus is true", () => {
+    const r = validateJailedLineupAndBonus({
+      teamId: "h1",
+      jailedTeamId: "h1",
+      antiJailedBonus: true,
+      games: GAMES,
+    });
+    expect(r).toMatchObject({ ok: false, error: { code: "JAILED_TEAM_PICK" } });
+  });
+
+  it("rejects pick with antiJailedBonus true when teamId is not in games", () => {
+    const r = validateJailedLineupAndBonus({
+      teamId: "lonely",
+      jailedTeamId: "h1",
+      antiJailedBonus: true,
       games: GAMES,
     });
     expect(r).toMatchObject({ ok: false, error: { code: "TEAM_NOT_IN_WEEK" } });

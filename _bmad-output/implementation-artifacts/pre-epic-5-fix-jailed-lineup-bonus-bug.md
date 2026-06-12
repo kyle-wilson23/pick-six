@@ -1,6 +1,6 @@
 # Pre-Epic 5: Fix validateJailedLineupAndBonus Unconditional Opponent Lookup
 
-Status: ready-for-dev
+Status: done
 
 ## Context
 
@@ -54,17 +54,17 @@ The opponent lookup is only semantically needed when `antiJailedBonus: true`. Fo
 
 ## Tasks / Subtasks
 
-- [ ] **Fix `validateJailedLineupAndBonus` in `src/lib/domain/picks.ts`**
-  - [ ] Gate `getOpponentOfJailedInWeek` call behind `if (antiJailedBonus)` check
-  - [ ] When `antiJailedBonus: false`: only check `teamId !== jailedTeamId`; skip opponent lookup entirely
-  - [ ] When `antiJailedBonus: true`: retain existing logic — opponent lookup required, return `JAILED_NOT_IN_WEEK_GAMES` if no opponent found
+- [x] **Fix `validateJailedLineupAndBonus` in `src/lib/domain/picks.ts`**
+  - [x] Gate `getOpponentOfJailedInWeek` call behind `if (antiJailedBonus)` check
+  - [x] When `antiJailedBonus: false`: only check `teamId !== jailedTeamId`; skip opponent lookup entirely
+  - [x] When `antiJailedBonus: true`: retain existing logic — opponent lookup required, return `JAILED_NOT_IN_WEEK_GAMES` if no opponent found
 
-- [ ] **Update `src/lib/domain/picks.test.ts`** (or wherever `validateJailedLineupAndBonus` tests live)
-  - [ ] Add test: regular pick (`antiJailedBonus: false`) succeeds when jailed team has a bye (no opponent in week games)
-  - [ ] Add test: anti-jailed pick (`antiJailedBonus: true`) fails with `JAILED_NOT_IN_WEEK_GAMES` when jailed team has a bye
-  - [ ] Verify existing tests for direct jailed pick rejection still pass
+- [x] **Update `src/lib/domain/picks.test.ts`** (or wherever `validateJailedLineupAndBonus` tests live)
+  - [x] Add test: regular pick (`antiJailedBonus: false`) succeeds when jailed team has a bye (no opponent in week games)
+  - [x] Add test: anti-jailed pick (`antiJailedBonus: true`) fails with `JAILED_NOT_IN_WEEK_GAMES` when jailed team has a bye
+  - [x] Verify existing tests for direct jailed pick rejection still pass
 
-- [ ] **`npm test` green; `npm run lint`; `npm run build`** before closing
+- [x] **`npm test` green; `npm run lint`; `npm run build`** before closing
 
 ## Dev Notes
 
@@ -150,3 +150,42 @@ Both callers benefit from the fix with no changes required at the call sites. Th
 - [Source: `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: code review of 4-2", item: `validateJailedLineupAndBonus blocks all picks when jailed team has a bye`]
 - [Source: `src/lib/domain/picks.ts` — function to fix]
 - [Source: Epic 4 retrospective 2026-06-11 — elevated to critical path pre-Epic 5]
+
+### Review Findings
+
+- [x] [Review][Patch] Extract `JAILED_NOT_IN_WEEK_GAMES` message to a named constant — duplicated verbatim across `picks.ts` and `picks.test.ts`; a copy change requires two edits [`src/lib/domain/picks.ts:86-88`, `src/lib/domain/picks.test.ts:hunk`]
+- [x] [Review][Patch] Update JSDoc on `validateJailedLineupAndBonus` to document the new contract — the comment does not reflect the conditional opponent-lookup behavior [`src/lib/domain/picks.ts:~42-55`]
+- [x] [Review][Patch] Add test: `antiJailedBonus: true` + `teamId` not in `games` — pins guard order (`TEAM_NOT_IN_WEEK` fires before `antiJailedBonus` block) against future refactors [`src/lib/domain/picks.test.ts`]
+- [x] [Review][Patch] Add test: `antiJailedBonus: true` + `teamId === jailedTeamId` — pins that `JAILED_TEAM_PICK` takes priority over the anti-jailed block regardless of `antiJailedBonus` flag [`src/lib/domain/picks.test.ts`]
+- [x] [Review][Patch] Extract `"jailed-on-bye"` fixture string to a named constant — repeated 3× across new tests; a rename requires 3 manual edits [`src/lib/domain/picks.test.ts:hunk`]
+- [x] [Review][Defer] Third new test redundant to AC3 coverage [`src/lib/domain/picks.test.ts:hunk`] — deferred, pre-existing; existing tests already satisfy AC3 (in-game scenario); this test adds bye-scenario confidence but contradicts the AC3 precondition ("normal operation")
+- [x] [Review][Defer] Test assertions on exact user-facing message copy are brittle to copywriting changes [`src/lib/domain/picks.test.ts`] — deferred, pre-existing; test philosophy convention question for broader test suite
+- [x] [Review][Defer] `JAILED_NOT_IN_WEEK_GAMES` error code name now semantically misleading after scope narrowing [`src/lib/domain/picks.ts:85`] — deferred, pre-existing; renaming touches API error contract and all callers; out of scope for this story
+- [x] [Review][Defer] No determinism test for `getOpponentOfJailedInWeek` when jailed team appears in multiple games [`src/lib/domain/picks.ts:hunk`] — deferred, pre-existing; belongs in `getOpponentOfJailedInWeek` unit coverage, not this validator
+
+## Dev Agent Record
+
+### Agent Model Used
+
+claude-4.6-sonnet-medium-thinking (Cursor agent)
+
+### Debug Log References
+
+### Implementation Plan
+
+Gated `getOpponentOfJailedInWeek` behind `if (antiJailedBonus)` so regular picks no longer fail when the jailed team is absent from week games (data anomaly / bye scenario). Direct jailed pick rejection remains first in the function. Updated `JAILED_NOT_IN_WEEK_GAMES` message to participant-friendly copy per AC2.
+
+### Completion Notes List
+
+- `validateJailedLineupAndBonus` now skips opponent lookup for regular picks; anti-jailed path unchanged except for improved error message.
+- Added 3 unit tests: regular pick succeeds with jailed-on-bye, anti-jailed fails with user-facing message, direct jailed pick still rejected on bye.
+- 230 tests pass (was 227 + 3 new). `npm run build` green. `npm run lint` reports 2 pre-existing errors in `AdminPickOverrideDialog.tsx` (unrelated to this story).
+
+### File List
+
+- `src/lib/domain/picks.ts` (modified)
+- `src/lib/domain/picks.test.ts` (modified)
+
+### Change Log
+
+- 2026-06-11: Gate jailed opponent lookup on `antiJailedBonus`; improve `JAILED_NOT_IN_WEEK_GAMES` message; add bye-week domain tests.

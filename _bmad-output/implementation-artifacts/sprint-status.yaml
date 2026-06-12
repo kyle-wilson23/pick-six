@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-05-30'  # Story 4.4 → done
+  last_updated: '2026-06-11'  # Epic 4 retrospective → done; pre-epic-5 blocking items added
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -76,12 +76,16 @@ development_status:
   3-10-kickoff-time-weather-forecast: done
   epic-3-retrospective: done
 
-  epic-4: in-progress
+  epic-4: done
   4-1-pick-submission-status-dashboard: done
   4-2-submit-or-change-pick-on-behalf-including-post-deadline: done
   4-3-audit-trail-for-overrides-and-admin-pick-visibility: done
   4-4-jailed-team-verification-view: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
+
+  # Pre-Epic 5 blocking items — must be done before epic-5 moves to in-progress
+  pre-epic-5-fix-jailed-lineup-bonus-bug: ready-for-dev
+  pre-epic-5-thursday-lockout-constant: ready-for-dev
 
   epic-5: backlog
   5-1-ingest-game-results-and-finalize-games: backlog

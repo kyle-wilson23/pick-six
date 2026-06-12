@@ -13,6 +13,12 @@ export const apiSportsGameNestedSchema = z.object({
   stage: z.string().optional(),
   week: z.union([z.string(), z.number()]).optional(),
   date: apiSportsGameDateSchema.optional(),
+  status: z
+    .object({
+      short: z.string().optional(),
+      long: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const apiSportsTeamSideSchema = z.object({
@@ -29,6 +35,12 @@ export const apiSportsGameRowSchema = z.object({
       away: apiSportsTeamSideSchema,
     })
     .passthrough(),
+  scores: z
+    .object({
+      home: z.object({ total: z.number().nullable().optional() }).optional(),
+      away: z.object({ total: z.number().nullable().optional() }).optional(),
+    })
+    .optional(),
 });
 
 export const apiSportsGamesEnvelopeSchema = z.object({

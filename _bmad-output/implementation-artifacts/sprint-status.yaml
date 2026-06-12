@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-06-11'  # pre-epic-5-thursday-lockout-constant → done (code review)
+  last_updated: '2026-06-11'  # epic-5 in-progress; 5-1 done after code review + patches
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -87,8 +87,8 @@ development_status:
   pre-epic-5-fix-jailed-lineup-bonus-bug: done
   pre-epic-5-thursday-lockout-constant: done
 
-  epic-5: backlog
-  5-1-ingest-game-results-and-finalize-games: backlog
+  epic-5: in-progress
+  5-1-ingest-game-results-and-finalize-games: done
   5-2-calculate-weekly-points-1-vs-2-anti-jailed: backlog
   5-3-mnf-completion-and-tuesday-standings-update: backlog
   5-4-live-leaderboard: backlog

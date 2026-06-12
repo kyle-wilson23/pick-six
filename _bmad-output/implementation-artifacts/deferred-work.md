@@ -2,6 +2,13 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 5-1-ingest-game-results-and-finalize-games (2026-06-11)
+
+- **N+1 queries in sync transaction** — `src/lib/nfl/sync-nfl-results.ts`. Per-game `findUnique` + `update` inside a single transaction (up to ~288 calls for a full-season 18-week sync). Correctness is unaffected; risk is transaction timeout on very large syncs. Refactor to batch-fetch all matching `NflGame` rows up front and reduce round-trips when quota or performance becomes a concern.
+- **Duplicate `readJsonObject` helper in both route files** — `src/app/api/admin/nfl/sync-results/route.ts` and `src/app/api/admin/nfl/games/[gameId]/result/route.ts`. Same 8-line function copied verbatim. Extract to a shared `src/lib/request-utils.ts` (or similar) when a third admin route needs it.
+- **NaN/Infinity not explicitly guarded in `getGameWinner`** — `src/lib/domain/scoring.ts:15`. The `== null` check does not catch `NaN`. Upstream `parseScoreTotal` guards against non-finite values, so runtime risk is low; add an explicit `Number.isFinite` guard if `getGameWinner` gains call sites outside the mapped-results pipeline.
+- **`skipped` count conflates team-match failures with DB-not-found** — `src/lib/nfl/sync-nfl-results.ts`. The `skipped` field in the sync response counts both mapping-level errors (unknown team names) and DB-level misses (no matching `NflGame` row). Split into separate counters (`skippedUnknownTeam`, `skippedNotFound`) when sync observability becomes important.
+
 ## Deferred from: code review of story 3-3-jailed-team-identification-and-tie-breakers (2026-04-25)
 
 - **Picks-lock guard on jailed POST (done in 3.5)** — `computeAndPersistNflWeekJailed` returns **409** `WEEK_PICK_WINDOW_CLOSED` when the pick window is past the story 3.5 deadline (schedule + kickoff data present). A future option: `force=true` + audit (Epic 4 / one-line follow-up) if recompute is ever required after lock.

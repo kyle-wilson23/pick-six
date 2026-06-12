@@ -116,16 +116,29 @@ model Team {
   @@map("teams")
 }
 
+enum NflGameStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINAL
+  CANCELLED
+
+  @@map("nfl_game_status")
+}
+
 /// NFL regular-season game (global — keyed by `nfl_season_year`, not `Season.id`).
 model NflGame {
-  id            String   @id @default(cuid())
-  nflSeasonYear Int      @map("nfl_season_year")
-  weekNumber    Int      @map("week_number")
-  homeTeamId    String   @map("home_team_id")
-  awayTeamId    String   @map("away_team_id")
-  kickoffAt     DateTime @map("kickoff_at") @db.Timestamptz
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id            String         @id @default(cuid())
+  nflSeasonYear Int            @map("nfl_season_year")
+  weekNumber    Int            @map("week_number")
+  homeTeamId    String         @map("home_team_id")
+  awayTeamId    String         @map("away_team_id")
+  kickoffAt     DateTime       @map("kickoff_at") @db.Timestamptz
+  status        NflGameStatus  @default(SCHEDULED) @map("status")
+  homeScore     Int?           @map("home_score")
+  awayScore     Int?           @map("away_score")
+  finalizedAt   DateTime?      @map("finalized_at") @db.Timestamptz
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
   homeTeam  Team              @relation("NflGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
   awayTeam  Team              @relation("NflGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
@@ -134,6 +147,7 @@ model NflGame {
   /// Natural key for idempotent schedule upserts (Story 3.9). Stable `id` preserves `NflGameOddsLine` FKs on refresh.
   @@unique([nflSeasonYear, weekNumber, homeTeamId, awayTeamId])
   @@index([nflSeasonYear, weekNumber])
+  @@index([nflSeasonYear, weekNumber, status])
   @@map("nfl_games")
 }
 

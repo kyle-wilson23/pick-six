@@ -1,0 +1,72 @@
+{
+  "get": "games",
+  "parameters": { "league": "1", "season": "2026" },
+  "errors": [],
+  "results": 4,
+  "response": [
+    {
+      "game": {
+        "id": 20001,
+        "stage": "Regular Season",
+        "week": "1",
+        "status": { "short": "FT", "long": "Finished" }
+      },
+      "teams": {
+        "home": { "id": 1, "name": "Kansas City Chiefs", "code": "KC" },
+        "away": { "id": 2, "name": "Buffalo Bills", "code": "BUF" }
+      },
+      "scores": {
+        "home": { "total": 27 },
+        "away": { "total": 20 }
+      }
+    },
+    {
+      "game": {
+        "id": 20002,
+        "stage": "Regular Season",
+        "week": "1",
+        "status": { "short": "Q3", "long": "Third Quarter" }
+      },
+      "teams": {
+        "home": { "id": 3, "name": "Chicago Bears", "code": "CHI" },
+        "away": { "id": 4, "name": "Cincinnati Bengals", "code": "CIN" }
+      },
+      "scores": {
+        "home": { "total": 14 },
+        "away": { "total": 10 }
+      }
+    },
+    {
+      "game": {
+        "id": 20003,
+        "stage": "Regular Season",
+        "week": "1",
+        "status": { "short": "NS", "long": "Not Started" }
+      },
+      "teams": {
+        "home": { "id": 5, "name": "Dallas Cowboys", "code": "DAL" },
+        "away": { "id": 6, "name": "Philadelphia Eagles", "code": "PHI" }
+      },
+      "scores": {
+        "home": { "total": null },
+        "away": { "total": null }
+      }
+    },
+    {
+      "game": {
+        "id": 20004,
+        "stage": "Regular Season",
+        "week": "1",
+        "status": { "short": "FT", "long": "Finished" }
+      },
+      "teams": {
+        "home": { "name": "Unknown Home Team", "code": "UNK" },
+        "away": { "name": "Unknown Away Team", "code": "ZZZ" }
+      },
+      "scores": {
+        "home": { "total": 3 },
+        "away": { "total": 0 }
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getGameWinner } from "./scoring";
+import { getGameWinner, scorePickOutcome } from "./scoring";
 
 const HOME = "team-home";
 const AWAY = "team-away";
@@ -36,5 +36,53 @@ describe("getGameWinner", () => {
     expect(() =>
       getGameWinner({ homeTeamId: HOME, awayTeamId: AWAY, homeScore: 10, awayScore: null as unknown as number }),
     ).toThrow("getGameWinner requires non-null scores");
+  });
+});
+
+describe("scorePickOutcome", () => {
+  const homeWin = getGameWinner({ homeTeamId: HOME, awayTeamId: AWAY, homeScore: 27, awayScore: 20 });
+  const awayWin = getGameWinner({ homeTeamId: HOME, awayTeamId: AWAY, homeScore: 14, awayScore: 21 });
+  const tie = getGameWinner({ homeTeamId: HOME, awayTeamId: AWAY, homeScore: 24, awayScore: 24 });
+
+  it("returns WIN with 1 point for standard win", () => {
+    expect(scorePickOutcome({ teamId: HOME, antiJailedBonus: false }, homeWin)).toEqual({
+      outcome: "WIN",
+      pointsEarned: 1,
+    });
+  });
+
+  it("returns WIN with 2 points for anti-jailed win", () => {
+    expect(scorePickOutcome({ teamId: AWAY, antiJailedBonus: true }, awayWin)).toEqual({
+      outcome: "WIN",
+      pointsEarned: 2,
+    });
+  });
+
+  it("returns LOSS with 0 points for standard loss", () => {
+    expect(scorePickOutcome({ teamId: AWAY, antiJailedBonus: false }, homeWin)).toEqual({
+      outcome: "LOSS",
+      pointsEarned: 0,
+    });
+  });
+
+  it("returns LOSS with 0 points for anti-jailed loss", () => {
+    expect(scorePickOutcome({ teamId: AWAY, antiJailedBonus: true }, homeWin)).toEqual({
+      outcome: "LOSS",
+      pointsEarned: 0,
+    });
+  });
+
+  it("returns TIE with 0 points when antiJailedBonus is false", () => {
+    expect(scorePickOutcome({ teamId: HOME, antiJailedBonus: false }, tie)).toEqual({
+      outcome: "TIE",
+      pointsEarned: 0,
+    });
+  });
+
+  it("returns TIE with 0 points when antiJailedBonus is true", () => {
+    expect(scorePickOutcome({ teamId: HOME, antiJailedBonus: true }, tie)).toEqual({
+      outcome: "TIE",
+      pointsEarned: 0,
+    });
   });
 });

@@ -23,3 +23,25 @@ export function getGameWinner(game: {
   }
   return { kind: "tie", teamIds: [homeTeamId, awayTeamId] };
 }
+
+export type ScoredPickResult = {
+  outcome: "WIN" | "LOSS" | "TIE";
+  pointsEarned: number;
+};
+
+/**
+ * Pure function — no I/O. Caller must call getGameWinner first.
+ * Determines the point outcome for a single pick against a finalized game.
+ */
+export function scorePickOutcome(
+  pick: { teamId: string; antiJailedBonus: boolean },
+  gameResult: GameWinnerResult,
+): ScoredPickResult {
+  if (gameResult.kind === "tie") {
+    return { outcome: "TIE", pointsEarned: 0 };
+  }
+  if (gameResult.winnerId === pick.teamId) {
+    return { outcome: "WIN", pointsEarned: pick.antiJailedBonus ? 2 : 1 };
+  }
+  return { outcome: "LOSS", pointsEarned: 0 };
+}

@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { assertAuthorizedForNflOddsOps } from "@/lib/nfl/authorize-odds-admin";
+import { readJsonObject } from "@/lib/request-utils";
 
 const patchSchema = z
   .object({
@@ -17,15 +18,6 @@ const patchSchema = z
   .refine((d) => d.status !== "FINAL" || (d.homeScore != null && d.awayScore != null), {
     message: "homeScore and awayScore are required when status is FINAL",
   });
-
-async function readJsonObject(request: NextRequest): Promise<{ ok: true; value: unknown } | { ok: false }> {
-  try {
-    const value: unknown = await request.json();
-    return { ok: true, value };
-  } catch {
-    return { ok: false };
-  }
-}
 
 /**
  * PATCH `/api/admin/nfl/games/[gameId]/result` — manual game result override (Story 5.1).
@@ -57,13 +49,10 @@ export async function PATCH(
 
   const bodyRead = await readJsonObject(request);
   if (!bodyRead.ok) {
-    return NextResponse.json(
-      { error: { code: "VALIDATION_ERROR", message: "Invalid JSON body" } },
-      { status: 400 },
-    );
+    return bodyRead.response;
   }
 
-  const parsed = patchSchema.safeParse(bodyRead.value);
+  const parsed = patchSchema.safeParse(bodyRead.body);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return NextResponse.json(
@@ -91,7 +80,7 @@ export async function PATCH(
     status: NflGameStatus;
     homeScore?: number | null;
     awayScore?: number | null;
-    finalizedAt?: Date;
+    finalizedAt?: Date | null;
   } = { status: newStatus };
 
   if (newStatus === "CANCELLED") {

@@ -7,8 +7,8 @@ import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { assertAuthorizedForNflOddsOps } from "@/lib/nfl/authorize-odds-admin";
-import { syncNflResultsFromApiSports } from "@/lib/nfl/sync-nfl-results";
 import { readJsonObject } from "@/lib/request-utils";
+import { scoreNflWeek } from "@/lib/scoring/score-nfl-week";
 
 function isOddsAutomationRequest(request: NextRequest): boolean {
   const secret = process.env.ODDS_SNAPSHOT_SECRET?.trim();
@@ -17,12 +17,12 @@ function isOddsAutomationRequest(request: NextRequest): boolean {
 }
 
 const bodySchema = z.object({
-  nflSeasonYear: z.coerce.number().int().min(2000).max(2100).optional(),
-  weekNumber: z.coerce.number().int().min(1).max(18).optional(),
+  nflSeasonYear: z.coerce.number().int().min(2020).max(2050).optional(),
+  weekNumber: z.coerce.number().int().min(1).max(18),
 });
 
 /**
- * POST `/api/admin/nfl/sync-results` — update `NflGame` result fields from API-Sports NFL (Story 5.1).
+ * POST `/api/admin/scoring/score-week` — score picks for a finalized NFL week (Story 5.2).
  * Auth: league admin session or `Authorization: Bearer ODDS_SNAPSHOT_SECRET`.
  */
 export async function POST(request: NextRequest) {
@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
       ? bodyRead.body
       : {};
 
+  if (!("weekNumber" in rawBody) || rawBody.weekNumber == null) {
+    return NextResponse.json(
+      { error: { code: "VALIDATION_ERROR", message: "weekNumber is required" } },
+      { status: 400 },
+    );
+  }
+
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
@@ -58,26 +65,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = process.env.API_SPORTS_KEY?.trim();
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "API_SPORTS_NOT_CONFIGURED",
-          message: "API_SPORTS_KEY is not set on the server",
-        },
-      },
-      { status: 503 },
-    );
-  }
-
   const nflSeasonYear = parsed.data.nflSeasonYear ?? getCurrentNflSeasonYear();
-  const weekNumber = parsed.data.weekNumber;
-  const result = await syncNflResultsFromApiSports(prisma, {
-    apiKey,
-    nflSeasonYear,
-    weekNumber,
-  });
+  const { weekNumber } = parsed.data;
+
+  const result = await scoreNflWeek(prisma, { nflSeasonYear, weekNumber });
 
   if (!result.ok) {
     return NextResponse.json(
@@ -93,8 +84,8 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     nflSeasonYear,
-    weekNumber: weekNumber ?? null,
-    synced: result.synced,
+    weekNumber,
+    scored: result.scored,
     skipped: result.skipped,
   });
 }

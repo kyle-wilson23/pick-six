@@ -116,6 +116,14 @@ model Team {
   @@map("teams")
 }
 
+enum PickOutcome {
+  WIN
+  LOSS
+  TIE
+
+  @@map("pick_outcome")
+}
+
 enum NflGameStatus {
   SCHEDULED
   IN_PROGRESS
@@ -234,8 +242,11 @@ model Pick {
   teamId             String   @map("team_id")
   nflWeekNumber      Int      @map("nfl_week_number")
   /// **FR20 / FR54:** 2-point underdog when true and rules match; scoring is Epic 5.
-  antiJailedBonus    Boolean  @default(false) @map("anti_jailed_bonus")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  antiJailedBonus    Boolean      @default(false) @map("anti_jailed_bonus")
+  outcome            PickOutcome? @map("outcome")
+  pointsEarned       Int?         @map("points_earned")
+  scoredAt           DateTime?    @map("scored_at") @db.Timestamptz
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   season           Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)

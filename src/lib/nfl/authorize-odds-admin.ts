@@ -5,6 +5,16 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
 /**
+ * Returns true if the request carries the `ODDS_SNAPSHOT_SECRET` bearer token
+ * (automation/cron callers). Used by admin NFL + scoring route handlers.
+ */
+export function isOddsAutomationRequest(request: NextRequest): boolean {
+  const secret = process.env.ODDS_SNAPSHOT_SECRET?.trim();
+  if (!secret) return false;
+  return request.headers.get("authorization") === `Bearer ${secret}`;
+}
+
+/**
  * Global NFL admin routes (**odds** Story 3.2, **schedule sync** Story 3.9): only **league admins**
  * (any league) or **`Authorization: Bearer ODDS_SNAPSHOT_SECRET`** (automation) (NFR16 pattern).
  */

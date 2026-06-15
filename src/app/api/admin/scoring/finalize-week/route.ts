@@ -6,16 +6,20 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
-import { assertAuthorizedForNflOddsOps, isOddsAutomationRequest } from "@/lib/nfl/authorize-odds-admin";
+import {
+  assertAuthorizedForNflOddsOps,
+  isOddsAutomationRequest,
+} from "@/lib/nfl/authorize-odds-admin";
 import { readJsonObject } from "@/lib/request-utils";
-import { scoreNflWeek } from "@/lib/scoring/score-nfl-week";
+import { finalizeNflWeek } from "@/lib/scoring/finalize-nfl-week";
+
 const bodySchema = z.object({
   nflSeasonYear: z.coerce.number().int().min(2020).max(2050).optional(),
   weekNumber: z.coerce.number().int().min(1).max(18),
 });
 
 /**
- * POST `/api/admin/scoring/score-week` — score picks for a finalized NFL week (Story 5.2).
+ * POST `/api/admin/scoring/finalize-week` — finalize an NFL week and score picks when all games are resolved (Story 5.3).
  * Auth: league admin session or `Authorization: Bearer ODDS_SNAPSHOT_SECRET`.
  */
 export async function POST(request: NextRequest) {
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
   const nflSeasonYear = parsed.data.nflSeasonYear ?? getCurrentNflSeasonYear();
   const { weekNumber } = parsed.data;
 
-  const result = await scoreNflWeek(prisma, { nflSeasonYear, weekNumber });
+  const result = await finalizeNflWeek(prisma, { nflSeasonYear, weekNumber });
 
   if (!result.ok) {
     return NextResponse.json(
@@ -78,6 +82,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     nflSeasonYear,
     weekNumber,
+    allGamesFinalized: result.allGamesFinalized,
+    finalCount: result.finalCount,
+    notFinalCount: result.notFinalCount,
     scored: result.scored,
     skipped: result.skipped,
   });

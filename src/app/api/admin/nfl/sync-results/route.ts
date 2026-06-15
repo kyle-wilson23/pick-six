@@ -6,16 +6,9 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
-import { assertAuthorizedForNflOddsOps } from "@/lib/nfl/authorize-odds-admin";
+import { assertAuthorizedForNflOddsOps, isOddsAutomationRequest } from "@/lib/nfl/authorize-odds-admin";
 import { syncNflResultsFromApiSports } from "@/lib/nfl/sync-nfl-results";
 import { readJsonObject } from "@/lib/request-utils";
-
-function isOddsAutomationRequest(request: NextRequest): boolean {
-  const secret = process.env.ODDS_SNAPSHOT_SECRET?.trim();
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 const bodySchema = z.object({
   nflSeasonYear: z.coerce.number().int().min(2000).max(2100).optional(),
   weekNumber: z.coerce.number().int().min(1).max(18).optional(),

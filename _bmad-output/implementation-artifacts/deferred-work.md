@@ -175,6 +175,14 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **React key on nflWeekNumber** — `src/components/history/PickHistoryTable.tsx`. DB unique constraint on `(leagueMembershipId, seasonId, nflWeekNumber)` prevents duplicates in practice; exposing a stable DB row ID in `PickHistoryEntry` would be safer if the constraint is ever relaxed.
 - **Unhandled Prisma rejections propagate as 500** — `src/app/(app)/leagues/[leagueId]/history/page.tsx` and `src/lib/scoring/get-personal-pick-history.ts`. No try/catch; DB errors surface as unhandled Next.js 500. Pre-existing pattern across all server components; address when a global error-handling layer is introduced.
 
+## Deferred from: Epic 5 retrospective (2026-06-16)
+
+- **`AdminPickOverrideDialog.tsx` pre-existing lint errors** — `src/components/admin/AdminPickOverrideDialog.tsx`. Two lint errors present since at least Story 4.2; noted as "pre-existing, unrelated" in completion notes for Stories 5.1–5.6 but never added here. Fix at start of next story that touches the admin panel. Success criteria: `npm run lint` reports zero errors project-wide.
+
+- **N+1 pattern in `score-nfl-week.ts` `$transaction` loop** — `src/lib/scoring/score-nfl-week.ts`. Per-pick sequential `tx.pick.update` calls inside a single transaction (up to `participants × weeks` calls per season scoring run). Same class as the `sync-nfl-results.ts` N+1 already documented above. At ≤14 participants MVP scale this is acceptable; batch with `updateMany` or a raw SQL update when participant count grows. Flag for Epic 7 hardening.
+
+- **Prisma `$transaction` counter double-counting footgun** — Counters (e.g. `scored`, `skipped`) declared in outer function scope and mutated inside the `$transaction` callback will accumulate across Prisma serialization-failure retries. Pattern fix: declare and return counters *inside* the transaction callback. First caught in Story 5.2 review; Story 5.3 corrected its implementation. Reference this item in future story specs that use `$transaction` with mutable counters.
+
 ## Deferred from: code review of 4-3-audit-trail-for-overrides-and-admin-pick-visibility (2026-05-30)
 
 - **No pagination/limit on `getAuditLog`** — `src/lib/admin/get-audit-log.ts:23`. Unbounded `findMany` fetches entire override history on every page load and API call. Add a `take` limit (e.g., 100) and cursor-based pagination when audit trails grow beyond a single season of overrides.

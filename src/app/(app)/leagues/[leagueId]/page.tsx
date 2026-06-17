@@ -97,6 +97,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
         </Typography>
         <Link href={`/leagues/${leagueId}/picks`}>Weekly picks</Link>
         <Link href={`/leagues/${leagueId}/standings`}>Standings</Link>
+        <Link href={`/leagues/${leagueId}/history`}>History</Link>
         <Link href={`/leagues/${leagueId}/rules`}>League rules</Link>
       </Stack>
 

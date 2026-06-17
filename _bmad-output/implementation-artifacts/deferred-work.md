@@ -158,6 +158,13 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **`user.email` may be null in OAuth scenarios; null displayName crashes `localeCompare`** — `src/lib/scoring/get-league-standings.ts:36`. Same as the roster page pattern. If email is non-nullable in the schema this is a non-issue; otherwise add `?? m.id` as ultimate fallback. Verify schema nullability before acting.
 - **All `leagueMembership` rows included in standings regardless of role** — `src/lib/scoring/get-league-standings.ts:22`. Non-playing roles (e.g., COMMISSIONER without picks) appear in standings with zeros. Story 2.6 made admin a full participant, but if non-participant roles exist they surface here. Filter by participant roles in a future story if the role model expands.
 
+## Deferred from: code review of 5-6-tuesday-reveal-vs-peer-visibility (2026-06-16)
+
+- **notFound() on unauthenticated session should redirect to sign-in** — `src/app/(app)/leagues/[leagueId]/results/page.tsx`. Same pre-existing pattern deferred from 5-5; fix when a unified auth-redirect middleware is introduced.
+- **Email-as-display-name fallback exposes PII to all league members** — `src/lib/scoring/get-league-peer-pick-history.ts`. `user.name ?? user.email` is spec-mandated but email is visible to every participant after a week reveals. Revisit when a user profile / display-name story is scoped.
+- **No `generateMetadata` on results page** — `src/app/(app)/leagues/[leagueId]/results/page.tsx`. Pre-existing pattern across all protected app pages; add when a global SEO/title pass is done.
+- **Test mocks do not validate Prisma WHERE clauses** — `src/lib/scoring/get-league-peer-pick-history.test.ts`. Mocked Prisma returns fixed data regardless of query params; a wrong `leagueId` or `seasonId` would pass all tests. Address with integration/e2e tests against a real DB or a Prisma mock that validates inputs.
+
 ## Deferred from: code review of 5-5-personal-pick-history (2026-06-16)
 
 - **scoredAt/outcome field inconsistency on partial DB writes** — `src/lib/scoring/get-personal-pick-history.ts`. PENDING is determined solely by `outcome == null`; if a future scoring bug sets `outcome` without `scored_at` (or vice versa), the display diverges from the intent. AC1 says "scoredAt IS NULL / outcome IS NULL" are equivalent indicators; add a CHECK constraint (see 5.2 deferred) or check both fields when data integrity is hardened.

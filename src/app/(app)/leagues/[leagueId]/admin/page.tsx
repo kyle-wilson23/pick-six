@@ -8,6 +8,7 @@ import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
 import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import { AdminEmailComposer } from "@/components/admin/AdminEmailComposer";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
+import { AdminReminderControls } from "@/components/admin/AdminReminderControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
@@ -68,6 +69,7 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
 
   const { weekNumber, participants } = payload;
   const showOverrideUi = overrideData != null && weekNumber != null;
+  const outstandingCount = participants.filter((p) => p.submittedPick === null).length;
 
   return (
     <Stack
@@ -127,6 +129,17 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
           Weekly Email
         </Typography>
         <AdminEmailComposer leagueId={leagueId} weekNumber={weekNumber} />
+      </Stack>
+
+      <Stack spacing={1}>
+        <Typography variant="h5" component="h2">
+          Reminder Emails
+        </Typography>
+        <AdminReminderControls
+          leagueId={leagueId}
+          weekNumber={weekNumber}
+          outstandingCount={outstandingCount}
+        />
       </Stack>
 
       <AdminAuditLog entries={auditEntries} />

@@ -68,13 +68,20 @@ export async function GET(
           weekNumber: data.weekNumber,
         },
       },
-      select: { bodyText: true, sentAt: true },
+      select: {
+        bodyText: true,
+        sentAt: true,
+        wednesdayReminderSentAt: true,
+        thursdayReminderSentAt: true,
+      },
     });
 
     return NextResponse.json({
       weekNumber: data.weekNumber,
       bodyText: config?.bodyText ?? null,
       sentAt: config?.sentAt?.toISOString() ?? null,
+      wednesdayReminderSentAt: config?.wednesdayReminderSentAt?.toISOString() ?? null,
+      thursdayReminderSentAt: config?.thursdayReminderSentAt?.toISOString() ?? null,
     });
   } catch (e) {
     if (e instanceof NoActiveWeekError) {
@@ -82,6 +89,8 @@ export async function GET(
         weekNumber: null,
         bodyText: null,
         sentAt: null,
+        wednesdayReminderSentAt: null,
+        thursdayReminderSentAt: null,
       });
     }
     if (e instanceof LeagueNotFoundError) {

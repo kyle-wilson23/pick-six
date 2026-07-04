@@ -246,6 +246,10 @@ model LeagueWeekEmailConfig {
   bodyText      String?   @map("body_text") @db.Text
   /// Populated when `sendTuesdayDigest` completes. Story 6.5 cron checks this to prevent duplicate sends.
   sentAt        DateTime? @map("sent_at") @db.Timestamptz
+  /// Set when `sendReminder` sends at least one Wednesday reminder for this week.
+  wednesdayReminderSentAt DateTime? @map("wednesday_reminder_sent_at") @db.Timestamptz
+  /// Set when `sendReminder` sends at least one Thursday reminder for this week.
+  thursdayReminderSentAt  DateTime? @map("thursday_reminder_sent_at") @db.Timestamptz
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

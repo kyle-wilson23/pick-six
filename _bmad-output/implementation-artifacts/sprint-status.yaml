@@ -87,7 +87,7 @@ development_status:
   pre-epic-5-fix-jailed-lineup-bonus-bug: done
   pre-epic-5-thursday-lockout-constant: done
 
-  epic-5: in-progress
+  epic-5: done
   5-1-ingest-game-results-and-finalize-games: done
   5-2-calculate-weekly-points-1-vs-2-anti-jailed: done
   5-3-mnf-completion-and-tuesday-standings-update: done

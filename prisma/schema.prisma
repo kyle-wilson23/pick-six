@@ -53,6 +53,7 @@ model League {
   memberships LeagueMembership[]
   invitations Invitation[]
   auditLogEntries AuditLogEntry[]
+  weekEmailConfigs LeagueWeekEmailConfig[]
 
   @@map("leagues")
 }
@@ -232,6 +233,27 @@ model NflWeekJailedTeam {
   @@unique([nflSeasonYear, weekNumber])
   @@index([jailedTeamId])
   @@map("nfl_week_jailed_teams")
+}
+
+/// Stores per-week admin-editable email config and idempotency guard for the Tuesday digest (Story 6.2).
+/// sentAt is set when `sendTuesdayDigest` completes; Story 6.5 cron skips if sentAt is already set.
+model LeagueWeekEmailConfig {
+  id            String    @id @default(cuid())
+  leagueId      String    @map("league_id")
+  nflSeasonYear Int       @map("nfl_season_year")
+  weekNumber    Int       @map("week_number")
+  /// Optional admin note appended to the Tuesday digest body text (UX: admin email config control).
+  bodyText      String?   @map("body_text") @db.Text
+  /// Populated when `sendTuesdayDigest` completes. Story 6.5 cron checks this to prevent duplicate sends.
+  sentAt        DateTime? @map("sent_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, nflSeasonYear, weekNumber])
+  @@index([leagueId, nflSeasonYear])
+  @@map("league_week_email_configs")
 }
 
 /// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.

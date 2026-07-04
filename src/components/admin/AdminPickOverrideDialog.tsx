@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
@@ -62,20 +62,6 @@ export function AdminPickOverrideDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // P3: only reset state on the closed→open transition so an in-progress selection
-  // is not wiped by a background router.refresh() that causes a prop change while
-  // the dialog is already open.
-  const prevOpenRef = useRef(false);
-  useEffect(() => {
-    const wasOpen = prevOpenRef.current;
-    prevOpenRef.current = open;
-    if (open && !wasOpen) {
-      setSelectedTeamId(currentPick?.teamId ?? null);
-      setAntiJailed(currentPick?.antiJailedBonus ?? false);
-      setError(null);
-    }
-  }, [open, currentPick?.teamId, currentPick?.antiJailedBonus]);
-
   const antiJailedOpponentId = (() => {
     const pairs = weekGames.map((g) => ({
       homeTeamId: g.homeTeamId,
@@ -85,14 +71,7 @@ export function AdminPickOverrideDialog({
     return opp.ok ? opp.opponentTeamId : null;
   })();
 
-  // P4: if the jailed team has no opponent in this week's schedule, the anti-jailed
-  // checkbox is never rendered — but antiJailed state could be stale (true from a
-  // previous pick). Clear it so the hidden value is not submitted silently.
-  useEffect(() => {
-    if (antiJailedOpponentId === null) {
-      setAntiJailed(false);
-    }
-  }, [antiJailedOpponentId]);
+  const effectiveAntiJailed = antiJailedOpponentId != null && antiJailed;
 
   const handleTeamSelect = useCallback(
     (teamId: string) => {
@@ -118,12 +97,10 @@ export function AdminPickOverrideDialog({
           targetMembershipId,
           teamId: selectedTeamId,
           nflWeekNumber: weekNumber,
-          antiJailedBonus: antiJailed,
+          antiJailedBonus: effectiveAntiJailed,
         }),
       });
       if (res.ok) {
-        // P5: call onSuccess() last — it unmounts the dialog, so setLoading must not
-        // run afterwards (no finally block here for the success path).
         onSuccess();
         return;
       }
@@ -138,7 +115,7 @@ export function AdminPickOverrideDialog({
     leagueId,
     targetMembershipId,
     weekNumber,
-    antiJailed,
+    effectiveAntiJailed,
     onSuccess,
   ]);
 

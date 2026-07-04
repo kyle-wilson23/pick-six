@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
 import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
+import { AdminEmailComposer } from "@/components/admin/AdminEmailComposer";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { auth } from "@/lib/auth";
@@ -120,6 +121,13 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
         verification={jailedVerification}
         weekNumber={weekNumber}
       />
+
+      <Stack spacing={1}>
+        <Typography variant="h5" component="h2">
+          Weekly Email
+        </Typography>
+        <AdminEmailComposer leagueId={leagueId} weekNumber={weekNumber} />
+      </Stack>
 
       <AdminAuditLog entries={auditEntries} />
     </Stack>

@@ -1,0 +1,17 @@
+{
+  "$schema_notes": "UTC schedules below. Eastern equivalents: tuesday-email 0 23 ** 2 = Tue 7PM EDT/6PM EST; wednesday-reminder 0 1 ** 4 = Wed 9PM EDT/8PM EST; thursday-reminder 0 0 ** 5 = Thu 8PM EDT/7PM EST. Season spans EDT (Sep-Nov, UTC-4) and EST (Nov-Jan, UTC-5); UTC schedules are fixed and stay within each route's Eastern window guard.",
+  "crons": [
+    {
+      "path": "/api/cron/tuesday-email",
+      "schedule": "0 23 * * 2"
+    },
+    {
+      "path": "/api/cron/wednesday-reminder",
+      "schedule": "0 1 * * 4"
+    },
+    {
+      "path": "/api/cron/thursday-reminder",
+      "schedule": "0 0 * * 5"
+    }
+  ]
+}

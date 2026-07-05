@@ -233,3 +233,81 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **No `server-only` import on email server modules** — `resend-client.ts` and `send-invitation-email.ts` lack `import 'server-only'`; startup guard provides runtime protection but no build-time enforcement. Add `import 'server-only'` to both files in a future cleanup pass.
 - **No input validation for empty `to` / empty `rawToken`** — `sendInvitationEmail` does not guard against empty `to` or `rawToken`; empty values produce degenerate signup URLs (`/signup/`) and idempotency key collisions (`invitation:`). API route callers validate upstream. Add defensive guards in a hardening pass.
 
+---
+
+## Pre-production go-live: Vercel operational checklist (Epic 6 — operational, not code)
+
+**Context:** Stories 6.1–6.5 implement transactional email and cron orchestration in code. Before the first real NFL-season weekly cycle in production, a deployer must complete the Vercel-side configuration below. This is an ops checklist — not a story deliverable — consolidated here so it is not lost across individual deferred items.
+
+**Complete before first production weekly email cycle.** Cross-check `.env.example` for the full variable list.
+
+### Required Production environment variables
+
+Set in Vercel → **Settings → Environment Variables → Production**. Redeploy after any change (vars are baked in at build time).
+
+| Variable | Purpose | Generate / source |
+|----------|---------|-------------------|
+| `DATABASE_URL` | Pooled Postgres (Neon `-pooler` host) | Neon dashboard → Connect |
+| `DIRECT_URL` | Direct Postgres for migrations | Neon dashboard → Connect (non-pooler) |
+| `AUTH_SECRET` | Session signing | `openssl rand -base64 32` |
+| `AUTH_URL` | Absolute site URL for Auth.js callbacks | `https://your-app.vercel.app` |
+| `RESEND_API_KEY` | Transactional email | [Resend dashboard](https://resend.com/) → API Keys |
+| `CRON_SECRET` | Cron route auth (Vercel sends as `Authorization: Bearer …`) | `openssl rand -hex 32` — **no trailing newlines or special chars** |
+
+Also required for full app operation (not Epic 6–specific): `ODDS_API_KEY`, `API_SPORTS_KEY`. Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`.
+
+**Never** prefix any of these with `NEXT_PUBLIC_`.
+
+### Email go-live (see also deferred item above)
+
+- [ ] Verify a **sending domain** in Resend (SPF/DKIM DNS; propagation up to 48 h).
+- [ ] Replace placeholder `from` in `send-invitation-email.ts`, `send-tuesday-digest.ts`, and `send-reminder.ts` (`noreply@yourdomain.com` → your verified domain).
+- [ ] Send a test invite and admin-triggered Tuesday digest to a real inbox; confirm delivery in Resend dashboard.
+
+### Cron go-live (Story 6.5)
+
+- [ ] Confirm `vercel.json` is deployed (three crons: `tuesday-email`, `wednesday-reminder`, `thursday-reminder`).
+- [ ] Vercel → **Settings → Cron Jobs** — all three jobs listed on **production** deployment. Crons do **not** run on preview branches.
+- [ ] Set `CRON_SECRET` in Production env vars; **redeploy production**.
+- [ ] Post-deploy smoke test (replace domain and secret):
+
+```bash
+# Expect 401
+curl -s https://your-app.vercel.app/api/cron/tuesday-email | jq
+
+# Expect 200 + outside_window (unless Tue 5–9 PM ET) or send summary
+curl -s https://your-app.vercel.app/api/cron/tuesday-email \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" | jq
+```
+
+- [ ] Repeat for `/api/cron/wednesday-reminder` and `/api/cron/thursday-reminder`.
+
+**Note:** Vercel Cron invokes routes via **GET**; routes delegate GET → shared handler. Manual curl can use GET or POST with the same `Authorization` header.
+
+### Database migrations
+
+- [ ] Run `npm run db:migrate:deploy` against production `DATABASE_URL` / `DIRECT_URL` before or as part of first deploy with schema changes.
+
+### Known accepted risks (see existing deferred items — do not duplicate fixes here)
+
+- **Hobby ±1 hr cron drift** — negative drift can cause `outside_window` skip with no retry that week. Mitigation: admin manual send routes; long-term: monitoring alert (see below).
+- **NFR32 Resend webhooks** — delivery confirmation tracking unassigned; no webhook route yet.
+- **No cron run observability in admin UI** — Story 7.2 (structured logging / health signals).
+- **Monitoring alert for missed weekly sends** — Epic 7 scope; until then, spot-check Vercel function logs after scheduled times.
+
+### Success criteria
+
+Production is "weekly-email ready" when: all required env vars set, production redeployed, Resend domain verified and `from` updated, cron smoke tests pass with 401/200 as expected, and at least one admin-triggered email confirmed in a real inbox.
+
+**Future:** Consider extracting detailed step-by-step instructions to `docs/deployment.md` when Epic 7.4 (deployment hardening) is scoped.
+
+## Deferred from: code review of 6-5-cron-routes-secrets-and-idempotent-weekly-orchestration (2026-07-04)
+
+- **No `maxDuration` in `vercel.json`** — All three cron routes process leagues serially in a single Vercel invocation. A large number of active leagues could hit the default function timeout, silently leaving the rest un-emailed. Add `"maxDuration": 300` (or an appropriate limit) to `vercel.json` when the active-league count grows.
+- **Timing side-channel from length pre-check in `assertCronRequest`** — The early return before `crypto.timingSafeEqual` when buffer lengths differ technically leaks the secret's byte-length via response-time variance. The spec explicitly authorizes this approach (to avoid `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`). A fully constant-time implementation would pad both buffers to a common length before comparing. Acceptable for MVP; revisit if a stricter security posture is required.
+- **No unit tests for `isInEasternWindow`** — The timezone utility is the most fragile piece of cron logic (DST transitions, ICU data). AC7 only required tests for `assert-cron-request.ts`. Add `isInEasternWindow` tests (mocking `Date` or using fixed UTC inputs) when the test baseline for the `src/lib/cron/` module is expanded.
+- **TOCTOU race on idempotency check (read-then-send-then-write)** — Two concurrent cron invocations could both pass the `sentAt == null` guard before either sets it, resulting in duplicate email sends. Accepted per dev notes; Resend's 24-hour idempotency key is the ultimate backstop. Eliminate the race with a DB-level upsert guard or distributed lock if Resend idempotency stops being sufficient.
+- **HTTP 200 always returned even when `failed > 0`** — Monitoring and alerting systems that watch HTTP status codes will not detect partial email failures. Log-based alerting on the `failed` counter is the current detection method. Consider returning a non-200 status (or emitting a structured monitoring event) if `failed > 0` when better observability infrastructure (Epic 7) is in place.
+- **No circuit breaker for email provider outage** — If Resend is unavailable, all three cron routes iterate every active league, accumulate failures, log errors, and return 200. There is no early-abort logic. Add a failure-threshold check (e.g., abort after N consecutive failures) when operational reliability tooling is added in Epic 7.
+- **`toLocaleString` ICU dependency in `eastern-window.ts`** — `new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))` relies on ICU timezone data being present in the Node.js runtime. Vercel's full-ICU runtime makes this safe in production. If the runtime environment ever changes (e.g., edge runtime, custom Docker image with `--small-icu`), this call could produce an Invalid Date, silently causing all window checks to return false. Migrate to a library like `date-fns-tz` or use the `Intl.DateTimeFormat` parts API for a more portable approach.
+

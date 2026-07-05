@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-04'  # 6-3-wednesday-and-thursday-reminders → review (code review patches applied)
+  last_updated: '2026-07-04'  # 6-3-wednesday-and-thursday-reminders → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -102,7 +102,7 @@ development_status:
   epic-6: in-progress
   6-1-transactional-email-integration: done
   6-2-tuesday-6-00-pm-league-email-content-and-admin-preview: done
-  6-3-wednesday-and-thursday-reminders: review
+  6-3-wednesday-and-thursday-reminders: done
   6-4-email-deep-links-to-picks: backlog
   6-5-cron-routes-secrets-and-idempotent-weekly-orchestration: backlog
   6-6-ux-spec-comparison-and-alignment: backlog  # carried from epic-3-retro → epic-4-retro → epic-5-retro; must close in epic 6

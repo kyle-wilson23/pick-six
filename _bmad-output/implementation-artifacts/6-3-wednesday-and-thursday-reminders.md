@@ -1,6 +1,6 @@
 # Story 6.3: Wednesday and Thursday Reminders
 
-Status: review
+Status: done
 
 ## Story
 

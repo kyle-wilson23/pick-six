@@ -49,6 +49,13 @@ describe("getSafeCallbackPath", () => {
     expect(getSafeCallbackPath("/login/reset", { defaultPath: "/dash" })).toBe("/dash");
   });
 
+  it("accepts league picks paths as valid server-side path-only callbackUrls", () => {
+    expect(getSafeCallbackPath("/leagues/clxxxxxxxx/picks")).toBe("/leagues/clxxxxxxxx/picks");
+    expect(getSafeCallbackPath("/leagues/clxxxxxxxx/picks?weekNumber=5")).toBe(
+      "/leagues/clxxxxxxxx/picks?weekNumber=5",
+    );
+  });
+
   it("buildLoginRedirectWithCallback encodes a safe path", () => {
     expect(buildLoginRedirectWithCallback("/dashboard/foo")).toBe(
       "/login?callbackUrl=%2Fdashboard%2Ffoo",

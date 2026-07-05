@@ -56,8 +56,11 @@ The app lives under `src/` (App Router).
 - **Done ✅** **Epic 2 — League setup:** create league/season, email invites, pre-season init, admin league list/settings, participant home (roster + rules), admin as participant, first competition week (incl. mid-season), production-ready league delete.
 
 - **Done ✅** **Epic 3 — Weekly picks:** NFL schedule sync, live odds snapshot, jailed team logic, pick API with deadline enforcement, picks UI (matchup cards with odds/spread/weather/roof), and kickoff-time weather forecasts.
+- **Done ✅** **Epic 4 — Admin picks tools:** submission status dashboard, submit/change picks on behalf of participants (incl. post-deadline overrides), audit trail, jailed team verification.
+- **Done ✅** **Epic 5 — Scoring & standings:** game results ingest, weekly points (1 vs 2 / anti-jailed), MNF finalize + Tuesday standings, live leaderboard, personal pick history, Tuesday reveal vs peer visibility.
+- **Done ✅** **Epic 6 — Email & ops:** Resend transactional email, Tuesday league digest + admin preview, Wed/Thu reminders, deep links to picks, Vercel cron orchestration, UX spec alignment (league nav shell, responsive layouts).
 
-**Next 🚀** **Epic 4 — Admin picks tools:** pick submission status dashboard, submit/change picks on behalf of participants (including post-deadline overrides), admin audit trail, and jailed team verification view.
+**Next 🚀** **Epic 7 — Polish & hardening:** admin CSV export, structured logging/health signals, WCAG 2.1 Level A baseline, performance and deployment hardening.
 
 **Stack 📦** Next.js / React, MUI; email, odds, and backend choices live in the architecture doc.
 

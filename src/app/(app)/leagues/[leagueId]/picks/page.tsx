@@ -1,6 +1,5 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -32,15 +31,6 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
   });
 
   if (!membership || !isLeagueParticipantRole(membership.role)) {
-    notFound();
-  }
-
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    select: { name: true },
-  });
-
-  if (!league) {
     notFound();
   }
 
@@ -87,6 +77,10 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
     }
   }
 
+  const showDeadline = showActiveWeekChrome && payload.pickDeadlineUtc != null;
+  const showJailed = showActiveWeekChrome && jailedTeam != null;
+  const showDeadlineJailedRow = showDeadline || showJailed;
+
   return (
     <Stack
       component="main"
@@ -95,27 +89,34 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
         minHeight: "100vh",
         px: { xs: 1.5, sm: 2 },
         py: { xs: 3, md: 4 },
-        maxWidth: 640,
+        maxWidth: { xs: 640, md: 960 },
         mx: "auto",
         alignItems: "stretch",
       }}
     >
-      <Typography variant="body2">
-        <Link href={`/leagues/${leagueId}`}>← {league.name}</Link>
-      </Typography>
-
       <Typography variant="h4" component="h1">
         Weekly picks
       </Typography>
 
       {payload.isPreview ? <PicksPreviewBanner /> : null}
 
-      {showActiveWeekChrome && payload.pickDeadlineUtc != null ? (
-        <DeadlineCountdown pickDeadlineUtc={payload.pickDeadlineUtc} />
-      ) : null}
-
-      {showActiveWeekChrome && jailedTeam != null ? (
-        <JailedTeamCallout team={jailedTeam} moneylineAmerican={jailedTeamMl} />
+      {showDeadlineJailedRow ? (
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
+          alignItems="stretch"
+        >
+          {showDeadline ? (
+            <Stack sx={{ flex: 1, minWidth: 0 }}>
+              <DeadlineCountdown pickDeadlineUtc={payload.pickDeadlineUtc!} />
+            </Stack>
+          ) : null}
+          {showJailed ? (
+            <Stack sx={{ flex: 1, minWidth: 0 }}>
+              <JailedTeamCallout team={jailedTeam!} moneylineAmerican={jailedTeamMl} />
+            </Stack>
+          ) : null}
+        </Stack>
       ) : null}
 
       <WeekMatchupList

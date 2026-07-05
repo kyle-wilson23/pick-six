@@ -61,6 +61,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
             return (
               <TableRow
                 key={entry.membershipId}
+                aria-current={isCurrentUser ? "row" : undefined}
                 sx={
                   isCurrentUser
                     ? { bgcolor: (t) => `${t.palette.primary.main}14` }
@@ -68,7 +69,28 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
                 }
               >
                 <TableCell sx={tabularNums}>{entry.rank}</TableCell>
-                <TableCell>{entry.displayName}</TableCell>
+                <TableCell>
+                  {entry.displayName}
+                  {isCurrentUser ? (
+                    <Typography
+                      component="span"
+                      sx={{
+                        position: "absolute",
+                        width: 1,
+                        height: 1,
+                        padding: 0,
+                        margin: -1,
+                        overflow: "hidden",
+                        clip: "rect(0, 0, 0, 0)",
+                        whiteSpace: "nowrap",
+                        border: 0,
+                      }}
+                    >
+                      {" "}
+                      (You)
+                    </Typography>
+                  ) : null}
+                </TableCell>
                 <TableCell sx={tabularNums}>{record}</TableCell>
                 <TableCell
                   align="right"

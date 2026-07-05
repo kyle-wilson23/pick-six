@@ -55,8 +55,8 @@ export default async function LeagueInvitesPage({ params }: PageProps) {
         Invite participants
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Paste or type email addresses (comma, semicolon, or newline separated). Each person receives a
-        signup link. In development, links are printed in the server console.
+        Paste or type email addresses (comma, semicolon, or newline separated). Each person receives
+        an invitation email with a signup link.
       </Typography>
       <MarkLeagueReadySection
         leagueId={leagueId}

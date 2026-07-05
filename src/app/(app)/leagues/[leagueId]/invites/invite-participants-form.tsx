@@ -74,8 +74,8 @@ export function InviteParticipantsForm({ leagueId }: Props) {
       />
       {successCount !== null ? (
         <Typography variant="body2" color="success.main">
-          Sent {successCount} invitation{successCount === 1 ? "" : "s"}. Check server logs for signup
-          links in development.
+          Sent {successCount} invitation{successCount === 1 ? "" : "s"}. Each recipient will
+          receive an email with a signup link.
         </Typography>
       ) : null}
       {errorMessage ? (

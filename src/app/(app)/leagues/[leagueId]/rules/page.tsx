@@ -1,6 +1,5 @@
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
@@ -57,10 +56,6 @@ export default async function LeagueRulesPage({ params }: PageProps) {
         mx: 'auto',
       }}
     >
-      <Typography variant='body2'>
-        <Link href={`/leagues/${leagueId}`}>← {league.name}</Link>
-      </Typography>
-
       <Typography
         variant='h4'
         component='h1'

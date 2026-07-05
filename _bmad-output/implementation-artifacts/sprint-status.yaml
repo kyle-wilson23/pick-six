@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-04'  # 6-5-cron-routes-secrets-and-idempotent-weekly-orchestration → done
+  last_updated: '2026-07-04'  # 6-6-ux-spec-comparison-and-alignment → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -105,7 +105,7 @@ development_status:
   6-3-wednesday-and-thursday-reminders: done
   6-4-email-deep-links-to-picks: done
   6-5-cron-routes-secrets-and-idempotent-weekly-orchestration: done
-  6-6-ux-spec-comparison-and-alignment: backlog  # carried from epic-3-retro → epic-4-retro → epic-5-retro; must close in epic 6
+  6-6-ux-spec-comparison-and-alignment: done  # carried from epic-3-retro → epic-4-retro → epic-5-retro; must close in epic 6
   epic-6-retrospective: optional
 
   epic-7: backlog

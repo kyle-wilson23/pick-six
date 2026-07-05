@@ -208,7 +208,7 @@ export function MatchupCard(props: MatchupCardProps) {
           <TeamLogo
             abbreviation={team.abbreviation}
             teamName={team.name}
-            size="md"
+            size="lg"
             jailed={isJailed}
             disabled={isAlreadyPicked}
             pickedWeekTag={otherWeek}
@@ -265,10 +265,10 @@ export function MatchupCard(props: MatchupCardProps) {
       variant="outlined"
       sx={{
         width: "100%",
-        maxWidth: 560,
+        maxWidth: { xs: 560, md: "none" },
         px: { xs: 1.25, sm: 2 },
         py: { xs: 1.25, sm: 1.5 },
-        bgcolor: cardHasSelected ? "action.selected" : "background.paper",
+        bgcolor: cardHasSelected ? "background.elevated" : "background.paper",
         borderWidth: cardHasJailed ? 2 : cardHasSelected ? 2 : 1,
         borderStyle: "solid",
         borderColor: cardHasJailed
@@ -276,6 +276,13 @@ export function MatchupCard(props: MatchupCardProps) {
           : cardHasSelected
             ? "primary.main"
             : "divider",
+        transition: (t) =>
+          t.transitions.create(["background-color", "border-color"], {
+            duration: t.transitions.duration.shortest,
+          }),
+        "&:hover": interactive
+          ? { bgcolor: "background.elevated" }
+          : undefined,
       }}
     >
       <Stack spacing={1.5}>

@@ -205,7 +205,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: Story 6.1 — transactional email integration (2026-07-04)
 
 - **Replace placeholder Resend `from` domain before production go-live** — `src/lib/email/send-invitation-email.ts` uses `Pick Six <noreply@yourdomain.com>` with a `// TODO: replace with verified Resend domain` comment. Real delivery to non-sandbox recipients requires a **verified sending domain** in Resend (SPF/DKIM DNS records; propagation can take up to 48 hours). Until configured: update the `from` address to your verified domain (e.g. `noreply@yourdomain.com`) and confirm sends in the Resend dashboard. Setup steps: [Resend domain docs](https://resend.com/docs/dashboard/domains/introduction); prerequisites also in `docs/email-provider-decision.md`. For local/dev smoke tests only, Resend's sandbox `from` (`onboarding@resend.dev`) can be used temporarily — do not ship that to production.
-- **Invites page copy still references console logs** — `src/app/(app)/leagues/[leagueId]/invites/page.tsx` and `invite-participants-form.tsx` tell admins to "check server logs for signup links in development." Update when a follow-up story polishes Epic 6 UX or when production email is confirmed working end-to-end.
+- ~~**Invites page copy still references console logs**~~ — Resolved in Story 6.6: `invite-participants-form.tsx` and `invites/page.tsx` now reflect that invitation emails are sent to recipients.
 
 ## Deferred from: code review of 6-2-tuesday-6-00-pm-league-email-content-and-admin-preview (2026-07-04)
 
@@ -310,4 +310,22 @@ Production is "weekly-email ready" when: all required env vars set, production r
 - **HTTP 200 always returned even when `failed > 0`** — Monitoring and alerting systems that watch HTTP status codes will not detect partial email failures. Log-based alerting on the `failed` counter is the current detection method. Consider returning a non-200 status (or emitting a structured monitoring event) if `failed > 0` when better observability infrastructure (Epic 7) is in place.
 - **No circuit breaker for email provider outage** — If Resend is unavailable, all three cron routes iterate every active league, accumulate failures, log errors, and return 200. There is no early-abort logic. Add a failure-threshold check (e.g., abort after N consecutive failures) when operational reliability tooling is added in Epic 7.
 - **`toLocaleString` ICU dependency in `eastern-window.ts`** — `new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))` relies on ICU timezone data being present in the Node.js runtime. Vercel's full-ICU runtime makes this safe in production. If the runtime environment ever changes (e.g., edge runtime, custom Docker image with `--small-icu`), this call could produce an Invalid Date, silently causing all window checks to return false. Migrate to a library like `date-fns-tz` or use the `Intl.DateTimeFormat` parts API for a more portable approach.
+
+## Deferred from: Story 6.6 — UX spec comparison and alignment (2026-07-04)
+
+- **PickStatusBanner desktop inline with page title** — UX spec shows banner inline with the "This Week" header row on desktop. Requires a header-row refactor; current banner remains full-width below deadline/jailed row.
+- **Standings desktop sidebar** — UX spec includes a contextual sidebar on desktop standings. MVP table-only layout retained; enhancement deferred to Epic 7.
+- **Global 48px button height enforcement** — UX button hierarchy specifies 48px touch targets globally. Not enforced in theme overrides; defer to Epic 7.3/7.4.
+- **Skeleton loading states** — UX responsive table calls for skeleton placeholders during load. No skeleton components yet; defer to Epic 7.4.
+- **Snackbar admin feedback** — UX prefers Snackbar for transient admin actions; current inline Alert pattern in email composers is acceptable MVP; polish pass deferred.
+- **Landing page hero layout** — Marketing landing page alignment out of league-shell scope; defer.
+- **`generateMetadata` on league pages** — Deferred from Stories 5.4–5.6; Epic 7.
+- **Full WCAG Level A audit** — Partial coverage (matchup radiogroup, standings `aria-current` added in 6.6); full audit in Story 7.3.
+- **WeatherBadge component extraction** — Weather remains inline in `MatchupCard`; cosmetic extraction deferred.
+- **NFR32 Resend webhooks** — Delivery confirmation tracking unassigned; documented in gap matrix, no implementation in 6.6.
+- **Real-time admin outstanding count refresh** — Stale SSR `outstandingCount` in `AdminReminderControls`; deferred from 6.3, unchanged in 6.6.
+
+## Deferred from: code review of 6-6-ux-spec-comparison-and-alignment (2026-07-04)
+
+- **Redundant Prisma membership queries in league layout + child pages** — New `[leagueId]/layout.tsx` duplicates membership/league fetches that every child page already performs. Consolidate via shared loader or React cache in a future perf pass.
 

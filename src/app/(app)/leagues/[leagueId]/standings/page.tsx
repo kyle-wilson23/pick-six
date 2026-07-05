@@ -1,6 +1,5 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StandingsTable } from "@/components/standings/StandingsTable";
@@ -23,14 +22,11 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
 
   const membership = await prisma.leagueMembership.findUnique({
     where: { userId_leagueId: { userId: session.user.id, leagueId } },
-    include: { league: { select: { name: true } } },
   });
 
-  if (!membership || !isLeagueParticipantRole(membership.role) || !membership.league) {
+  if (!membership || !isLeagueParticipantRole(membership.role)) {
     notFound();
   }
-
-  const { league } = membership;
   const nflSeasonYear = getCurrentNflSeasonYear();
   const standings = await getLeagueStandings(prisma, { leagueId, nflSeasonYear });
 
@@ -46,10 +42,6 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
         mx: "auto",
       }}
     >
-      <Typography variant="body2">
-        <Link href={`/leagues/${leagueId}`}>← {league.name}</Link>
-      </Typography>
-
       <Typography variant="h4" component="h1">
         Standings
       </Typography>

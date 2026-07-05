@@ -14,6 +14,8 @@ export function createAppTheme(fontFamily: string) {
       background: {
         default: "#121212",
         paper: "#1E1E1E",
+        elevated: "#2A2A2A",
+        overlay: "#333333",
       },
       accent: {
         gold: "#FFD700",

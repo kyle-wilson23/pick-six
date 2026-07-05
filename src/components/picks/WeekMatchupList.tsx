@@ -1,5 +1,6 @@
 "use client";
 
+import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import {
@@ -267,13 +268,17 @@ export function WeekMatchupList({
           No games are scheduled or loaded for this week yet.
         </Typography>
       ) : (
-        <Stack
+        <Box
           ref={radiogroupRef}
-          spacing={2}
           role={interactive ? "radiogroup" : undefined}
           aria-label={interactive ? `Pick a team for Week ${weekLabel}` : undefined}
           aria-busy={submitting || undefined}
           onKeyDown={interactive ? handleRadiogroupKeyDown : undefined}
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+            gap: 2,
+          }}
         >
           {matchups.map((m) => (
             <MatchupCard
@@ -288,7 +293,7 @@ export function WeekMatchupList({
               antiJailedOpponentTeamId={antiJailedOpponentTeamId}
             />
           ))}
-        </Stack>
+        </Box>
       )}
     </Stack>
   );

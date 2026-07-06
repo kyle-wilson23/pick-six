@@ -28,6 +28,7 @@ function rateLimitClientKey(request: NextRequest): string {
 const RATE_LIMITED_POST_PATHS = new Set([
   "/api/auth/callback/credentials",
   "/api/signup/invite",
+  "/api/signup/invite/accept",
   "/api/leagues",
 ]);
 
@@ -84,6 +85,7 @@ export const config = {
   matcher: [
     "/api/auth/callback/credentials",
     "/api/signup/invite",
+    "/api/signup/invite/accept",
     "/api/leagues",
     "/api/leagues/:path*",
     "/dashboard",

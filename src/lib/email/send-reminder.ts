@@ -2,6 +2,7 @@ import { createElement } from "react";
 
 import { prisma } from "@/lib/db";
 import { getReminderData, type ReminderData } from "@/lib/email/get-reminder-data";
+import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { ReminderEmail } from "@/lib/email/templates/ReminderEmail";
@@ -35,7 +36,7 @@ export async function sendReminder({
       await sendWithRetry(async () => {
         const { error } = await resend.emails.send(
           {
-            from: "Pick Six <noreply@yourdomain.com>",
+            from: getResendFrom(),
             to: [member.email],
             subject: reminderSubject(data, reminderType),
             react: createElement(ReminderEmail, {

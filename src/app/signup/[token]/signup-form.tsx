@@ -25,9 +25,10 @@ const formSchema = z.object({
 type SignupFormProps = {
   token: string;
   invitedEmail: string;
+  loginHref: string;
 };
 
-export function SignupForm({ token, invitedEmail }: SignupFormProps) {
+export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [signInRecovery, setSignInRecovery] = useState(false);
@@ -101,7 +102,7 @@ export function SignupForm({ token, invitedEmail }: SignupFormProps) {
       {signInRecovery ? (
         <Alert severity="warning">
           Your account was created, but automatic sign-in did not complete. Please{" "}
-          <Link component={NextLink} href="/login">
+          <Link component={NextLink} href={loginHref}>
             sign in
           </Link>{" "}
           with this email and your password.
@@ -131,7 +132,7 @@ export function SignupForm({ token, invitedEmail }: SignupFormProps) {
       </Button>
       <Typography variant="body2" color="text.secondary">
         Already have an account?{" "}
-        <Link component={NextLink} href="/login">
+        <Link component={NextLink} href={loginHref}>
           Log in
         </Link>
       </Typography>

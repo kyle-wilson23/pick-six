@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { getAppBaseUrl } from '@/lib/email/app-base-url';
+import { getResendFrom } from '@/lib/email/resend-from';
 import { resend } from '@/lib/email/resend-client';
 import { sendWithRetry } from '@/lib/email/send-with-retry';
 import { InvitationEmail } from '@/lib/email/templates/InvitationEmail';
@@ -23,8 +24,7 @@ export async function sendInvitationEmail(
     await sendWithRetry(async () => {
       const { data, error } = await resend.emails.send(
         {
-          // TODO: replace with verified Resend domain
-          from: 'Pick Six <noreply@yourdomain.com>',
+          from: getResendFrom(),
           to: [input.to],
           subject: `You're invited to join ${input.leagueName} on Pick Six`,
           react: createElement(InvitationEmail, {

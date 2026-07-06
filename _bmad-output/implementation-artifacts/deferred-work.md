@@ -2,6 +2,17 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of pre-epic-7-observability-scope-decision (2026-07-05)
+
+- **NFR46 MVP stance covers email only, not scoring/deadline failures** — `docs/observability-scope-decision.md` documents manual ops for email cron windows; PRD NFR46 also lists deadline enforcement and scoring. Explicit out-of-scope table defers scoring/pick-deadline structured logging to post-launch; acceptable for hybrid MVP scope.
+
+## Deferred from: code review of pre-epic-7-manual-email-flow-smoke-test (2026-07-05)
+
+- **AC8 Resend message IDs not captured** — Smoke test results confirm delivery in inbox/dashboard but do not record per-send message IDs; optional hardening before production smoke test (`post-epic-8-production-smoke-test`).
+- **Thin unit coverage for `acceptLeagueInvitation`** — Only error-class tests exist; membership upsert and invite consumption paths verified manually during AC3 smoke test.
+- **No unit test for `already_registered` signup preview branch** — New preview status branch covered by manual invite flow only.
+- **Concurrent duplicate accept requests** — Parallel accept POSTs can race on invite consumption; defer to Epic 7.4 (TOCTOU hardening).
+
 ## Deferred from: code review of 5-1-ingest-game-results-and-finalize-games (2026-06-11)
 
 - **N+1 queries in sync transaction** — `src/lib/nfl/sync-nfl-results.ts`. Per-game `findUnique` + `update` inside a single transaction (up to ~288 calls for a full-season 18-week sync). Correctness is unaffected; risk is transaction timeout on very large syncs. Refactor to batch-fetch all matching `NflGame` rows up front and reduce round-trips when quota or performance becomes a concern.
@@ -196,10 +207,10 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of pre-epic-6-email-provider-spike (2026-07-04)
 
 - ~~**Resend idempotency rolling window duration unspecified**~~ — Resolved in Story 6.1: 24-hour window documented in `src/lib/email/resend-client.ts` (see [Resend idempotency docs](https://resend.com/docs/dashboard/emails/idempotency-keys)).
-- **NFR32 webhook owner unassigned** — `docs/email-provider-decision.md`. The doc attributes webhook registration to "Story 6.x" with no story number. NFR32 delivery confirmation tracking has no committed owner. Assign to a specific Epic 6 story (likely 6.5 or a new 6.6) before sprint planning.
+- ~~**NFR32 webhook owner unassigned**~~ — **Owner: Story 7.2** (`docs/observability-scope-decision.md`, 2026-07-05). Scope: log-only `POST /api/webhooks/resend` with Svix signature verification; delivery/bounce events logged to structured console. Admin UI for per-recipient delivery status deferred post-MVP.
 - ~~**HTTP 429 retry should be differentiated from transient errors**~~ — Resolved in Story 6.1: `send-with-retry.ts` short-circuits on `statusCode === 429`.
 - ~~**`RESEND_API_KEY` absent at SDK construction — no startup guard**~~ — Resolved in Story 6.1: `resend-client.ts` throws at module load.
-- **Hobby ±1 hr negative-drift silent-skip risk** — `docs/email-provider-decision.md`. If Vercel fires the cron an hour early (negative drift), the ET time-gate check rejects the invocation and emails are silently skipped for the week. The idempotency sent-flag cannot distinguish "not yet sent" from "skipped". Consider adding a monitoring alert or a manual-trigger fallback route.
+- **Hobby ±1 hr negative-drift silent-skip risk** — `docs/email-provider-decision.md`. If Vercel fires the cron an hour early (negative drift), the ET time-gate check rejects the invocation and emails are silently skipped for the week. The idempotency sent-flag cannot distinguish "not yet sent" from "skipped". **Mitigation (Story 7.2):** `AdminWeeklyEmailStatus` card shows missing timestamps; ops runbook documents manual log spot-check. **Automated alert:** deferred to Story 7.4 (non-200 on `failed > 0` + external monitor). Manual admin send routes remain the immediate fallback.
 - ~~**Hyphen delimiter in idempotency key ambiguous with hyphenated IDs**~~ — Resolved in Story 6.1: colon delimiter (`invitation:${rawToken}`).
 
 ## Deferred from: Story 6.1 — transactional email integration (2026-07-04)
@@ -291,9 +302,9 @@ curl -s https://your-app.vercel.app/api/cron/tuesday-email \
 ### Known accepted risks (see existing deferred items — do not duplicate fixes here)
 
 - **Hobby ±1 hr cron drift** — negative drift can cause `outside_window` skip with no retry that week. Mitigation: admin manual send routes; long-term: monitoring alert (see below).
-- **NFR32 Resend webhooks** — delivery confirmation tracking unassigned; no webhook route yet.
-- **No cron run observability in admin UI** — Story 7.2 (structured logging / health signals).
-- **Monitoring alert for missed weekly sends** — Epic 7 scope; until then, spot-check Vercel function logs after scheduled times.
+- ~~**NFR32 Resend webhooks**~~ — **Owner: Story 7.2** — log-only webhook route (`docs/observability-scope-decision.md`).
+- ~~**No cron run observability in admin UI**~~ — **Owner: Story 7.2** — `AdminWeeklyEmailStatus` card on league admin page (hybrid observability decision).
+- **Monitoring alert for missed weekly sends** — **Owner: Story 7.2 (manual ops) + Story 7.4 (automated)**. MVP: documented weekly spot-check in ops runbook + admin card "Not sent" state. Automated non-200 cron + external monitor deferred to 7.4 (`docs/observability-scope-decision.md`).
 
 ### Success criteria
 
@@ -307,7 +318,7 @@ Production is "weekly-email ready" when: all required env vars set, production r
 - **Timing side-channel from length pre-check in `assertCronRequest`** — The early return before `crypto.timingSafeEqual` when buffer lengths differ technically leaks the secret's byte-length via response-time variance. The spec explicitly authorizes this approach (to avoid `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`). A fully constant-time implementation would pad both buffers to a common length before comparing. Acceptable for MVP; revisit if a stricter security posture is required.
 - **No unit tests for `isInEasternWindow`** — The timezone utility is the most fragile piece of cron logic (DST transitions, ICU data). AC7 only required tests for `assert-cron-request.ts`. Add `isInEasternWindow` tests (mocking `Date` or using fixed UTC inputs) when the test baseline for the `src/lib/cron/` module is expanded.
 - **TOCTOU race on idempotency check (read-then-send-then-write)** — Two concurrent cron invocations could both pass the `sentAt == null` guard before either sets it, resulting in duplicate email sends. Accepted per dev notes; Resend's 24-hour idempotency key is the ultimate backstop. Eliminate the race with a DB-level upsert guard or distributed lock if Resend idempotency stops being sufficient.
-- **HTTP 200 always returned even when `failed > 0`** — Monitoring and alerting systems that watch HTTP status codes will not detect partial email failures. Log-based alerting on the `failed` counter is the current detection method. Consider returning a non-200 status (or emitting a structured monitoring event) if `failed > 0` when better observability infrastructure (Epic 7) is in place.
+- **HTTP 200 always returned even when `failed > 0`** — Monitoring and alerting systems that watch HTTP status codes will not detect partial email failures. Log-based alerting on the `failed` counter is the current detection method. **Owner: Story 7.4** — return non-200 (or emit structured monitoring event) when `failed > 0`; MVP keeps 200 per `docs/observability-scope-decision.md`.
 - **No circuit breaker for email provider outage** — If Resend is unavailable, all three cron routes iterate every active league, accumulate failures, log errors, and return 200. There is no early-abort logic. Add a failure-threshold check (e.g., abort after N consecutive failures) when operational reliability tooling is added in Epic 7.
 - **`toLocaleString` ICU dependency in `eastern-window.ts`** — `new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))` relies on ICU timezone data being present in the Node.js runtime. Vercel's full-ICU runtime makes this safe in production. If the runtime environment ever changes (e.g., edge runtime, custom Docker image with `--small-icu`), this call could produce an Invalid Date, silently causing all window checks to return false. Migrate to a library like `date-fns-tz` or use the `Intl.DateTimeFormat` parts API for a more portable approach.
 
@@ -322,7 +333,7 @@ Production is "weekly-email ready" when: all required env vars set, production r
 - **`generateMetadata` on league pages** — Deferred from Stories 5.4–5.6; Epic 7.
 - **Full WCAG Level A audit** — Partial coverage (matchup radiogroup, standings `aria-current` added in 6.6); full audit in Story 7.3.
 - **WeatherBadge component extraction** — Weather remains inline in `MatchupCard`; cosmetic extraction deferred.
-- **NFR32 Resend webhooks** — Delivery confirmation tracking unassigned; documented in gap matrix, no implementation in 6.6.
+- ~~**NFR32 Resend webhooks**~~ — **Owner: Story 7.2** — log-only webhook route per `docs/observability-scope-decision.md`.
 - **Real-time admin outstanding count refresh** — Stale SSR `outstandingCount` in `AdminReminderControls`; deferred from 6.3, unchanged in 6.6.
 
 ## Deferred from: code review of 6-6-ux-spec-comparison-and-alignment (2026-07-04)

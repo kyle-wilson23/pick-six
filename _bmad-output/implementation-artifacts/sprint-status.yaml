@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-05'  # post-epic-8 production launch gate items added
+  last_updated: '2026-07-05'  # pre-epic-7 observability scope decision done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -109,8 +109,8 @@ development_status:
   epic-6-retrospective: done
 
   # Pre-Epic 7 blocking items — must be done before epic-7 moves to in-progress
-  pre-epic-7-manual-email-flow-smoke-test: backlog  # local dev: Tuesday digest send/preview, Wed/Thu reminders, deep links; Kyle noted untested at epic-6 retro
-  pre-epic-7-observability-scope-decision: backlog  # one-page decision before 7.2 spec: log-only MVP vs admin UI health panel (mirrors pre-epic-6 spike pattern)
+  pre-epic-7-manual-email-flow-smoke-test: done  # local dev: Tuesday digest send/preview, Wed/Thu reminders, deep links; Kyle verified 2026-07-05; code review 2026-07-05
+  pre-epic-7-observability-scope-decision: done  # docs/observability-scope-decision.md — Hybrid (structured logs + admin weekly email status card); unblocks 7.2 spec
 
   epic-7: backlog
   7-1-admin-csv-export-of-full-league-snapshot: backlog

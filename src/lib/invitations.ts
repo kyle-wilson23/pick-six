@@ -56,4 +56,9 @@ export type SignupInvitePreview =
       invitedEmail: string;
       /** League context for league-scoped invites; **null** for legacy seed invites (Story 1.5). */
       league: { name: string } | null;
+    }
+  | {
+      status: "already_registered";
+      invitedEmail: string;
+      league: { name: string } | null;
     };

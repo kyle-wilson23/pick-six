@@ -2,6 +2,7 @@ import { createElement } from "react";
 
 import { prisma } from "@/lib/db";
 import { getTuesdayDigestData, type TuesdayDigestData } from "@/lib/email/get-tuesday-digest-data";
+import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { TuesdayDigestEmail } from "@/lib/email/templates/TuesdayDigestEmail";
@@ -36,7 +37,7 @@ export async function sendTuesdayDigest({
       await sendWithRetry(async () => {
         const { error } = await resend.emails.send(
           {
-            from: "Pick Six <noreply@yourdomain.com>",
+            from: getResendFrom(),
             to: [member.email],
             subject: `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
             react: createElement(TuesdayDigestEmail, {

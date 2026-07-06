@@ -2,6 +2,15 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 7-1-admin-csv-export-of-full-league-snapshot (2026-07-06)
+
+- **CSV formula-injection not sanitized** — `src/lib/export/serialize-league-export-csv.ts`. Email or team labels starting with `=`, `+`, `-` could trigger spreadsheet formula execution on open. Not in story AC; consider prefixing or sanitizing in a security pass.
+- **Anchor download shows raw JSON on API errors** — `src/components/admin/AdminExportCsvButton.tsx`. Spec explicitly chose `component="a"` + `href` over fetch+blob; error UX improvement deferred unless product revisits download pattern.
+- **`auth()` outside try/catch on export route** — Matches existing `submission-status` route pattern; defer consistent auth error envelope to a cross-route hardening pass.
+- **`REGULAR_SEASON_WEEKS` duplicated** — Builder and serializer each define `18`; low-risk maintainability nit.
+- **No unit tests for `sanitizeDownloadFilenameSegment`** — Simple helper; manual route verification sufficient for MVP.
+- **No audit log for bulk PII CSV export** — Observability/audit scope deferred to Stories 7.2 and 7.4.
+
 ## Deferred from: code review of pre-epic-7-observability-scope-decision (2026-07-05)
 
 - **NFR46 MVP stance covers email only, not scoring/deadline failures** — `docs/observability-scope-decision.md` documents manual ops for email cron windows; PRD NFR46 also lists deadline enforcement and scoring. Explicit out-of-scope table defers scoring/pick-deadline structured logging to post-launch; acceptable for hybrid MVP scope.

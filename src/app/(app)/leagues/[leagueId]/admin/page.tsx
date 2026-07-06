@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
 import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import { AdminEmailComposer } from "@/components/admin/AdminEmailComposer";
+import { AdminExportCsvButton } from "@/components/admin/AdminExportCsvButton";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
 import { AdminReminderControls } from "@/components/admin/AdminReminderControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
@@ -84,9 +85,17 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
         mx: "auto",
       }}
     >
-      <Typography variant="h4" component="h1">
-        {weekNumber != null ? `Week ${weekNumber} — Submission Status` : "No active week"}
-      </Typography>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        alignItems={{ xs: "stretch", md: "flex-start" }}
+        justifyContent="space-between"
+      >
+        <Typography variant="h4" component="h1">
+          {weekNumber != null ? `Week ${weekNumber} — Submission Status` : "No active week"}
+        </Typography>
+        <AdminExportCsvButton leagueId={leagueId} />
+      </Stack>
 
       {allSubmitted ? (
         <Typography variant="body1" color="success.main">

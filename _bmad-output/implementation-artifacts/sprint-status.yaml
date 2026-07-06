@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-04'  # 6-6-ux-spec-comparison-and-alignment → done
+  last_updated: '2026-07-05'  # post-epic-8 production launch gate items added
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -99,14 +99,18 @@ development_status:
   # Pre-Epic 6 blocking item — must be done before epic-6 story 6.1 begins
   pre-epic-6-email-provider-spike: done  # compare popular transactional providers (Resend, Postmark, SendGrid, etc.); prioritize free tier that meets requirements; document decision
 
-  epic-6: in-progress
+  epic-6: done
   6-1-transactional-email-integration: done
   6-2-tuesday-6-00-pm-league-email-content-and-admin-preview: done
   6-3-wednesday-and-thursday-reminders: done
   6-4-email-deep-links-to-picks: done
   6-5-cron-routes-secrets-and-idempotent-weekly-orchestration: done
   6-6-ux-spec-comparison-and-alignment: done  # carried from epic-3-retro → epic-4-retro → epic-5-retro; must close in epic 6
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
+
+  # Pre-Epic 7 blocking items — must be done before epic-7 moves to in-progress
+  pre-epic-7-manual-email-flow-smoke-test: backlog  # local dev: Tuesday digest send/preview, Wed/Thu reminders, deep links; Kyle noted untested at epic-6 retro
+  pre-epic-7-observability-scope-decision: backlog  # one-page decision before 7.2 spec: log-only MVP vs admin UI health panel (mirrors pre-epic-6 spike pattern)
 
   epic-7: backlog
   7-1-admin-csv-export-of-full-league-snapshot: backlog
@@ -124,3 +128,9 @@ development_status:
   8-6-rehearsal-runbook-for-invited-participants: backlog
   8-7-delete-test-league-and-data-cleanup: backlog
   epic-8-retrospective: optional
+
+  # Post-Epic 8 — production launch gate (must complete before first real NFL season; deploy after all epics)
+  # Detailed checklist: deferred-work.md § "Pre-production go-live: Vercel operational checklist"
+  post-epic-8-vercel-production-env-and-cron: backlog  # Production env vars (.env.example); deploy vercel.json crons; CRON_SECRET; redeploy after env changes
+  post-epic-8-resend-domain-and-from-address: backlog  # Verify sending domain (SPF/DKIM); replace noreply@yourdomain.com in all email senders
+  post-epic-8-production-smoke-test: backlog  # Real inbox: invite + Tuesday digest + reminders; confirm Resend dashboard; optional prod cron curl

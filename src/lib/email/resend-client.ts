@@ -1,8 +1,17 @@
 import { Resend } from "resend";
 
+import { logEvent } from "@/lib/logging/log-event";
+
 if (!process.env.RESEND_API_KEY?.trim()) {
+  logEvent({
+    level: "error",
+    domain: "email",
+    action: "config_missing",
+    code: "CONFIG_MISSING",
+    message: "RESEND_API_KEY is not configured — set in .env.local or Vercel env vars",
+  });
   throw new Error(
-    "[email] RESEND_API_KEY is not configured — set in .env.local or Vercel env vars",
+    "RESEND_API_KEY is not configured — set in .env.local or Vercel env vars",
   );
 }
 

@@ -17,6 +17,9 @@ import {
   getReminderData,
 } from "@/lib/email/get-reminder-data";
 import { sendReminder } from "@/lib/email/send-reminder";
+import { logEvent } from "@/lib/logging/log-event";
+
+const ROUTE = "/api/cron/wednesday-reminder";
 
 export async function POST(request: NextRequest) {
   const authError = assertCronRequest(request);
@@ -25,6 +28,14 @@ export async function POST(request: NextRequest) {
   }
 
   if (!isInEasternWindow(new Date(), 3, 19, 24)) {
+    logEvent({
+      level: "info",
+      domain: "cron",
+      route: ROUTE,
+      action: "outside_window_skip",
+      code: "CRON_OUTSIDE_WINDOW",
+      message: "cron skipped — outside Eastern time window",
+    });
     return NextResponse.json({ status: "skipped", reason: "outside_window" });
   }
 
@@ -32,7 +43,14 @@ export async function POST(request: NextRequest) {
   try {
     leagueIds = await getActiveLeagueIds();
   } catch (e) {
-    console.error("[cron] wednesday-reminder: failed to fetch active leagues", { error: e });
+    logEvent({
+      level: "error",
+      domain: "cron",
+      route: ROUTE,
+      action: "league_error",
+      message: "wednesday-reminder: failed to fetch active leagues",
+      context: { error: e instanceof Error ? e.message : String(e) },
+    });
     return NextResponse.json(
       { error: { code: "DB_ERROR", message: "Failed to fetch active leagues" } },
       { status: 500 },
@@ -76,21 +94,43 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       if (e instanceof NoActiveWeekError || e instanceof LeagueNotFoundError) {
         skippedNoWeek++;
-        console.info("[cron] wednesday-reminder: no active week for league", { leagueId });
+        logEvent({
+          level: "info",
+          domain: "cron",
+          route: ROUTE,
+          action: "no_active_week",
+          leagueId,
+          message: "wednesday-reminder: no active week for league",
+        });
       } else {
         failed++;
-        console.error("[cron] wednesday-reminder: unhandled league error", { leagueId, error: e });
+        logEvent({
+          level: "error",
+          domain: "cron",
+          route: ROUTE,
+          action: "league_error",
+          leagueId,
+          message: "wednesday-reminder: unhandled league error",
+          context: { error: e instanceof Error ? e.message : String(e) },
+        });
       }
     }
     processed++;
   }
 
-  console.info("[cron] wednesday-reminder complete", {
-    processed,
-    sent,
-    skippedAlreadySent,
-    skippedNoWeek,
-    failed,
+  logEvent({
+    level: "info",
+    domain: "cron",
+    route: ROUTE,
+    action: "job_complete",
+    message: "wednesday-reminder complete",
+    context: {
+      processed,
+      sent,
+      skippedAlreadySent,
+      skippedNoWeek,
+      failed,
+    },
   });
 
   return NextResponse.json({

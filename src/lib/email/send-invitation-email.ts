@@ -4,6 +4,7 @@ import { getResendFrom } from '@/lib/email/resend-from';
 import { resend } from '@/lib/email/resend-client';
 import { sendWithRetry } from '@/lib/email/send-with-retry';
 import { InvitationEmail } from '@/lib/email/templates/InvitationEmail';
+import { logEvent } from '@/lib/logging/log-event';
 
 export type SendInvitationEmailInput = {
   to: string;
@@ -42,15 +43,27 @@ export async function sendInvitationEmail(
       return data;
     });
 
-    console.info('[email] invitation sent', {
-      to: input.to,
-      leagueName: input.leagueName,
+    logEvent({
+      level: 'info',
+      domain: 'email',
+      action: 'invitation_sent',
+      message: 'invitation sent',
+      context: {
+        to: input.to,
+        leagueName: input.leagueName,
+      },
     });
   } catch (err) {
-    console.error('[email] invitation send failed', {
-      to: input.to,
-      leagueName: input.leagueName,
-      error: err,
+    logEvent({
+      level: 'error',
+      domain: 'email',
+      action: 'invitation_failed',
+      message: 'invitation send failed',
+      context: {
+        to: input.to,
+        leagueName: input.leagueName,
+        error: err instanceof Error ? err.message : String(err),
+      },
     });
   }
 }

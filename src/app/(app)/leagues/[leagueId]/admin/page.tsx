@@ -10,15 +10,18 @@ import { AdminExportCsvButton } from "@/components/admin/AdminExportCsvButton";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
 import { AdminReminderControls } from "@/components/admin/AdminReminderControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
+import { AdminWeeklyEmailStatus } from "@/components/admin/AdminWeeklyEmailStatus";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import { getAuditLog } from "@/lib/admin/get-audit-log";
 import { getJailedVerification } from "@/lib/admin/get-jailed-verification";
+import { getWeeklyEmailStatus } from "@/lib/admin/get-weekly-email-status";
 import {
   buildSubmissionStatus,
   type AdminSubmissionStatusPayload,
 } from "@/lib/admin/build-submission-status";
 import { prisma } from "@/lib/db";
+import { logEvent } from "@/lib/logging/log-event";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -72,6 +75,26 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   const outstandingCount = participants.filter((p) => p.submittedPick === null).length;
   const allSubmitted =
     weekNumber != null && participants.length > 0 && outstandingCount === 0;
+
+  let weeklyEmailStatus: Awaited<ReturnType<typeof getWeeklyEmailStatus>> | undefined;
+  let weeklyEmailStatusError = false;
+  try {
+    weeklyEmailStatus = await getWeeklyEmailStatus({
+      leagueId,
+      outstandingCount,
+    });
+  } catch (e) {
+    weeklyEmailStatusError = true;
+    logEvent({
+      level: "error",
+      domain: "api",
+      route: `/leagues/${leagueId}/admin`,
+      action: "weekly_email_status_failed",
+      leagueId,
+      message: "failed to load weekly email status for admin card",
+      context: { error: e instanceof Error ? e.message : String(e) },
+    });
+  }
 
   return (
     <Stack
@@ -152,6 +175,11 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
               outstandingCount={outstandingCount}
             />
           </Stack>
+
+          <AdminWeeklyEmailStatus
+            status={weeklyEmailStatus}
+            loadError={weeklyEmailStatusError}
+          />
         </Stack>
       </Stack>
 

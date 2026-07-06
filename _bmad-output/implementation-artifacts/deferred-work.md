@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 7-2-structured-logging-and-admin-visible-health-signals (2026-07-06)
+
+- **`getEasternWallClock` uses `toLocaleString` round-trip** — `src/lib/cron/eastern-window.ts`. Pre-existing fragile ET conversion; new status helpers inherit it. Refactor to `Intl` or `Temporal` when cron/time logic is next touched.
+- **`redactSensitive` redacts any string containing `@`** — `src/lib/logging/redact-sensitive.ts`. May over-redact URLs or error text; acceptable MVP tradeoff for PII safety.
+
 ## Deferred from: code review of 7-1-admin-csv-export-of-full-league-snapshot (2026-07-06)
 
 - **CSV formula-injection not sanitized** — `src/lib/export/serialize-league-export-csv.ts`. Email or team labels starting with `=`, `+`, `-` could trigger spreadsheet formula execution on open. Not in story AC; consider prefixing or sanitizing in a security pass.

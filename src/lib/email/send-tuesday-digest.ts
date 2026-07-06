@@ -6,6 +6,7 @@ import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { TuesdayDigestEmail } from "@/lib/email/templates/TuesdayDigestEmail";
+import { logEvent } from "@/lib/logging/log-event";
 
 export async function sendTuesdayDigest({
   leagueId,
@@ -68,12 +69,18 @@ export async function sendTuesdayDigest({
       sent += 1;
     } catch (err) {
       failed += 1;
-      console.error("[email] tuesday digest member send failed", {
+      logEvent({
+        level: "error",
+        domain: "email",
+        action: "member_send_failed",
+        code: "EMAIL_SEND_FAILED",
         leagueId,
         weekNumber: data.weekNumber,
-        membershipId: member.membershipId,
-        email: member.email,
-        error: err,
+        message: "tuesday digest member send failed",
+        context: {
+          membershipId: member.membershipId,
+          error: err instanceof Error ? err.message : String(err),
+        },
       });
     }
   }
@@ -102,11 +109,18 @@ export async function sendTuesdayDigest({
     });
   }
 
-  console.info("[email] tuesday digest sent", {
-    leagueName: data.leagueName,
+  logEvent({
+    level: "info",
+    domain: "email",
+    action: "tuesday_digest_complete",
+    leagueId,
     weekNumber: data.weekNumber,
-    sent,
-    failed,
+    message: "tuesday digest sent",
+    context: {
+      leagueName: data.leagueName,
+      sent,
+      failed,
+    },
   });
 
   return { sent, failed, sentAt };

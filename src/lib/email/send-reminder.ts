@@ -6,6 +6,7 @@ import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { ReminderEmail } from "@/lib/email/templates/ReminderEmail";
+import { logEvent } from "@/lib/logging/log-event";
 
 function reminderSubject(
   data: ReminderData,
@@ -61,12 +62,19 @@ export async function sendReminder({
       sent += 1;
     } catch (err) {
       failed += 1;
-      console.error(`[email] ${reminderType} reminder member send failed`, {
+      logEvent({
+        level: "error",
+        domain: "email",
+        action: "member_send_failed",
+        code: "EMAIL_SEND_FAILED",
         leagueId,
         weekNumber: data.weekNumber,
-        membershipId: member.membershipId,
-        email: member.email,
-        error: err,
+        message: `${reminderType} reminder member send failed`,
+        context: {
+          reminderType,
+          membershipId: member.membershipId,
+          error: err instanceof Error ? err.message : String(err),
+        },
       });
     }
   }
@@ -97,16 +105,23 @@ export async function sendReminder({
     });
   }
 
-  const logLabel =
-    sent > 0
-      ? `[email] ${reminderType} reminder sent`
-      : `[email] ${reminderType} reminder skipped — no outstanding members`;
-  console.info(logLabel, {
-    leagueName: data.leagueName,
+  logEvent({
+    level: "info",
+    domain: "email",
+    action: sent > 0 ? "reminder_complete" : "reminder_skipped",
+    leagueId,
     weekNumber: data.weekNumber,
-    sent,
-    failed,
-    skipped,
+    message:
+      sent > 0
+        ? `${reminderType} reminder sent`
+        : `${reminderType} reminder skipped — no outstanding members`,
+    context: {
+      reminderType,
+      leagueName: data.leagueName,
+      sent,
+      failed,
+      skipped,
+    },
   });
 
   return { sent, failed, skipped, sentAt };

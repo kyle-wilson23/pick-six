@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-06'  # story 7-1 done
+  last_updated: '2026-07-06'  # story 7-2 review
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -114,7 +114,7 @@ development_status:
 
   epic-7: in-progress
   7-1-admin-csv-export-of-full-league-snapshot: done
-  7-2-structured-logging-and-admin-visible-health-signals: backlog
+  7-2-structured-logging-and-admin-visible-health-signals: done
   7-3-accessibility-baseline-wcag-2-1-level-a-for-core-flows: backlog
   7-4-performance-and-deployment-hardening: backlog
   epic-7-retrospective: optional

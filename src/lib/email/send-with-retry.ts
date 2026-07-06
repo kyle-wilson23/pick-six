@@ -1,3 +1,5 @@
+import { logEvent } from "@/lib/logging/log-event";
+
 export type RetryOptions = {
   /** Retry attempts after the first failure (default 3 → delays ~1s / ~2s / ~4s). */
   maxRetries?: number;
@@ -53,14 +55,24 @@ export async function sendWithRetry<T>(
       lastError = err;
 
       if (isDailyCapError(err)) {
-        console.error(
-          "[email] daily cap exhausted — will not retry until midnight UTC reset",
-          { statusCode: 429 },
-        );
+        logEvent({
+          level: "error",
+          domain: "email",
+          action: "daily_cap_exhausted",
+          code: "EMAIL_DAILY_CAP",
+          message: "daily cap exhausted — will not retry until midnight UTC reset",
+          context: { statusCode: 429 },
+        });
         throw err;
       }
 
-      console.error(`[email] attempt ${attempt + 1} failed: ${errorMessage(err)}`);
+      logEvent({
+        level: "error",
+        domain: "email",
+        action: "send_retry_failed",
+        message: `attempt ${attempt + 1} failed: ${errorMessage(err)}`,
+        context: { attempt: attempt + 1 },
+      });
 
       if (attempt >= maxRetries) {
         break;

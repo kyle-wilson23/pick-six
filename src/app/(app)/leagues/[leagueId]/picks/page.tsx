@@ -13,6 +13,7 @@ import { DeadlineCountdown } from "@/components/picks/DeadlineCountdown";
 import { JailedTeamCallout } from "@/components/picks/JailedTeamCallout";
 import { PicksPreviewBanner } from "@/components/picks/PicksPreviewBanner";
 import { WeekMatchupList } from "@/components/picks/WeekMatchupList";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -84,6 +85,8 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
         minHeight: "100vh",
@@ -92,6 +95,7 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
         maxWidth: { xs: 640, md: 960 },
         mx: "auto",
         alignItems: "stretch",
+        ...skipTargetMainSx,
       }}
     >
       <Typography variant="h4" component="h1">

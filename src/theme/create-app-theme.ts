@@ -1,5 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 
+import { focusVisibleRingCss } from "@/theme/focus-visible-ring";
+
 /** UX: Visual Design Foundation — dark mode, emerald primary, gold accent (Pick Six). */
 export function createAppTheme(fontFamily: string) {
   return createTheme({
@@ -32,9 +34,65 @@ export function createAppTheme(fontFamily: string) {
     components: {
       MuiButton: {
         styleOverrides: {
-          root: {
+          root: ({ theme }) => ({
             textTransform: "none",
+            "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
+              theme.palette.primary.main,
+            ),
+          }),
+          sizeLarge: {
+            minHeight: 44,
           },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
+              theme.palette.primary.main,
+            ),
+          }),
+        },
+      },
+      MuiBottomNavigationAction: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
+              theme.palette.primary.main,
+            ),
+          }),
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
+              theme.palette.primary.main,
+            ),
+          }),
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
+              theme.palette.primary.main,
+            ),
+          }),
+        },
+      },
+      MuiLink: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&:focus-visible": focusVisibleRingCss(theme.palette.primary.main),
+          }),
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focused": focusVisibleRingCss(theme.palette.primary.main),
+          }),
         },
       },
     },

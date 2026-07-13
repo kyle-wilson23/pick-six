@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -30,13 +30,27 @@ type SignupFormProps = {
 
 export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) {
   const router = useRouter();
+  const alertRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [signInRecovery, setSignInRecovery] = useState(false);
+  const [focusNonce, setFocusNonce] = useState(0);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (focusNonce > 0) {
+      alertRef.current?.focus();
+    }
+  }, [focusNonce]);
+
+  function announceAlert() {
+    setFocusNonce((n) => n + 1);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setPasswordError(null);
     setSignInRecovery(false);
     const form = new FormData(event.currentTarget);
     const raw = {
@@ -44,7 +58,10 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
     };
     const parsed = formSchema.safeParse(raw);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Invalid input.");
+      const message = parsed.error.issues[0]?.message ?? "Invalid input.";
+      setPasswordError(message);
+      setError(message);
+      announceAlert();
       return;
     }
 
@@ -72,6 +89,8 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
           /* keep generic invite message */
         }
         setError(msg);
+        setPasswordError(msg);
+        announceAlert();
         return;
       }
 
@@ -83,6 +102,7 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
       });
       if (result?.error) {
         setSignInRecovery(true);
+        announceAlert();
         return;
       }
       router.push("/");
@@ -92,15 +112,27 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
     }
   }
 
+  const showBanner = Boolean(error) || signInRecovery;
+  const passwordHelper = passwordError
+    ? `${passwordError} ${SIGNUP_PASSWORD_POLICY_MESSAGE}`
+    : SIGNUP_PASSWORD_POLICY_MESSAGE;
+  const passwordDescribedBy = [
+    "signup-password-helper",
+    showBanner ? "signup-form-error" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <Stack
       component="form"
       spacing={2}
       onSubmit={handleSubmit}
+      noValidate
       sx={{ width: "100%", maxWidth: 400 }}
     >
       {signInRecovery ? (
-        <Alert severity="warning">
+        <Alert ref={alertRef} id="signup-form-error" severity="warning" tabIndex={-1} role="alert">
           Your account was created, but automatic sign-in did not complete. Please{" "}
           <Link component={NextLink} href={loginHref}>
             sign in
@@ -108,7 +140,9 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
           with this email and your password.
         </Alert>
       ) : error ? (
-        <Alert severity="error">{error}</Alert>
+        <Alert ref={alertRef} id="signup-form-error" severity="error" tabIndex={-1} role="alert">
+          {error}
+        </Alert>
       ) : null}
       <TextField
         name="email"
@@ -125,7 +159,15 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
         autoComplete="new-password"
         required
         fullWidth
-        helperText={SIGNUP_PASSWORD_POLICY_MESSAGE}
+        error={Boolean(passwordError)}
+        helperText={passwordHelper}
+        FormHelperTextProps={{ id: "signup-password-helper" }}
+        slotProps={{
+          htmlInput: {
+            "aria-invalid": Boolean(passwordError) || undefined,
+            "aria-describedby": passwordDescribedBy,
+          },
+        }}
       />
       <Button type="submit" variant="contained" size="large" disabled={pending} fullWidth>
         {pending ? "Creating account…" : "Create account"}

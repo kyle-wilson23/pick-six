@@ -80,14 +80,14 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 3-6-picks-ui-matchups-odds-spread-weather-optional (2026-04-28)
 
-- **Keyboard/a11y for clickable team selection** — `MatchupCard` propagates `onClick` but has no `role="button"`, `tabIndex`, or `onKeyDown`; story 3.6 is display-only so this is deferred to Story 3.7 when `onTeamSelect` is wired.
+- ~~**Keyboard/a11y for clickable team selection**~~ — **Resolved by Story 3.7** (radiogroup + keyboard); verified no regression in Story 7.3.
 - **Weather caching** — `cache: "no-store"` on every SSR render will exhaust the OpenWeatherMap free-tier quota under any meaningful traffic. Spec open questions explicitly defer caching to performance testing. Add `next: { revalidate }` or an in-process TTL cache in a future iteration.
 - **Domed stadium weather display** — Weather conditions are fetched and shown for fully-enclosed stadiums (Allegiant/LV, US Bank/MIN, SoFi/LAC+LAR, Lucas Oil/IND, Ford Field/DET, NRG/HOU). Showing temperature and wind for a climate-controlled game is misleading. Add a `dome: true` flag to `NFL_STADIUM_BY_TEAM_ABBR` and skip weather fetch for dome stadiums. Product decision required before implementing.
 
 ## Deferred from: code review of 3-7-jailed-and-already-picked-ux-with-countdown-and-status (2026-05-09)
 
 - **Prisma patch-level bump + seed session note** — `package.json` / `package-lock.json` move `@prisma/client` and `prisma` from 7.7.x to 7.8.x; `prisma/seed.cjs` adds a console reminder to re-auth after migrate reset. Unrelated to 3.7 acceptance criteria; treat as repo hygiene when convenient.
-- **44×44 touch target for anti-jailed “2 PTS” chip** — `MatchupCard` uses MUI `Chip` `size="small"`, which may be under NFR8. Defer sizing pass until a11y QA or explicit design direction.
+- ~~**44×44 touch target for anti-jailed “2 PTS” chip**~~ — **Resolved by Story 7.3** — `MatchupCard` anti-jailed chip `minWidth`/`minHeight` ≥44.
 
 ## Deferred from: code review of 3-5-deadline-enforcement-server-authority (2026-04-26)
 
@@ -178,7 +178,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of 5-4-live-leaderboard (2026-06-14)
 
 - **Missing `generateMetadata` export on standings page** — `src/app/(app)/leagues/[leagueId]/standings/page.tsx`. Browser tab uses layout default title. Add a `generateMetadata` function that includes the league name once that pattern is adopted across pages.
-- **Current user row: color-only highlight lacks WCAG 1.4.1 non-color indicator** — `src/components/standings/StandingsTable.tsx`. Background color alone does not satisfy WCAG 1.4.1. Add `aria-current="row"` and a visually-hidden "You" label. Address in Story 7.3 (accessibility baseline).
+- ~~**Current user row: color-only highlight lacks WCAG 1.4.1 non-color indicator**~~ — **Resolved by Story 6.6** (`aria-current="row"` + visually hidden “(You)”); verified in Story 7.3 axe/semantics tests.
 - **Outcome comparisons use raw string literals instead of Prisma-generated enum** — `src/lib/scoring/get-league-standings.ts:43`. `p.outcome === "WIN"` / `"LOSS"` / `"TIE"` — enum rename silently breaks comparisons. Pre-existing pattern across all scoring files (5.2, 5.3); fix in a single enum-import pass across the scoring module.
 - **`user.email` may be null in OAuth scenarios; null displayName crashes `localeCompare`** — `src/lib/scoring/get-league-standings.ts:36`. Same as the roster page pattern. If email is non-nullable in the schema this is a non-issue; otherwise add `?? m.id` as ultimate fallback. Verify schema nullability before acting.
 - **All `leagueMembership` rows included in standings regardless of role** — `src/lib/scoring/get-league-standings.ts:22`. Non-playing roles (e.g., COMMISSIONER without picks) appear in standings with zeros. Story 2.6 made admin a full participant, but if non-participant roles exist they surface here. Filter by participant roles in a future story if the role model expands.
@@ -196,7 +196,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **season.findFirst non-deterministic on duplicate records** — `src/lib/scoring/get-personal-pick-history.ts`. If two Season rows share `(leagueId, nflSeasonYear)`, `findFirst` silently picks one. Schema likely enforces uniqueness; switch to `findUnique` and get a compile-time guarantee in a future scoring refactor pass.
 - **notFound() on unauthenticated session should redirect to sign-in** — `src/app/(app)/leagues/[leagueId]/history/page.tsx`. A 404 provides no recovery path for logged-out users. Pre-existing pattern across all protected app pages; fix when a unified auth-redirect middleware is introduced.
 - **minHeight: "100vh" on page Stack inside nested layout** — `src/app/(app)/leagues/[leagueId]/history/page.tsx`. Mirrors the standings page exactly per spec; may cause double-full-height subtrees if the app shell already occupies a full-height container. Revisit in a layout/UX pass.
-- **Breadcrumb link accessibility polish** — `src/app/(app)/leagues/[leagueId]/history/page.tsx`. "← {league.name}" link lacks a `<nav>` landmark and aria annotations for the arrow character. Deferred to Story 7.3 (accessibility baseline).
+- ~~**Breadcrumb link accessibility polish**~~ — **N/A / stale for history** — history breadcrumb removed in Story 6.6; league home “Your leagues” breadcrumb polished in Story 7.3 (`<nav aria-label="Breadcrumb">` + decorative arrow `aria-hidden`).
 - **React key on nflWeekNumber** — `src/components/history/PickHistoryTable.tsx`. DB unique constraint on `(leagueMembershipId, seasonId, nflWeekNumber)` prevents duplicates in practice; exposing a stable DB row ID in `PickHistoryEntry` would be safer if the constraint is ever relaxed.
 - **Unhandled Prisma rejections propagate as 500** — `src/app/(app)/leagues/[leagueId]/history/page.tsx` and `src/lib/scoring/get-personal-pick-history.ts`. No try/catch; DB errors surface as unhandled Next.js 500. Pre-existing pattern across all server components; address when a global error-handling layer is introduced.
 
@@ -340,12 +340,12 @@ Production is "weekly-email ready" when: all required env vars set, production r
 
 - **PickStatusBanner desktop inline with page title** — UX spec shows banner inline with the "This Week" header row on desktop. Requires a header-row refactor; current banner remains full-width below deadline/jailed row.
 - **Standings desktop sidebar** — UX spec includes a contextual sidebar on desktop standings. MVP table-only layout retained; enhancement deferred to Epic 7.
-- **Global 48px button height enforcement** — UX button hierarchy specifies 48px touch targets globally. Not enforced in theme overrides; defer to Epic 7.3/7.4.
+- ~~**Global 48px button height enforcement**~~ — **Partial in Story 7.3** — core-flow `Button` `sizeLarge` minHeight 44px; full theme-wide 48px remains for **Story 7.4**.
 - **Skeleton loading states** — UX responsive table calls for skeleton placeholders during load. No skeleton components yet; defer to Epic 7.4.
 - **Snackbar admin feedback** — UX prefers Snackbar for transient admin actions; current inline Alert pattern in email composers is acceptable MVP; polish pass deferred.
 - **Landing page hero layout** — Marketing landing page alignment out of league-shell scope; defer.
 - **`generateMetadata` on league pages** — Deferred from Stories 5.4–5.6; Epic 7.
-- **Full WCAG Level A audit** — Partial coverage (matchup radiogroup, standings `aria-current` added in 6.6); full audit in Story 7.3.
+- ~~**Full WCAG Level A audit**~~ — **Resolved by Story 7.3** — login/picks/standings + league shell; see `docs/accessibility-checklist.md`.
 - **WeatherBadge component extraction** — Weather remains inline in `MatchupCard`; cosmetic extraction deferred.
 - ~~**NFR32 Resend webhooks**~~ — **Owner: Story 7.2** — log-only webhook route per `docs/observability-scope-decision.md`.
 - **Real-time admin outstanding count refresh** — Stale SSR `outstandingCount` in `AdminReminderControls`; deferred from 6.3, unchanged in 6.6.

@@ -22,6 +22,7 @@ import {
 } from "@/lib/admin/build-submission-status";
 import { prisma } from "@/lib/db";
 import { logEvent } from "@/lib/logging/log-event";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -99,8 +100,11 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
+        ...skipTargetMainSx,
         minHeight: "100vh",
         px: 2,
         py: 4,

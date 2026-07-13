@@ -13,6 +13,7 @@ import { listLeagueRoster } from "@/lib/league/list-league-roster";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -65,6 +66,8 @@ export default async function LeagueHomePage({ params }: PageProps) {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
         minHeight: "100vh",
@@ -72,11 +75,17 @@ export default async function LeagueHomePage({ params }: PageProps) {
         py: 4,
         maxWidth: 560,
         mx: "auto",
+        ...skipTargetMainSx,
       }}
     >
-      <Typography variant="body2">
-        <Link href="/my-leagues">← Your leagues</Link>
-      </Typography>
+      <Stack component="nav" aria-label="Breadcrumb">
+        <Typography variant="body2" component="span">
+          <Link href="/my-leagues">
+            <span aria-hidden="true">← </span>
+            Your leagues
+          </Link>
+        </Typography>
+      </Stack>
 
       <Typography variant="h4" component="h1">
         {league.name}

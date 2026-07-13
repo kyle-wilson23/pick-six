@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getPersonalPickHistory } from "@/lib/scoring/get-personal-pick-history";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -37,8 +38,11 @@ export default async function LeagueHistoryPage({ params }: PageProps) {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
+        ...skipTargetMainSx,
         minHeight: "100vh",
         px: 2,
         py: 4,

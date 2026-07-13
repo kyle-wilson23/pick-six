@@ -15,6 +15,8 @@ import {
   computeMatchupSideState,
   type MatchupSideState,
 } from "@/lib/picks/matchup-card-state";
+import { buildTeamPickAriaLabel } from "@/lib/picks/team-pick-aria-label";
+import { focusVisibleRingSx } from "@/theme/focus-visible-ring";
 
 import type { PicksWeekMatchupJson } from "@/lib/picks/picks-week-view-types";
 
@@ -159,7 +161,12 @@ export function MatchupCard(props: MatchupCardProps) {
 
     const otherWeek = isAlreadyPicked ? pickedWeekByTeamId?.[team.id] : undefined;
 
-    const ariaLabel = `${team.name}, moneyline ${formatAmericanMl(moneylineAmerican)}`;
+    const ariaLabel = buildTeamPickAriaLabel({
+      teamName: team.name,
+      moneylineLabel: formatAmericanMl(moneylineAmerican),
+      state,
+      pickedInWeek: otherWeek,
+    });
 
     const role = interactive ? "radio" : undefined;
     const tabIndex = interactive ? (isDisabled ? -1 : 0) : undefined;
@@ -198,10 +205,7 @@ export function MatchupCard(props: MatchupCardProps) {
           cursor: interactive && !isDisabled ? "pointer" : "default",
           color: isAlreadyPicked ? "text.disabled" : "inherit",
           outline: "none",
-          "&:focus-visible": {
-            outline: (t) => `2px solid ${t.palette.primary.main}`,
-            outlineOffset: 2,
-          },
+          "&:focus-visible": focusVisibleRingSx,
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
@@ -245,6 +249,8 @@ export function MatchupCard(props: MatchupCardProps) {
             aria-label={`Pick ${team.name} for 2-point anti-jailed bonus`}
             sx={{
               ml: 5,
+              minWidth: 44,
+              minHeight: 44,
               fontWeight: 700,
               letterSpacing: 0.5,
               bgcolor: (t) => t.palette.accent.gold,

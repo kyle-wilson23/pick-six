@@ -12,6 +12,7 @@ import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-seas
 import { DeleteLeagueDialog } from "./delete-league-dialog";
 import { FirstCompetitionWeekSettings } from "./first-competition-week-settings";
 import { NflOddsAdminPanel } from "./nfl-odds-admin-panel";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -53,8 +54,11 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
+        ...skipTargetMainSx,
         minHeight: "100vh",
         px: 2,
         py: 4,

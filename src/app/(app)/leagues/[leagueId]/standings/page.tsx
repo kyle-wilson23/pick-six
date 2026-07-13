@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeagueStandings } from "@/lib/scoring/get-league-standings";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
@@ -33,6 +34,8 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
         minHeight: "100vh",
@@ -40,6 +43,7 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
         py: 4,
         maxWidth: 560,
         mx: "auto",
+        ...skipTargetMainSx,
       }}
     >
       <Typography variant="h4" component="h1">

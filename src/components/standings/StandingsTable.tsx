@@ -40,7 +40,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
 
   return (
     <>
-      <Table size="small">
+      <Table size="small" aria-label="League standings">
         <TableHead>
           <TableRow>
             <TableCell sx={{ width: 40, ...tabularNums }}>#</TableCell>

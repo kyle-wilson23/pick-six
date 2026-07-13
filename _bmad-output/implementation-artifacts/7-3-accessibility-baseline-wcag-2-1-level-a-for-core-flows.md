@@ -1,6 +1,6 @@
 # Story 7.3: Accessibility Baseline (WCAG 2.1 Level A) for Core Flows
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -203,7 +203,7 @@ so that I can play too (**NFR37–NFR44**).
 
 ### Review Findings
 
-- [ ] [Review][Decision] Manual AC7 checklist still unchecked — Kyle will complete keyboard / VoiceOver / contrast passes and check off `docs/accessibility-checklist.md` before story → done (do not mark done until checklist is checked).
+- [x] [Review][Decision] Manual AC7 checklist completed — Kyle verified keyboard / VoiceOver / contrast; `docs/accessibility-checklist.md` fully checked off.
 - [x] [Review][Patch] Skip-target `<main>` uses `outline: "none"` with no replacement focus ring — fixed via `skipTargetMainSx`
 - [x] [Review][Patch] Core-flow TextField / OutlinedInput lack theme focus-visible ring — `MuiOutlinedInput` focused ring in theme
 - [x] [Review][Patch] Identical validation/auth error string may not refocus alert — `focusNonce` on login + signup
@@ -338,7 +338,7 @@ Cursor Grok 4.5
 - Picks: `buildTeamPickAriaLabel` + unit tests; MatchupCard uses it; 2 PTS chip ≥44×44; radiogroup keyboard unchanged (code review + preview-mode page smoke).
 - Standings: `aria-label="League standings"`; verified `aria-current="row"` + “(You)” via axe/jsdom test.
 - Breadcrumb: league home `<nav aria-label="Breadcrumb">` with decorative arrow `aria-hidden`.
-- Docs: `docs/accessibility-checklist.md` (manual VoiceOver/contrast remaining for human spot-check).
+- Docs: `docs/accessibility-checklist.md` — automated + manual keyboard / VoiceOver / contrast fully checked off (Kyle, 2026-07-12).
 - Deferred-work: closed 7.3 a11y items (full Level A audit, 2 PTS target, standings non-color, history breadcrumb N/A, MatchupCard keyboard verify, partial 48px → 7.4).
 - Known Level A exceptions: none.
 
@@ -376,3 +376,4 @@ Cursor Grok 4.5
 - 2026-07-12: Story context created (create-story) — ready-for-dev.
 - 2026-07-12: Implemented WCAG 2.1 Level A baseline for login/picks/standings + shell; tests + checklist; status → review.
 - 2026-07-12: Code review — applied 7 patches (skip-target focus, TextField ring, alert refocus, signup describedby/policy, SkipLink focus, drop unused jest-dom); manual checklist remains; status → in-progress.
+- 2026-07-12: Manual AC7 checklist completed; story + sprint status → done.

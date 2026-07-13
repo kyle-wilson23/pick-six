@@ -10,24 +10,24 @@ Core flows: **login**, **picks**, **standings** (+ league shell chrome).
 
 ## Manual — keyboard-only
 
-- [ ] `/login`: Tab reaches email → password → Login → “Back to home”; submit with empty fields focuses error alert; valid login proceeds
-- [ ] After login, open a league: first Tab shows **Skip to main content**; Enter moves focus to `#main-content`
-- [ ] Desktop: Tab through league nav tabs; active tab has `aria-current="page"`; Enter opens tab
-- [ ] Mobile viewport: bottom nav actions are Tab/Enter operable
-- [ ] `/picks`: Tab order is status/deadline/jailed context → matchup radios → (if present) 2 PTS chip; arrow keys move within radiogroup; Enter/Space selects; jailed/picked sides announce state in name
-- [ ] `/standings`: table reachable; current user row announced as current (You)
+- [x] `/login`: Tab reaches email → password → Login → “Back to home”; submit with empty fields focuses error alert; valid login proceeds
+- [x] After login, open a league: first Tab shows **Skip to main content**; Enter moves focus to `#main-content`
+- [x] Desktop: Tab through league nav tabs; active tab has `aria-current="page"`; Enter opens tab
+- [x] Mobile viewport: bottom nav actions are Tab/Enter operable
+- [x] `/picks`: Tab order is status/deadline/jailed context → matchup radios → (if present) 2 PTS chip; arrow keys move within radiogroup; Enter/Space selects; jailed/picked sides announce state in name
+- [x] `/standings`: table reachable; current user row announced as current (You)
 
 ## Manual — screen reader spot-check (VoiceOver + Safari recommended)
 
-- [ ] Login validation / auth failure: alert announced; fields marked invalid with helper text
-- [ ] Picks: team radio names include jailed / already picked week N / selected / locked as applicable
-- [ ] Standings: “League standings” table name; current row includes “(You)”
+- [x] Login validation / auth failure: alert announced; fields marked invalid with helper text
+- [x] Picks: team radio names include jailed / already picked week N / selected / locked as applicable
+- [x] Standings: “League standings” table name; current row includes “(You)”
 
 ## Manual — contrast / non-color
 
-- [ ] Body text and labels on `#121212` / `#1E1E1E` meet ≥4.5:1 (DevTools contrast)
-- [ ] Deadline urgency readable from text (“Picks lock in” + countdown label), not color alone
-- [ ] Selected pick visible via styling **and** `aria-checked`; standings current user via `aria-current` + “(You)”
+- [x] Body text and labels on `#121212` / `#1E1E1E` meet ≥4.5:1 (DevTools contrast)
+- [x] Deadline urgency readable from text (“Picks lock in” + countdown label), not color alone
+- [x] Selected pick visible via styling **and** `aria-checked`; standings current user via `aria-current` + “(You)”
 
 ## Known Level A exceptions
 

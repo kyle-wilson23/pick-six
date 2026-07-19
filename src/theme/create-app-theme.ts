@@ -40,14 +40,18 @@ export function createAppTheme(fontFamily: string) {
               theme.palette.primary.main,
             ),
           }),
+          sizeMedium: {
+            minHeight: 48,
+          },
           sizeLarge: {
-            minHeight: 44,
+            minHeight: 48,
           },
         },
       },
       MuiTab: {
         styleOverrides: {
           root: ({ theme }) => ({
+            minHeight: 48,
             "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
               theme.palette.primary.main,
             ),

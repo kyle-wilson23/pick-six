@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { LeagueNavShell } from "@/components/league/LeagueNavShell";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 
 type LayoutProps = {
@@ -18,20 +18,8 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership || !isLeagueParticipantRole(membership.role)) {
-    notFound();
-  }
-
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    select: { name: true },
-  });
-
-  if (!league) {
+  const access = await getLeagueAccess(session.user.id, leagueId);
+  if (!access || !isLeagueParticipantRole(access.membership.role)) {
     notFound();
   }
 
@@ -41,8 +29,8 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
   return (
     <LeagueNavShell
       leagueId={leagueId}
-      leagueName={league.name}
-      isAdmin={membership.role === LeagueMembershipRole.ADMIN}
+      leagueName={access.league.name}
+      isAdmin={access.membership.role === LeagueMembershipRole.ADMIN}
       userDisplayName={userDisplayName}
     >
       {children}

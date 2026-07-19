@@ -61,7 +61,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
             return (
               <TableRow
                 key={entry.membershipId}
-                aria-current={isCurrentUser ? "row" : undefined}
+                aria-current={isCurrentUser ? true : undefined}
                 sx={
                   isCurrentUser
                     ? { bgcolor: (t) => `${t.palette.primary.main}14` }

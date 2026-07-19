@@ -291,6 +291,7 @@ export function WeekMatchupList({
               pickedWeekByTeamId={pickedWeekByTeamId}
               isLocked={isLocked}
               antiJailedOpponentTeamId={antiJailedOpponentTeamId}
+              isSubmitting={submitting}
             />
           ))}
         </Box>

@@ -45,7 +45,7 @@ Story 7.2 **does not** implement Slack, PagerDuty, or email-on-failure alerts. O
 - League admins use the in-app status card for per-league confirmation.
 - Resend dashboard covers bounce/complaint visibility without per-recipient admin UI.
 
-**Deferred to Story 7.4:** non-200 cron responses when `failed > 0` (enables free external uptime monitors), circuit breaker for Resend outages, scoring/deadline structured logging.
+**Resolved by Story 7.4:** non-200 cron responses when `failed > 0` (enables free external uptime monitors), Resend circuit breaker (`EMAIL_CIRCUIT_OPEN`), `maxDuration = 300` on cron routes. Scoring/deadline structured logging remains post-launch.
 
 ## Resend webhook setup (NFR32 log-only)
 
@@ -74,14 +74,15 @@ curl -X POST http://localhost:3000/api/webhooks/resend \
 
 Expected: `401` with `{ "error": { "code": "UNAUTHORIZED", ... } }`.
 
-## Deferred to Story 7.4
+## Story 7.4 cron hardening (resolved)
 
-| Item | Notes |
-|------|-------|
-| Cron HTTP non-200 when `failed > 0` | Enables external health monitors |
-| Resend circuit breaker | Pause retries during provider outage |
-| Scoring / pick-deadline structured logging | Post-launch scope |
-| `maxDuration` / cron timeout hardening | Deployment hardening epic |
+| Item | Status |
+|------|--------|
+| Cron HTTP **500** when `failed > 0` | **Resolved by 7.4** — same JSON body; 200 for success / `outside_window` |
+| Resend circuit breaker | **Resolved by 7.4** — after 3 consecutive provider failures, abort remaining; `code: EMAIL_CIRCUIT_OPEN` |
+| `maxDuration = 300` on cron routes | **Resolved by 7.4** — route-segment export |
+| External uptime monitor | **Documented** in [deployment.md](./deployment.md) — ops configures cron-job.org / Better Stack |
+| Scoring / pick-deadline structured logging | Still **post-launch** |
 
 ## Related docs
 

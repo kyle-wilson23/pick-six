@@ -1,7 +1,17 @@
 import { createElement } from "react";
 
 import { prisma } from "@/lib/db";
+import {
+  EMAIL_CIRCUIT_OPEN_CODE,
+  createEmailCircuitBreaker,
+  recordEmailSendFailure,
+  recordEmailSendSuccess,
+} from "@/lib/email/circuit-breaker";
 import { getTuesdayDigestData, type TuesdayDigestData } from "@/lib/email/get-tuesday-digest-data";
+import {
+  EMAIL_SEND_CONCURRENCY,
+  mapWithConcurrency,
+} from "@/lib/email/map-with-concurrency";
 import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
@@ -32,8 +42,14 @@ export async function sendTuesdayDigest({
 
   let sent = 0;
   let failed = 0;
+  const breaker = createEmailCircuitBreaker();
 
-  for (const member of data.members) {
+  await mapWithConcurrency(data.members, EMAIL_SEND_CONCURRENCY, async (member) => {
+    if (breaker.open) {
+      failed += 1;
+      return;
+    }
+
     try {
       await sendWithRetry(async () => {
         const { error } = await resend.emails.send(
@@ -67,6 +83,7 @@ export async function sendTuesdayDigest({
         }
       });
       sent += 1;
+      recordEmailSendSuccess(breaker);
     } catch (err) {
       failed += 1;
       logEvent({
@@ -82,8 +99,24 @@ export async function sendTuesdayDigest({
           error: err instanceof Error ? err.message : String(err),
         },
       });
+
+      if (recordEmailSendFailure(breaker)) {
+        logEvent({
+          level: "error",
+          domain: "email",
+          action: "circuit_open",
+          code: EMAIL_CIRCUIT_OPEN_CODE,
+          leagueId,
+          weekNumber: data.weekNumber,
+          message: "tuesday digest aborted remaining sends — Resend circuit open",
+          context: {
+            consecutiveFailures: breaker.consecutiveFailures,
+            remainingAborted: true,
+          },
+        });
+      }
     }
-  }
+  });
 
   const sentAt = sent > 0 ? new Date() : null;
 
@@ -120,6 +153,7 @@ export async function sendTuesdayDigest({
       leagueName: data.leagueName,
       sent,
       failed,
+      circuitOpen: breaker.open,
     },
   });
 

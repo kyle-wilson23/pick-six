@@ -3,7 +3,7 @@ import Typography from "@mui/material/Typography";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
 import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
@@ -27,11 +27,8 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
     notFound();
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership || !isLeagueParticipantRole(membership.role)) {
+  const access = await getLeagueAccess(session.user.id, leagueId);
+  if (!access || !isLeagueParticipantRole(access.membership.role)) {
     notFound();
   }
 

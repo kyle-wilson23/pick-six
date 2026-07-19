@@ -2,6 +2,7 @@
 
 import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
@@ -61,6 +62,8 @@ export type MatchupCardProps = {
   isLocked?: boolean;
   /** Anti-jailed eligible opponent (precomputed by the controller). */
   antiJailedOpponentTeamId?: string | null;
+  /** True while a pick POST is in flight — selected card shows pending cue. */
+  isSubmitting?: boolean;
 };
 
 export function MatchupCard(props: MatchupCardProps) {
@@ -73,6 +76,7 @@ export function MatchupCard(props: MatchupCardProps) {
     pickedWeekByTeamId,
     isLocked = false,
     antiJailedOpponentTeamId = null,
+    isSubmitting = false,
   } = props;
   const { homeTeam, awayTeam } = matchup;
   const weather = matchup.weather;
@@ -107,6 +111,7 @@ export function MatchupCard(props: MatchupCardProps) {
 
   const cardHasSelected = homeState === "selected" || awayState === "selected";
   const cardHasJailed = homeState === "jailed" || awayState === "jailed";
+  const showPending = isSubmitting && cardHasSelected;
 
   let kickDisplay = "—";
   try {
@@ -123,7 +128,7 @@ export function MatchupCard(props: MatchupCardProps) {
     state: MatchupSideState,
     opts: { antiJailedBonus: boolean } = { antiJailedBonus: false },
   ) {
-    if (!interactive) return;
+    if (!interactive || isSubmitting) return;
     if (state === "jailed") {
       onTeamSelect?.(teamId, { kind: "blocked", reason: "JAILED_TEAM_PICK" });
       return;
@@ -154,9 +159,9 @@ export function MatchupCard(props: MatchupCardProps) {
     const isSelected = state === "selected";
     const isJailed = state === "jailed";
     const isAlreadyPicked = state === "alreadyPicked";
-    const isDisabled = isJailed || isAlreadyPicked || isLocked;
+    const isDisabled = isJailed || isAlreadyPicked || isLocked || isSubmitting;
     const isAntiJailedEligible =
-      !isLocked && !isJailed && !isAlreadyPicked &&
+      !isLocked && !isJailed && !isAlreadyPicked && !isSubmitting &&
       antiJailedOpponentTeamId != null && team.id === antiJailedOpponentTeamId;
 
     const otherWeek = isAlreadyPicked ? pickedWeekByTeamId?.[team.id] : undefined;
@@ -269,6 +274,7 @@ export function MatchupCard(props: MatchupCardProps) {
   return (
     <Card
       variant="outlined"
+      aria-busy={showPending || undefined}
       sx={{
         width: "100%",
         maxWidth: { xs: 560, md: "none" },
@@ -282,11 +288,13 @@ export function MatchupCard(props: MatchupCardProps) {
           : cardHasSelected
             ? "primary.main"
             : "divider",
+        opacity: isSubmitting && !cardHasSelected ? 0.55 : showPending ? 0.9 : 1,
+        pointerEvents: isSubmitting ? "none" : "auto",
         transition: (t) =>
-          t.transitions.create(["background-color", "border-color"], {
+          t.transitions.create(["background-color", "border-color", "opacity"], {
             duration: t.transitions.duration.shortest,
           }),
-        "&:hover": interactive
+        "&:hover": interactive && !isSubmitting
           ? { bgcolor: "background.elevated" }
           : undefined,
       }}
@@ -300,9 +308,19 @@ export function MatchupCard(props: MatchupCardProps) {
           flexWrap="wrap"
           useFlexGap
         >
-          <Typography variant="body2" color="text.secondary" component="p">
-            {kickDisplay}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <Typography variant="body2" color="text.secondary" component="p">
+              {kickDisplay}
+            </Typography>
+            {showPending ? (
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                <CircularProgress size={16} thickness={5} aria-label="Saving pick" />
+                <Typography variant="caption" color="primary.main" fontWeight={600}>
+                  Saving…
+                </Typography>
+              </Stack>
+            ) : null}
+          </Stack>
           {weather ? (
             stadiumRoof === "retractable" ? (
               <Tooltip title="Retractable roof — may be open or closed on game day">

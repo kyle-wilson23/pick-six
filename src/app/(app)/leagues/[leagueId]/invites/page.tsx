@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 
 import { InviteParticipantsForm } from "./invite-participants-form";
@@ -22,15 +23,12 @@ export default async function LeagueInvitesPage({ params }: PageProps) {
     notFound();
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: {
-      userId_leagueId: { userId: session.user.id, leagueId },
-    },
-  });
-
-  if (!membership) {
+  const access = await getLeagueAccess(session.user.id, leagueId);
+  if (!access) {
     notFound();
   }
+
+  const { membership } = access;
 
   const nflSeasonYear = getCurrentNflSeasonYear();
   const season = await prisma.season.findUnique({

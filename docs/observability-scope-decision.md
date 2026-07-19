@@ -48,7 +48,7 @@ Architecture committed to "Vercel logs + structured console/JSON — add Axiom/D
 | **Alerting (NFR46)** | Manual ops runbook + Resend dashboard; no automated pager at MVP |
 | **NFR32 webhooks** | Log-only `POST /api/webhooks/resend` in Story 7.2; no admin UI for per-recipient delivery |
 | **Cron drift monitoring** | Documented manual check; optional 7.2 enhancement: flag missing timestamps after expected windows |
-| **HTTP 200 when `failed > 0`** | Keep 200 for MVP (monitoring via structured logs); revisit non-200 or monitoring event in 7.4 |
+| **HTTP when `failed > 0`** | **Resolved by 7.4** — cron returns **500** when `failed > 0`; **200** for success / `outside_window` |
 
 ## Structured log schema proposal
 
@@ -136,7 +136,7 @@ True "immediate alerts" (PagerDuty, Slack bot, email-on-failure) require either 
 1. **After each cron window** (Tue ~6 PM ET, Wed evening, Thu ~1 hr before deadline): Kyle checks Vercel → Functions → Logs filtered by `domain:"cron"` OR reviews the admin weekly email status card per league.
 2. **Resend dashboard:** Bounced/complained emails visible without webhook integration.
 3. **Admin card:** Missing `sentAt` / reminder timestamps after expected window → visual "Not sent" state prompts manual admin send via existing composer controls.
-4. **Deferred to 7.4:** Return non-200 when cron `failed > 0` to enable free external uptime monitors (e.g. cron-job.org health check on response body). Circuit breaker for Resend outage also deferred to 7.4.
+4. **Resolved by 7.4:** Cron returns non-200 (`500`) when `failed > 0` for free external uptime monitors. Resend circuit breaker (`EMAIL_CIRCUIT_OPEN` after 3 consecutive failures). Monitor setup: [deployment.md](./deployment.md).
 
 **Post-MVP triggers to add automated alerting:**
 
@@ -159,7 +159,7 @@ True "immediate alerts" (PagerDuty, Slack bot, email-on-failure) require either 
 | **Automated alert** | ❌ Deferred — document in ops runbook: if no `sentAt` by Wed 9 AM ET, investigate Vercel logs for `outside_window` |
 | **External cron fallback** | Remains documented in `docs/email-provider-decision.md`; not implemented in 7.2 |
 
-**Owner:** Story 7.2 implements admin card, structured logging (including `outside_window` path), and `isInEasternWindow` unit tests; Story 7.4 may add non-200 on failure.
+**Owner:** Story 7.2 implements admin card, structured logging (including `outside_window` path), and `isInEasternWindow` unit tests; Story 7.4 returns non-200 on `failed > 0` and documents external monitors.
 
 ## Story 7.2 handoff
 
@@ -259,11 +259,11 @@ Use MUI `Alert` severity: success when sent, warning when not sent after expecte
 | Per-recipient Resend delivery status in admin UI | Post-launch |
 | Automated Slack/PagerDuty alerting | Post-MVP or when league count grows |
 | `system_job_runs` DB table | Optional; defer unless log retention insufficient |
-| Cron returns non-200 when `failed > 0` | **Story 7.4** (performance/deployment hardening) |
-| Circuit breaker for Resend outage | **Story 7.4** |
+| Cron returns non-200 when `failed > 0` | **Resolved by 7.4** |
+| Circuit breaker for Resend outage | **Resolved by 7.4** |
 | `isInEasternWindow` unit tests | **Story 7.2** — DST/fixed-UTC test baseline for `src/lib/cron/eastern-window.ts` |
 | Axiom/Datadog/Sentry integration | Post-MVP trigger table above |
-| Scoring job structured logging | **Story 7.4** or post-launch |
+| Scoring job structured logging | **Out of scope for 7.4** — post-launch |
 | Pick deadline enforcement structured events | Post-launch |
 
 ## When to re-open observability scope
@@ -271,7 +271,7 @@ Use MUI `Alert` severity: success when sent, warning when not sent after expecte
 | Trigger | Action |
 |---------|--------|
 | Admin card insufficient — admins need full error history | Spike admin log viewer or Axiom free tier |
-| Production missed weekly send during real season | Implement non-200 cron + external monitor (7.4) |
+| Production missed weekly send during real season | External monitor already documented (7.4); verify alert fires on 500 |
 | League count exceeds ~10 active | Evaluate log volume and Axiom integration |
 | NFR46 becomes launch blocker | Add Resend bounce webhook → Slack (free tier) |
 | Vercel Hobby log retention insufficient | Add `system_job_runs` table or upgrade to Pro log drain |

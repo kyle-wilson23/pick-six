@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getLeagueAccess } from '@/lib/league/get-league-access';
 import { isLeagueParticipantRole } from '@/lib/league/participant-membership';
 import { getCurrentNflSeasonYear } from '@/lib/league/nfl-season';
 import { resolveCurrentSeasonForLeague } from '@/lib/league/resolve-current-season';
@@ -20,26 +21,12 @@ export default async function LeagueRulesPage({ params }: PageProps) {
     notFound();
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership) {
+  const access = await getLeagueAccess(session.user.id, leagueId);
+  if (!access || !isLeagueParticipantRole(access.membership.role)) {
     notFound();
   }
 
-  if (!isLeagueParticipantRole(membership.role)) {
-    notFound();
-  }
-
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    select: { name: true },
-  });
-
-  if (!league) {
-    notFound();
-  }
+  const { league } = access;
 
   const nflSeasonYear = getCurrentNflSeasonYear();
   const season = await resolveCurrentSeasonForLeague(prisma.season, leagueId, nflSeasonYear);

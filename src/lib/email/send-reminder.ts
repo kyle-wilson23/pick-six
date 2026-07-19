@@ -1,7 +1,17 @@
 import { createElement } from "react";
 
 import { prisma } from "@/lib/db";
+import {
+  EMAIL_CIRCUIT_OPEN_CODE,
+  createEmailCircuitBreaker,
+  recordEmailSendFailure,
+  recordEmailSendSuccess,
+} from "@/lib/email/circuit-breaker";
 import { getReminderData, type ReminderData } from "@/lib/email/get-reminder-data";
+import {
+  EMAIL_SEND_CONCURRENCY,
+  mapWithConcurrency,
+} from "@/lib/email/map-with-concurrency";
 import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
@@ -31,53 +41,81 @@ export async function sendReminder({
   const skipped = data.submittedCount;
   let sent = 0;
   let failed = 0;
+  const breaker = createEmailCircuitBreaker();
 
-  for (const member of data.outstandingMembers) {
-    try {
-      await sendWithRetry(async () => {
-        const { error } = await resend.emails.send(
-          {
-            from: getResendFrom(),
-            to: [member.email],
-            subject: reminderSubject(data, reminderType),
-            react: createElement(ReminderEmail, {
-              leagueName: data.leagueName,
-              weekNumber: data.weekNumber,
-              recipientDisplayName: member.displayName,
-              jailedTeamName: data.jailedTeamName,
-              jailedTeamAbbreviation: data.jailedTeamAbbreviation,
-              picksUrl: data.picksUrl,
+  await mapWithConcurrency(
+    data.outstandingMembers,
+    EMAIL_SEND_CONCURRENCY,
+    async (member) => {
+      if (breaker.open) {
+        failed += 1;
+        return;
+      }
+
+      try {
+        await sendWithRetry(async () => {
+          const { error } = await resend.emails.send(
+            {
+              from: getResendFrom(),
+              to: [member.email],
+              subject: reminderSubject(data, reminderType),
+              react: createElement(ReminderEmail, {
+                leagueName: data.leagueName,
+                weekNumber: data.weekNumber,
+                recipientDisplayName: member.displayName,
+                jailedTeamName: data.jailedTeamName,
+                jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+                picksUrl: data.picksUrl,
+                reminderType,
+              }),
+            },
+            {
+              idempotencyKey: `${reminderType}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
+            },
+          );
+
+          if (error) {
+            throw error;
+          }
+        });
+        sent += 1;
+        recordEmailSendSuccess(breaker);
+      } catch (err) {
+        failed += 1;
+        logEvent({
+          level: "error",
+          domain: "email",
+          action: "member_send_failed",
+          code: "EMAIL_SEND_FAILED",
+          leagueId,
+          weekNumber: data.weekNumber,
+          message: `${reminderType} reminder member send failed`,
+          context: {
+            reminderType,
+            membershipId: member.membershipId,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+
+        if (recordEmailSendFailure(breaker)) {
+          logEvent({
+            level: "error",
+            domain: "email",
+            action: "circuit_open",
+            code: EMAIL_CIRCUIT_OPEN_CODE,
+            leagueId,
+            weekNumber: data.weekNumber,
+            message: `${reminderType} reminder aborted remaining sends — Resend circuit open`,
+            context: {
               reminderType,
-            }),
-          },
-          {
-            idempotencyKey: `${reminderType}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
-          },
-        );
-
-        if (error) {
-          throw error;
+              consecutiveFailures: breaker.consecutiveFailures,
+              remainingAborted: true,
+            },
+          });
         }
-      });
-      sent += 1;
-    } catch (err) {
-      failed += 1;
-      logEvent({
-        level: "error",
-        domain: "email",
-        action: "member_send_failed",
-        code: "EMAIL_SEND_FAILED",
-        leagueId,
-        weekNumber: data.weekNumber,
-        message: `${reminderType} reminder member send failed`,
-        context: {
-          reminderType,
-          membershipId: member.membershipId,
-          error: err instanceof Error ? err.message : String(err),
-        },
-      });
-    }
-  }
+      }
+    },
+  );
 
   const sentAt = sent > 0 ? new Date() : null;
 
@@ -121,6 +159,7 @@ export async function sendReminder({
       sent,
       failed,
       skipped,
+      circuitOpen: breaker.open,
     },
   });
 

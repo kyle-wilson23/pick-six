@@ -14,7 +14,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **`auth()` outside try/catch on export route** — Matches existing `submission-status` route pattern; defer consistent auth error envelope to a cross-route hardening pass.
 - **`REGULAR_SEASON_WEEKS` duplicated** — Builder and serializer each define `18`; low-risk maintainability nit.
 - **No unit tests for `sanitizeDownloadFilenameSegment`** — Simple helper; manual route verification sufficient for MVP.
-- **No audit log for bulk PII CSV export** — Observability/audit scope deferred to Stories 7.2 and 7.4.
+- **No audit log for bulk PII CSV export** — Observability/audit scope deferred to Stories 7.2 and 7.4. **7.4 stretch skipped** — still optional post-launch; not blocking ACs.
 
 ## Deferred from: code review of pre-epic-7-observability-scope-decision (2026-07-05)
 
@@ -25,7 +25,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **AC8 Resend message IDs not captured** — Smoke test results confirm delivery in inbox/dashboard but do not record per-send message IDs; optional hardening before production smoke test (`post-epic-8-production-smoke-test`).
 - **Thin unit coverage for `acceptLeagueInvitation`** — Only error-class tests exist; membership upsert and invite consumption paths verified manually during AC3 smoke test.
 - **No unit test for `already_registered` signup preview branch** — New preview status branch covered by manual invite flow only.
-- **Concurrent duplicate accept requests** — Parallel accept POSTs can race on invite consumption; defer to Epic 7.4 (TOCTOU hardening).
+- **Concurrent duplicate accept requests** — Parallel accept POSTs can race on invite consumption. **Out of scope for 7.4** (AC8); revisit if invite abuse appears.
 
 ## Deferred from: code review of 5-1-ingest-game-results-and-finalize-games (2026-06-11)
 
@@ -81,7 +81,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of 3-6-picks-ui-matchups-odds-spread-weather-optional (2026-04-28)
 
 - ~~**Keyboard/a11y for clickable team selection**~~ — **Resolved by Story 3.7** (radiogroup + keyboard); verified no regression in Story 7.3.
-- **Weather caching** — `cache: "no-store"` on every SSR render will exhaust the OpenWeatherMap free-tier quota under any meaningful traffic. Spec open questions explicitly defer caching to performance testing. Add `next: { revalidate }` or an in-process TTL cache in a future iteration.
+- ~~**Weather caching**~~ — **Resolved by 7.4** — 10-minute in-memory TTL (+ in-flight coalescing) in `src/lib/integrations/weather/client.ts`.
 - **Domed stadium weather display** — Weather conditions are fetched and shown for fully-enclosed stadiums (Allegiant/LV, US Bank/MIN, SoFi/LAC+LAR, Lucas Oil/IND, Ford Field/DET, NRG/HOU). Showing temperature and wind for a climate-controlled game is misleading. Add a `dome: true` flag to `NFL_STADIUM_BY_TEAM_ABBR` and skip weather fetch for dome stadiums. Product decision required before implementing.
 
 ## Deferred from: code review of 3-7-jailed-and-already-picked-ux-with-countdown-and-status (2026-05-09)
@@ -224,7 +224,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - ~~**NFR32 webhook owner unassigned**~~ — **Owner: Story 7.2** (`docs/observability-scope-decision.md`, 2026-07-05). Scope: log-only `POST /api/webhooks/resend` with Svix signature verification; delivery/bounce events logged to structured console. Admin UI for per-recipient delivery status deferred post-MVP.
 - ~~**HTTP 429 retry should be differentiated from transient errors**~~ — Resolved in Story 6.1: `send-with-retry.ts` short-circuits on `statusCode === 429`.
 - ~~**`RESEND_API_KEY` absent at SDK construction — no startup guard**~~ — Resolved in Story 6.1: `resend-client.ts` throws at module load.
-- **Hobby ±1 hr negative-drift silent-skip risk** — `docs/email-provider-decision.md`. If Vercel fires the cron an hour early (negative drift), the ET time-gate check rejects the invocation and emails are silently skipped for the week. The idempotency sent-flag cannot distinguish "not yet sent" from "skipped". **Mitigation (Story 7.2):** `AdminWeeklyEmailStatus` card shows missing timestamps; ops runbook documents manual log spot-check. **Automated alert:** deferred to Story 7.4 (non-200 on `failed > 0` + external monitor). Manual admin send routes remain the immediate fallback.
+- **Hobby ±1 hr negative-drift silent-skip risk** — `docs/email-provider-decision.md`. If Vercel fires the cron an hour early (negative drift), the ET time-gate check rejects the invocation and emails are silently skipped for the week. The idempotency sent-flag cannot distinguish "not yet sent" from "skipped". **Mitigation (Story 7.2):** `AdminWeeklyEmailStatus` card shows missing timestamps; ops runbook documents manual log spot-check. **Automated alert:** **Resolved by 7.4** — cron returns HTTP 500 when `failed > 0`; external monitor setup in `docs/deployment.md`. Manual admin send routes remain the immediate fallback.
 - ~~**Hyphen delimiter in idempotency key ambiguous with hyphenated IDs**~~ — Resolved in Story 6.1: colon delimiter (`invitation:${rawToken}`).
 
 ## Deferred from: Story 6.1 — transactional email integration (2026-07-04)
@@ -235,7 +235,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of 6-2-tuesday-6-00-pm-league-email-content-and-admin-preview (2026-07-04)
 
 - **TOCTOU race on concurrent sends** — `src/app/api/leagues/[leagueId]/email/tuesday-send/route.ts`: two concurrent POST requests (double-click or cron+admin overlap) can both pass the `sentAt=null` check before either upserts, potentially triggering duplicate send loops. Resend idempotency keys mitigate within 24h. Proper fix requires DB-level advisory lock or atomic conditional-upsert pattern.
-- **Sequential per-member send may exceed serverless timeout** — `src/lib/email/send-tuesday-digest.ts`: sends are strictly sequential with up to 4 retry attempts each; no `maxDuration` export on the route. Large leagues may time out mid-loop, leaving partial delivery with inconsistent `sentAt` state. Fix in a performance hardening pass (parallel batch with concurrency limit + `maxDuration` export).
+- ~~**Sequential per-member send may exceed serverless timeout**~~ — **Resolved by 7.4** — `maxDuration = 300` on cron routes; bounded concurrency (`EMAIL_SEND_CONCURRENCY = 4`) + Resend circuit breaker in digest/reminder senders.
 - **`force=true` resends to all members after Resend idempotency key expiry** — `src/app/api/leagues/[leagueId]/email/tuesday-send/route.ts`: after 24h idempotency keys expire; a forced resend re-iterates every member and members who received the original digest may receive duplicates. Acceptable for an admin tool; address if duplicate-send complaints arise.
 
 ## Deferred from: code review of 6-3-wednesday-and-thursday-reminders (2026-07-04)
@@ -262,86 +262,35 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Pre-production go-live: Vercel operational checklist (Epic 6 — operational, not code)
 
-**Context:** Stories 6.1–6.5 implement transactional email and cron orchestration in code. Before the first real NFL-season weekly cycle in production, a deployer must complete the Vercel-side configuration below. This is an ops checklist — not a story deliverable — consolidated here so it is not lost across individual deferred items.
+> **Canonical copy moved to [`docs/deployment.md`](../../docs/deployment.md)** (Story 7.4). Do not maintain a second checklist here — update that doc instead.
+>
+> Post–Epic 8 handoff items (`post-epic-8-vercel-production-env-and-cron`, `post-epic-8-resend-domain-and-from-address`, `post-epic-8-production-smoke-test`) remain tracked in `sprint-status.yaml`.
 
-**Complete before first production weekly email cycle.** Cross-check `.env.example` for the full variable list.
+~~**Context:** Stories 6.1–6.5 implement transactional email and cron orchestration in code. Before the first real NFL-season weekly cycle in production, a deployer must complete the Vercel-side configuration below.~~
 
-### Required Production environment variables
+<details>
+<summary>Historical checklist (struck — see docs/deployment.md)</summary>
 
-Set in Vercel → **Settings → Environment Variables → Production**. Redeploy after any change (vars are baked in at build time).
+~~Required Production env vars, email/cron go-live steps, migrations, and success criteria lived here until Story 7.4.~~
 
-| Variable | Purpose | Generate / source |
-|----------|---------|-------------------|
-| `DATABASE_URL` | Pooled Postgres (Neon `-pooler` host) | Neon dashboard → Connect |
-| `DIRECT_URL` | Direct Postgres for migrations | Neon dashboard → Connect (non-pooler) |
-| `AUTH_SECRET` | Session signing | `openssl rand -base64 32` |
-| `AUTH_URL` | Absolute site URL for Auth.js callbacks | `https://your-app.vercel.app` |
-| `RESEND_API_KEY` | Transactional email | [Resend dashboard](https://resend.com/) → API Keys |
-| `CRON_SECRET` | Cron route auth (Vercel sends as `Authorization: Bearer …`) | `openssl rand -hex 32` — **no trailing newlines or special chars** |
-
-Also required for full app operation (not Epic 6–specific): `ODDS_API_KEY`, `API_SPORTS_KEY`. Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`.
-
-**Never** prefix any of these with `NEXT_PUBLIC_`.
-
-### Email go-live (see also deferred item above)
-
-- [ ] Verify a **sending domain** in Resend (SPF/DKIM DNS; propagation up to 48 h).
-- [ ] Replace placeholder `from` in `send-invitation-email.ts`, `send-tuesday-digest.ts`, and `send-reminder.ts` (`noreply@yourdomain.com` → your verified domain).
-- [ ] Send a test invite and admin-triggered Tuesday digest to a real inbox; confirm delivery in Resend dashboard.
-
-### Cron go-live (Story 6.5)
-
-- [ ] Confirm `vercel.json` is deployed (three crons: `tuesday-email`, `wednesday-reminder`, `thursday-reminder`).
-- [ ] Vercel → **Settings → Cron Jobs** — all three jobs listed on **production** deployment. Crons do **not** run on preview branches.
-- [ ] Set `CRON_SECRET` in Production env vars; **redeploy production**.
-- [ ] Post-deploy smoke test (replace domain and secret):
-
-```bash
-# Expect 401
-curl -s https://your-app.vercel.app/api/cron/tuesday-email | jq
-
-# Expect 200 + outside_window (unless Tue 5–9 PM ET) or send summary
-curl -s https://your-app.vercel.app/api/cron/tuesday-email \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" | jq
-```
-
-- [ ] Repeat for `/api/cron/wednesday-reminder` and `/api/cron/thursday-reminder`.
-
-**Note:** Vercel Cron invokes routes via **GET**; routes delegate GET → shared handler. Manual curl can use GET or POST with the same `Authorization` header.
-
-### Database migrations
-
-- [ ] Run `npm run db:migrate:deploy` against production `DATABASE_URL` / `DIRECT_URL` before or as part of first deploy with schema changes.
-
-### Known accepted risks (see existing deferred items — do not duplicate fixes here)
-
-- **Hobby ±1 hr cron drift** — negative drift can cause `outside_window` skip with no retry that week. Mitigation: admin manual send routes; long-term: monitoring alert (see below).
-- ~~**NFR32 Resend webhooks**~~ — **Owner: Story 7.2** — log-only webhook route (`docs/observability-scope-decision.md`).
-- ~~**No cron run observability in admin UI**~~ — **Owner: Story 7.2** — `AdminWeeklyEmailStatus` card on league admin page (hybrid observability decision).
-- **Monitoring alert for missed weekly sends** — **Owner: Story 7.2 (manual ops) + Story 7.4 (automated)**. MVP: documented weekly spot-check in ops runbook + admin card "Not sent" state. Automated non-200 cron + external monitor deferred to 7.4 (`docs/observability-scope-decision.md`).
-
-### Success criteria
-
-Production is "weekly-email ready" when: all required env vars set, production redeployed, Resend domain verified and `from` updated, cron smoke tests pass with 401/200 as expected, and at least one admin-triggered email confirmed in a real inbox.
-
-**Future:** Consider extracting detailed step-by-step instructions to `docs/deployment.md` when Epic 7.4 (deployment hardening) is scoped.
+</details>
 
 ## Deferred from: code review of 6-5-cron-routes-secrets-and-idempotent-weekly-orchestration (2026-07-04)
 
-- **No `maxDuration` in `vercel.json`** — All three cron routes process leagues serially in a single Vercel invocation. A large number of active leagues could hit the default function timeout, silently leaving the rest un-emailed. Add `"maxDuration": 300` (or an appropriate limit) to `vercel.json` when the active-league count grows.
+- ~~**No `maxDuration` in `vercel.json`**~~ — **Resolved by 7.4** — `export const maxDuration = 300` on each cron `route.ts` (prefer route-segment over `vercel.json` functions globs).
 - **Timing side-channel from length pre-check in `assertCronRequest`** — The early return before `crypto.timingSafeEqual` when buffer lengths differ technically leaks the secret's byte-length via response-time variance. The spec explicitly authorizes this approach (to avoid `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`). A fully constant-time implementation would pad both buffers to a common length before comparing. Acceptable for MVP; revisit if a stricter security posture is required.
-- **No unit tests for `isInEasternWindow`** — The timezone utility is the most fragile piece of cron logic (DST transitions, ICU data). AC7 only required tests for `assert-cron-request.ts`. Add `isInEasternWindow` tests (mocking `Date` or using fixed UTC inputs) when the test baseline for the `src/lib/cron/` module is expanded.
-- **TOCTOU race on idempotency check (read-then-send-then-write)** — Two concurrent cron invocations could both pass the `sentAt == null` guard before either sets it, resulting in duplicate email sends. Accepted per dev notes; Resend's 24-hour idempotency key is the ultimate backstop. Eliminate the race with a DB-level upsert guard or distributed lock if Resend idempotency stops being sufficient.
-- **HTTP 200 always returned even when `failed > 0`** — Monitoring and alerting systems that watch HTTP status codes will not detect partial email failures. Log-based alerting on the `failed` counter is the current detection method. **Owner: Story 7.4** — return non-200 (or emit structured monitoring event) when `failed > 0`; MVP keeps 200 per `docs/observability-scope-decision.md`.
-- **No circuit breaker for email provider outage** — If Resend is unavailable, all three cron routes iterate every active league, accumulate failures, log errors, and return 200. There is no early-abort logic. Add a failure-threshold check (e.g., abort after N consecutive failures) when operational reliability tooling is added in Epic 7.
+- ~~**No unit tests for `isInEasternWindow`**~~ — **Resolved by Story 7.2**.
+- **TOCTOU race on idempotency check (read-then-send-then-write)** — Two concurrent cron invocations could both pass the `sentAt == null` guard before either sets it, resulting in duplicate email sends. Accepted per Story 7.4 AC8 — **out of scope**; Resend's 24-hour idempotency key remains the backstop.
+- ~~**HTTP 200 always returned even when `failed > 0`**~~ — **Resolved by 7.4** — HTTP **500** when `failed > 0`; **200** for success / `outside_window`.
+- ~~**No circuit breaker for email provider outage**~~ — **Resolved by 7.4** — after 3 consecutive provider failures, abort remaining; `code: EMAIL_CIRCUIT_OPEN`.
 - **`toLocaleString` ICU dependency in `eastern-window.ts`** — `new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }))` relies on ICU timezone data being present in the Node.js runtime. Vercel's full-ICU runtime makes this safe in production. If the runtime environment ever changes (e.g., edge runtime, custom Docker image with `--small-icu`), this call could produce an Invalid Date, silently causing all window checks to return false. Migrate to a library like `date-fns-tz` or use the `Intl.DateTimeFormat` parts API for a more portable approach.
 
 ## Deferred from: Story 6.6 — UX spec comparison and alignment (2026-07-04)
 
 - **PickStatusBanner desktop inline with page title** — UX spec shows banner inline with the "This Week" header row on desktop. Requires a header-row refactor; current banner remains full-width below deadline/jailed row.
 - **Standings desktop sidebar** — UX spec includes a contextual sidebar on desktop standings. MVP table-only layout retained; enhancement deferred to Epic 7.
-- ~~**Global 48px button height enforcement**~~ — **Partial in Story 7.3** — core-flow `Button` `sizeLarge` minHeight 44px; full theme-wide 48px remains for **Story 7.4**.
-- **Skeleton loading states** — UX responsive table calls for skeleton placeholders during load. No skeleton components yet; defer to Epic 7.4.
+- ~~**Global 48px button height enforcement**~~ — **Resolved by 7.4** — theme `MuiButton` medium/large + `MuiTab` `minHeight: 48`.
+- ~~**Skeleton loading states**~~ — **Resolved by 7.4** — `loading.tsx` skeletons on picks + standings.
 - **Snackbar admin feedback** — UX prefers Snackbar for transient admin actions; current inline Alert pattern in email composers is acceptable MVP; polish pass deferred.
 - **Landing page hero layout** — Marketing landing page alignment out of league-shell scope; defer.
 - **`generateMetadata` on league pages** — Deferred from Stories 5.4–5.6; Epic 7.
@@ -352,5 +301,5 @@ Production is "weekly-email ready" when: all required env vars set, production r
 
 ## Deferred from: code review of 6-6-ux-spec-comparison-and-alignment (2026-07-04)
 
-- **Redundant Prisma membership queries in league layout + child pages** — New `[leagueId]/layout.tsx` duplicates membership/league fetches that every child page already performs. Consolidate via shared loader or React cache in a future perf pass.
+- ~~**Redundant Prisma membership queries in league layout + child pages**~~ — **Resolved by 7.4** — `getLeagueAccess` (`React.cache`) shared by layout + child pages.
 

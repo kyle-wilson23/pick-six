@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchWeatherForGame } from "./client";
+import { clearWeatherCacheForTests, fetchWeatherForGame } from "./client";
 import { getStadiumRoof } from "./stadium-locations";
 import forecastFixture from "./fixtures/owm-forecast-sample.json";
 
@@ -23,6 +23,7 @@ describe("fetchWeatherForGame", () => {
 
   beforeEach(() => {
     process.env = { ...REAL_ENV, WEATHER_API_KEY: "test-key" };
+    clearWeatherCacheForTests();
     // Pin Date.now() to 2 days before DT_FIRST so fixture dt values are "in the future".
     vi.useFakeTimers();
     vi.setSystemTime(new Date((DT_FIRST - 2 * 24 * 60 * 60) * 1000));
@@ -32,6 +33,35 @@ describe("fetchWeatherForGame", () => {
     process.env = REAL_ENV;
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe("TTL cache", () => {
+    it("reuses a successful response within the TTL without a second fetch", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(forecastFixture), { status: 200 }),
+      );
+      const kickoff = makeKickoffFromDt(DT_FIRST);
+
+      const first = await fetchWeatherForGame(VALID_ABBR, kickoff);
+      const second = await fetchWeatherForGame(VALID_ABBR, kickoff);
+
+      expect(first).not.toBeNull();
+      expect(second).toEqual(first);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches after the TTL expires", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(forecastFixture), { status: 200 }),
+      );
+      const kickoff = makeKickoffFromDt(DT_FIRST);
+
+      await fetchWeatherForGame(VALID_ABBR, kickoff);
+      vi.advanceTimersByTime(10 * 60 * 1000 + 1);
+      await fetchWeatherForGame(VALID_ABBR, kickoff);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("nearest forecast slot selection", () => {

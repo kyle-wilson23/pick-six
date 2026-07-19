@@ -66,6 +66,9 @@ The app lives under `src/` (App Router).
 
 ## Docs 📚
 
+**Production deploy / backups / critical windows:** [`docs/deployment.md`](docs/deployment.md).  
+**Performance budgets:** [`docs/performance-budgets.md`](docs/performance-budgets.md).
+
 Planning outputs live under [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/) — start with [`prd.md`](_bmad-output/planning-artifacts/prd.md) for scope and requirements.
 
 Sprint and story status: [`_bmad-output/implementation-artifacts/sprint-status.yaml`](_bmad-output/implementation-artifacts/sprint-status.yaml) (per-story notes in the same folder).

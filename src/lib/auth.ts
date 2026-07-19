@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
+import { logEvent } from "@/lib/logging/log-event";
 import { normalizeEmail } from "@/lib/normalize-email";
 import {
   getSessionMaxAgeSeconds,
@@ -37,6 +38,7 @@ const nextAuth = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
+        const startedAt = Date.now();
         const rawEmail = credentials?.email;
         const password = credentials?.password;
         if (typeof rawEmail !== "string" || typeof password !== "string") {
@@ -46,9 +48,28 @@ const nextAuth = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         const hashToCompare = user?.passwordHash ?? DUMMY_PASSWORD_BCRYPT;
         const valid = await bcrypt.compare(password, hashToCompare);
+        const durationMs = Date.now() - startedAt;
         if (!user?.passwordHash || !valid) {
+          logEvent({
+            level: "info",
+            domain: "api",
+            route: "/api/auth/callback/credentials",
+            action: "login",
+            code: "LOGIN_FAILED",
+            message: "credentials authorize rejected",
+            context: { durationMs },
+          });
           return null;
         }
+        logEvent({
+          level: "info",
+          domain: "api",
+          route: "/api/auth/callback/credentials",
+          action: "login",
+          userId: user.id,
+          message: "credentials authorize completed",
+          context: { durationMs },
+        });
         return {
           id: user.id,
           email: user.email,

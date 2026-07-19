@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { assertCronRequest } from "@/lib/cron/assert-cron-request";
+import { cronJobHttpStatus } from "@/lib/cron/cron-job-http-status";
 import { isInEasternWindow } from "@/lib/cron/eastern-window";
 import { getActiveLeagueIds } from "@/lib/cron/get-active-league-ids";
 import { prisma } from "@/lib/db";
@@ -18,6 +19,9 @@ import {
 } from "@/lib/email/get-reminder-data";
 import { sendReminder } from "@/lib/email/send-reminder";
 import { logEvent } from "@/lib/logging/log-event";
+
+/** Hobby ceiling — serial leagues + multi-member sends (Story 7.4). */
+export const maxDuration = 300;
 
 const ROUTE = "/api/cron/wednesday-reminder";
 
@@ -118,28 +122,24 @@ export async function POST(request: NextRequest) {
     processed++;
   }
 
+  const body = {
+    processed,
+    sent,
+    skippedAlreadySent,
+    skippedNoWeek,
+    failed,
+  };
+
   logEvent({
     level: "info",
     domain: "cron",
     route: ROUTE,
     action: "job_complete",
     message: "wednesday-reminder complete",
-    context: {
-      processed,
-      sent,
-      skippedAlreadySent,
-      skippedNoWeek,
-      failed,
-    },
+    context: body,
   });
 
-  return NextResponse.json({
-    processed,
-    sent,
-    skippedAlreadySent,
-    skippedNoWeek,
-    failed,
-  });
+  return NextResponse.json(body, { status: cronJobHttpStatus(failed) });
 }
 
 /** Vercel Cron invokes routes via GET; delegate to shared handler. */

@@ -21,6 +21,7 @@ import {
   type AdminSubmissionStatusPayload,
 } from "@/lib/admin/build-submission-status";
 import { prisma } from "@/lib/db";
+import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { logEvent } from "@/lib/logging/log-event";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
@@ -35,26 +36,12 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
     notFound();
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership) {
+  const access = await getLeagueAccess(session.user.id, leagueId);
+  if (!access || access.membership.role !== LeagueMembershipRole.ADMIN) {
     notFound();
   }
 
-  if (membership.role !== LeagueMembershipRole.ADMIN) {
-    notFound();
-  }
-
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    select: { id: true, name: true },
-  });
-
-  if (!league) {
-    notFound();
-  }
+  const { league } = access;
 
   let payload: AdminSubmissionStatusPayload;
   let overrideData: Awaited<ReturnType<typeof buildAdminOverrideData>>;

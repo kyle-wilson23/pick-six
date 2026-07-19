@@ -69,7 +69,7 @@ describe("StandingsTable a11y", () => {
     const table = container.querySelector("table");
     expect(table?.getAttribute("aria-label")).toBe("League standings");
 
-    const currentRow = container.querySelector('tr[aria-current="row"]');
+    const currentRow = container.querySelector('tr[aria-current="true"]');
     expect(currentRow).not.toBeNull();
     expect(currentRow?.textContent).toContain("(You)");
   });

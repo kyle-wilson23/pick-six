@@ -18,6 +18,27 @@ type OwmForecastResponse = {
 /** 5-day horizon in seconds for OWM /data/2.5/forecast free tier. */
 const FORECAST_HORIZON_SECONDS = 5 * 24 * 60 * 60;
 
+/** In-memory TTL so Sunday SSR traffic does not burn OWM quota per request. */
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+
+type WeatherCacheEntry = {
+  expiresAt: number;
+  value: WeatherData | null;
+};
+
+const weatherCache = new Map<string, WeatherCacheEntry>();
+const weatherInflight = new Map<string, Promise<WeatherData | null>>();
+
+function weatherCacheKey(abbreviation: string, kickoffAt: Date): string {
+  return `${abbreviation}:${kickoffAt.toISOString()}`;
+}
+
+/** Test-only: clear module cache between cases. */
+export function clearWeatherCacheForTests(): void {
+  weatherCache.clear();
+  weatherInflight.clear();
+}
+
 /**
  * Forecast conditions near the home team's stadium at kickoff time (OpenWeatherMap Forecast).
  *
@@ -60,6 +81,40 @@ export async function fetchWeatherForGame(
     return null;
   }
 
+  const cacheKey = weatherCacheKey(upper, kickoffAt);
+  const cached = weatherCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const existingInflight = weatherInflight.get(cacheKey);
+  if (existingInflight) {
+    return existingInflight;
+  }
+
+  const promise = (async () => {
+    try {
+      const value = await fetchWeatherFromApi(upper, coords, kickoffSeconds, key);
+      weatherCache.set(cacheKey, {
+        expiresAt: Date.now() + WEATHER_CACHE_TTL_MS,
+        value,
+      });
+      return value;
+    } finally {
+      weatherInflight.delete(cacheKey);
+    }
+  })();
+
+  weatherInflight.set(cacheKey, promise);
+  return promise;
+}
+
+async function fetchWeatherFromApi(
+  upper: string,
+  coords: { lat: number; lon: number },
+  kickoffSeconds: number,
+  key: string,
+): Promise<WeatherData | null> {
   const url = new URL("https://api.openweathermap.org/data/2.5/forecast");
   url.searchParams.set("lat", String(coords.lat));
   url.searchParams.set("lon", String(coords.lon));

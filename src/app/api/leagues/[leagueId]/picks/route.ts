@@ -24,6 +24,7 @@ import { postPickBodySchema } from "@/lib/picks/post-pick-body";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
 import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
 import { NFL_REGULAR_SEASON_WEEK_MIN, NFL_REGULAR_SEASON_WEEK_MAX } from "@/lib/nfl/nfl-regular-season";
+import { logEvent } from "@/lib/logging/log-event";
 import type { Prisma } from "@prisma/client";
 
 async function readJsonObject(
@@ -124,6 +125,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ leagueId: string }> },
 ) {
+  const startedAt = Date.now();
   const bodyRead = await readJsonObject(request);
   if (!bodyRead.ok) {
     return NextResponse.json(
@@ -197,12 +199,38 @@ export async function POST(
     );
   }
 
+  const durationMs = Date.now() - startedAt;
+
   if (outcome.type === "err") {
+    logEvent({
+      level: "warn",
+      domain: "api",
+      route: "/api/leagues/[leagueId]/picks",
+      action: "pick_submit",
+      code: outcome.code,
+      userId: session.user.id,
+      leagueId,
+      weekNumber: nflWeekNumber,
+      message: "pick submit rejected",
+      context: { durationMs, status: outcome.status },
+    });
     return NextResponse.json(
       { error: { code: outcome.code, message: outcome.message } },
       { status: outcome.status },
     );
   }
+
+  logEvent({
+    level: "info",
+    domain: "api",
+    route: "/api/leagues/[leagueId]/picks",
+    action: "pick_submit",
+    userId: session.user.id,
+    leagueId,
+    weekNumber: nflWeekNumber,
+    message: "pick submit completed",
+    context: { durationMs, status: outcome.status },
+  });
 
   return NextResponse.json(outcome.body, { status: outcome.status });
 }

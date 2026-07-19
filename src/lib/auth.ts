@@ -42,6 +42,15 @@ const nextAuth = NextAuth({
         const rawEmail = credentials?.email;
         const password = credentials?.password;
         if (typeof rawEmail !== "string" || typeof password !== "string") {
+          logEvent({
+            level: "info",
+            domain: "api",
+            route: "/api/auth/callback/credentials",
+            action: "login",
+            code: "LOGIN_FAILED",
+            message: "credentials authorize rejected — malformed credentials",
+            context: { durationMs: Date.now() - startedAt },
+          });
           return null;
         }
         const email = normalizeEmail(rawEmail);

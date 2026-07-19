@@ -6,6 +6,7 @@ import {
   createEmailCircuitBreaker,
   recordEmailSendFailure,
   recordEmailSendSuccess,
+  type EmailCircuitBreaker,
 } from "@/lib/email/circuit-breaker";
 import { getTuesdayDigestData, type TuesdayDigestData } from "@/lib/email/get-tuesday-digest-data";
 import {
@@ -21,11 +22,27 @@ import { logEvent } from "@/lib/logging/log-event";
 export async function sendTuesdayDigest({
   leagueId,
   preloadedData,
+  breaker: providedBreaker,
 }: {
   leagueId: string;
   preloadedData?: TuesdayDigestData;
+  /**
+   * Shared circuit breaker for a multi-league cron invocation — pass the same
+   * instance across leagues so an open circuit aborts the rest of the run, not
+   * just this league. Defaults to a fresh per-call breaker for single-league
+   * callers (e.g. the admin manual-send route).
+   */
+  breaker?: EmailCircuitBreaker;
 }): Promise<{ sent: number; failed: number; sentAt: Date | null }> {
   const data = preloadedData ?? (await getTuesdayDigestData({ leagueId }));
+
+  const breaker = providedBreaker ?? createEmailCircuitBreaker();
+
+  if (breaker.open) {
+    // Circuit already open from an earlier league in this invocation — abort
+    // this league entirely without attempting any member sends.
+    return { sent: 0, failed: data.members.length, sentAt: null };
+  }
 
   const config = await prisma.leagueWeekEmailConfig.findUnique({
     where: {
@@ -42,81 +59,87 @@ export async function sendTuesdayDigest({
 
   let sent = 0;
   let failed = 0;
-  const breaker = createEmailCircuitBreaker();
 
-  await mapWithConcurrency(data.members, EMAIL_SEND_CONCURRENCY, async (member) => {
-    if (breaker.open) {
-      failed += 1;
-      return;
-    }
+  await mapWithConcurrency(
+    data.members,
+    EMAIL_SEND_CONCURRENCY,
+    async (member) => {
+      try {
+        await sendWithRetry(async () => {
+          const { error } = await resend.emails.send(
+            {
+              from: getResendFrom(),
+              to: [member.email],
+              subject: `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
+              react: createElement(TuesdayDigestEmail, {
+                leagueName: data.leagueName,
+                weekNumber: data.weekNumber,
+                standings: data.standings.map((s) => ({
+                  rank: s.rank,
+                  displayName: s.displayName,
+                  totalPoints: s.totalPoints,
+                  wins: s.wins,
+                  losses: s.losses,
+                })),
+                jailedTeamName: data.jailedTeamName,
+                jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+                picksUrl: data.picksUrl,
+                adminNote,
+              }),
+            },
+            {
+              idempotencyKey: `tuesday-digest:${leagueId}:${data.weekNumber}:${member.membershipId}`,
+            },
+          );
 
-    try {
-      await sendWithRetry(async () => {
-        const { error } = await resend.emails.send(
-          {
-            from: getResendFrom(),
-            to: [member.email],
-            subject: `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
-            react: createElement(TuesdayDigestEmail, {
-              leagueName: data.leagueName,
-              weekNumber: data.weekNumber,
-              standings: data.standings.map((s) => ({
-                rank: s.rank,
-                displayName: s.displayName,
-                totalPoints: s.totalPoints,
-                wins: s.wins,
-                losses: s.losses,
-              })),
-              jailedTeamName: data.jailedTeamName,
-              jailedTeamAbbreviation: data.jailedTeamAbbreviation,
-              picksUrl: data.picksUrl,
-              adminNote,
-            }),
-          },
-          {
-            idempotencyKey: `tuesday-digest:${leagueId}:${data.weekNumber}:${member.membershipId}`,
-          },
-        );
-
-        if (error) {
-          throw error;
-        }
-      });
-      sent += 1;
-      recordEmailSendSuccess(breaker);
-    } catch (err) {
-      failed += 1;
-      logEvent({
-        level: "error",
-        domain: "email",
-        action: "member_send_failed",
-        code: "EMAIL_SEND_FAILED",
-        leagueId,
-        weekNumber: data.weekNumber,
-        message: "tuesday digest member send failed",
-        context: {
-          membershipId: member.membershipId,
-          error: err instanceof Error ? err.message : String(err),
-        },
-      });
-
-      if (recordEmailSendFailure(breaker)) {
+          if (error) {
+            throw error;
+          }
+        });
+        sent += 1;
+        recordEmailSendSuccess(breaker);
+      } catch (err) {
+        failed += 1;
         logEvent({
           level: "error",
           domain: "email",
-          action: "circuit_open",
-          code: EMAIL_CIRCUIT_OPEN_CODE,
+          action: "member_send_failed",
+          code: "EMAIL_SEND_FAILED",
           leagueId,
           weekNumber: data.weekNumber,
-          message: "tuesday digest aborted remaining sends — Resend circuit open",
+          message: "tuesday digest member send failed",
           context: {
-            consecutiveFailures: breaker.consecutiveFailures,
-            remainingAborted: true,
+            membershipId: member.membershipId,
+            error: err instanceof Error ? err.message : String(err),
           },
         });
+
+        if (recordEmailSendFailure(breaker)) {
+          logEvent({
+            level: "error",
+            domain: "email",
+            action: "circuit_open",
+            code: EMAIL_CIRCUIT_OPEN_CODE,
+            leagueId,
+            weekNumber: data.weekNumber,
+            message: "tuesday digest aborted remaining sends — Resend circuit open",
+            context: {
+              consecutiveFailures: breaker.consecutiveFailures,
+              remainingAborted: true,
+            },
+          });
+        }
       }
-    }
-  });
+    },
+    { shouldAbort: () => breaker.open },
+  );
+
+  // Members the pool never reached because the circuit opened mid-run — count
+  // them as failed too (AC5: "count remaining as failed/skipped consistently").
+  const notAttempted = data.members.length - sent - failed;
+  if (notAttempted > 0) {
+    failed += notAttempted;
+  }
 
   const sentAt = sent > 0 ? new Date() : null;
 

@@ -40,6 +40,9 @@ export function createAppTheme(fontFamily: string) {
               theme.palette.primary.main,
             ),
           }),
+          sizeSmall: {
+            minHeight: 48,
+          },
           sizeMedium: {
             minHeight: 48,
           },
@@ -70,6 +73,8 @@ export function createAppTheme(fontFamily: string) {
       MuiIconButton: {
         styleOverrides: {
           root: ({ theme }) => ({
+            minWidth: 48,
+            minHeight: 48,
             "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
               theme.palette.primary.main,
             ),

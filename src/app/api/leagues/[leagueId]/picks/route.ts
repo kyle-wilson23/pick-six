@@ -68,6 +68,29 @@ function err(status: number, code: string, message: string): RouteErr {
   return { type: "err", status, code, message };
 }
 
+/** NFR5: log every pick-submit rejection (not just the transaction outcome) with timing. */
+function logPickSubmitRejected(args: {
+  startedAt: number;
+  leagueId: string;
+  code: string;
+  status: number;
+  userId?: string;
+  weekNumber?: number;
+}): void {
+  logEvent({
+    level: "warn",
+    domain: "api",
+    route: "/api/leagues/[leagueId]/picks",
+    action: "pick_submit",
+    code: args.code,
+    userId: args.userId,
+    leagueId: args.leagueId,
+    weekNumber: args.weekNumber,
+    message: "pick submit rejected",
+    context: { durationMs: Date.now() - args.startedAt, status: args.status },
+  });
+}
+
 /**
  * GET — week matchup list for picks UI (Story 3.6). JSON only; caller must supply session cookie.
  */
@@ -126,8 +149,11 @@ export async function POST(
   context: { params: Promise<{ leagueId: string }> },
 ) {
   const startedAt = Date.now();
+  const { leagueId } = await context.params;
+
   const bodyRead = await readJsonObject(request);
   if (!bodyRead.ok) {
+    logPickSubmitRejected({ startedAt, leagueId, code: "VALIDATION_ERROR", status: 400 });
     return NextResponse.json(
       { error: { code: "VALIDATION_ERROR", message: "Invalid JSON body" } },
       { status: 400 },
@@ -137,6 +163,7 @@ export async function POST(
   const parsed = postPickBodySchema.safeParse(bodyRead.value);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
+    logPickSubmitRejected({ startedAt, leagueId, code: "VALIDATION_ERROR", status: 400 });
     return NextResponse.json(
       {
         error: {
@@ -148,27 +175,48 @@ export async function POST(
     );
   }
 
+  const { teamId, nflWeekNumber, antiJailedBonus } = parsed.data;
+
   const forbidden = assertCookieSessionMutationOrigin(request);
   if (forbidden) {
+    logPickSubmitRejected({
+      startedAt,
+      leagueId,
+      weekNumber: nflWeekNumber,
+      code: "FORBIDDEN_ORIGIN",
+      status: 403,
+    });
     return forbidden;
   }
 
   const session = await auth();
   if (!session?.user?.id) {
+    logPickSubmitRejected({
+      startedAt,
+      leagueId,
+      weekNumber: nflWeekNumber,
+      code: "UNAUTHENTICATED",
+      status: 401,
+    });
     return NextResponse.json(
       { error: { code: "UNAUTHENTICATED", message: "Sign in required" } },
       { status: 401 },
     );
   }
 
-  const { leagueId } = await context.params;
-  const { teamId, nflWeekNumber, antiJailedBonus } = parsed.data;
-
   const membership = await prisma.leagueMembership.findUnique({
     where: { userId_leagueId: { userId: session.user.id, leagueId } },
   });
 
   if (!membership || !isLeagueParticipantRole(membership.role)) {
+    logPickSubmitRejected({
+      startedAt,
+      leagueId,
+      userId: session.user.id,
+      weekNumber: nflWeekNumber,
+      code: "FORBIDDEN",
+      status: 403,
+    });
     return NextResponse.json(
       {
         error: {
@@ -193,6 +241,14 @@ export async function POST(
     });
   } catch (e) {
     console.error("POST /api/leagues/[leagueId]/picks failed", e);
+    logPickSubmitRejected({
+      startedAt,
+      leagueId,
+      userId: session.user.id,
+      weekNumber: nflWeekNumber,
+      code: "INTERNAL_ERROR",
+      status: 500,
+    });
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Something went wrong" } },
       { status: 500 },

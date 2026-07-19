@@ -12,6 +12,7 @@ import { cronJobHttpStatus } from "@/lib/cron/cron-job-http-status";
 import { isInEasternWindow } from "@/lib/cron/eastern-window";
 import { getActiveLeagueIds } from "@/lib/cron/get-active-league-ids";
 import { prisma } from "@/lib/db";
+import { EMAIL_CIRCUIT_OPEN_CODE, createEmailCircuitBreaker } from "@/lib/email/circuit-breaker";
 import {
   LeagueNotFoundError,
   NoActiveWeekError,
@@ -67,7 +68,26 @@ export async function POST(request: NextRequest) {
   let skippedNoWeek = 0;
   let failed = 0;
 
+  // Shared across the whole invocation so a Resend outage aborts every
+  // remaining league, not just the current one (AC5).
+  const breaker = createEmailCircuitBreaker();
+
   for (const leagueId of leagueIds) {
+    if (breaker.open) {
+      failed++;
+      processed++;
+      logEvent({
+        level: "info",
+        domain: "cron",
+        route: ROUTE,
+        action: "league_skipped_circuit_open",
+        code: EMAIL_CIRCUIT_OPEN_CODE,
+        leagueId,
+        message: "wednesday-reminder: league skipped — Resend circuit open for this invocation",
+      });
+      continue;
+    }
+
     try {
       const data = await getReminderData({ leagueId });
 
@@ -92,6 +112,7 @@ export async function POST(request: NextRequest) {
         leagueId,
         reminderType: "wednesday",
         preloadedData: data,
+        breaker,
       });
       sent += result.sent;
       failed += result.failed;

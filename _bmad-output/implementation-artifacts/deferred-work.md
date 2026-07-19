@@ -303,3 +303,12 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 - ~~**Redundant Prisma membership queries in league layout + child pages**~~ — **Resolved by 7.4** — `getLeagueAccess` (`React.cache`) shared by layout + child pages.
 
+## Deferred from: code review of story-7-4-performance-and-deployment-hardening (2026-07-19)
+
+- **Circuit-breaker member-skips merged into the same `failed` counter as real Resend errors** — `src/app/api/cron/tuesday-email/route.ts` (and wednesday/thursday reminders). No separate counter in the cron JSON body distinguishes genuine provider failures from breaker no-op skips; ops can't tell which happened after an outage from the summary alone. Not required by AC5's letter ("count remaining as failed/skipped consistently").
+- **Circuit-open log events omit the skipped-member count** — `src/lib/email/send-tuesday-digest.ts:104-116`, `src/lib/email/send-reminder.ts:100-115`. `context.remainingAborted: true` is logged but not how many recipients were actually skipped, reducing the diagnostic value of the event.
+- **In-memory weather cache has no proactive eviction** — `src/lib/integrations/weather/client.ts:29-30`. Entries are only refreshed when the same cache key is re-requested after expiry; unused stale entries sit in memory indefinitely. Low risk given the tiny key space (~32 team/kickoff combos per week) and serverless instance recycling.
+- **Weather client caches a transient failure with the full success TTL** — `src/lib/integrations/weather/client.ts:95-101`. A single blip (non-OK response, timeout) caches `null` for the same 10-minute TTL as a real result, hiding weather for up to 10 minutes even after the provider recovers. Weather is explicitly best-effort/optional with graceful null fallback.
+- **`mapWithConcurrency`'s `concurrency` argument isn't validated** — `src/lib/email/map-with-concurrency.ts:15`. `NaN`/`0`/negative values would silently resolve with zero items processed (`Array.from({length: NaN})` yields no workers). Not reachable today — the only caller passes the hardcoded `EMAIL_SEND_CONCURRENCY = 4` constant.
+- **`mapWithConcurrency` uses `Promise.all` instead of `Promise.allSettled`** — `src/lib/email/map-with-concurrency.ts:33`. A future mapper that rejects instead of catching internally would reject the whole pool while other in-flight workers continue unawaited. Both current callers (`send-tuesday-digest.ts`, `send-reminder.ts`) self-catch inside the mapper, so not reachable with today's callers.
+

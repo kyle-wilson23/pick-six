@@ -6,6 +6,7 @@ import {
   createEmailCircuitBreaker,
   recordEmailSendFailure,
   recordEmailSendSuccess,
+  type EmailCircuitBreaker,
 } from "@/lib/email/circuit-breaker";
 import { getReminderData, type ReminderData } from "@/lib/email/get-reminder-data";
 import {
@@ -31,27 +32,37 @@ export async function sendReminder({
   leagueId,
   reminderType,
   preloadedData,
+  breaker: providedBreaker,
 }: {
   leagueId: string;
   reminderType: "wednesday" | "thursday";
   preloadedData?: ReminderData;
+  /**
+   * Shared circuit breaker for a multi-league cron invocation — pass the same
+   * instance across leagues so an open circuit aborts the rest of the run, not
+   * just this league. Defaults to a fresh per-call breaker for single-league
+   * callers (e.g. the admin manual-send route).
+   */
+  breaker?: EmailCircuitBreaker;
 }): Promise<{ sent: number; failed: number; skipped: number; sentAt: Date | null }> {
   const data = preloadedData ?? (await getReminderData({ leagueId }));
 
+  const breaker = providedBreaker ?? createEmailCircuitBreaker();
   const skipped = data.submittedCount;
+
+  if (breaker.open) {
+    // Circuit already open from an earlier league in this invocation — abort
+    // this league entirely without attempting any member sends.
+    return { sent: 0, failed: data.outstandingMembers.length, skipped, sentAt: null };
+  }
+
   let sent = 0;
   let failed = 0;
-  const breaker = createEmailCircuitBreaker();
 
   await mapWithConcurrency(
     data.outstandingMembers,
     EMAIL_SEND_CONCURRENCY,
     async (member) => {
-      if (breaker.open) {
-        failed += 1;
-        return;
-      }
-
       try {
         await sendWithRetry(async () => {
           const { error } = await resend.emails.send(
@@ -115,7 +126,15 @@ export async function sendReminder({
         }
       }
     },
+    { shouldAbort: () => breaker.open },
   );
+
+  // Members the pool never reached because the circuit opened mid-run — count
+  // them as failed too (AC5: "count remaining as failed/skipped consistently").
+  const notAttempted = data.outstandingMembers.length - sent - failed;
+  if (notAttempted > 0) {
+    failed += notAttempted;
+  }
 
   const sentAt = sent > 0 ? new Date() : null;
 

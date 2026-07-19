@@ -21,7 +21,7 @@ Secrets are **server-only**. Never put `CRON_SECRET`, `AUTH_SECRET`, API keys, o
 
 ## Production environment variables
 
-Set in Vercel → **Settings → Environment Variables → Production**. Redeploy after any change (vars are available at runtime; cron/`CRON_SECRET` changes require a redeploy so production picks them up).
+Set in Vercel → **Settings → Environment Variables → Production**. Vercel injects env vars into a function only at build/deploy time, not live into already-running instances — **redeploy after any change** (including `CRON_SECRET`) so the new value actually takes effect.
 
 | Variable | Purpose | Generate / source |
 |----------|---------|-------------------|

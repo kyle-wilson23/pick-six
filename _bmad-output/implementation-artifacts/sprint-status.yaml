@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-19'  # story 7-4 → done
+  last_updated: '2026-07-19'  # epic-7 retrospective
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -112,12 +112,12 @@ development_status:
   pre-epic-7-manual-email-flow-smoke-test: done  # local dev: Tuesday digest send/preview, Wed/Thu reminders, deep links; Kyle verified 2026-07-05; code review 2026-07-05
   pre-epic-7-observability-scope-decision: done  # docs/observability-scope-decision.md — Hybrid (structured logs + admin weekly email status card); unblocks 7.2 spec
 
-  epic-7: in-progress
+  epic-7: done
   7-1-admin-csv-export-of-full-league-snapshot: done
   7-2-structured-logging-and-admin-visible-health-signals: done
   7-3-accessibility-baseline-wcag-2-1-level-a-for-core-flows: done
   7-4-performance-and-deployment-hardening: done
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   epic-8: backlog
   8-1-test-league-flag-labeling-and-optional-global-gates: backlog

@@ -260,6 +260,11 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ---
 
+## Deferred from: Epic 7 retrospective (2026-07-19)
+
+- **Authenticated Lighthouse re-measure for picks/standings** — `docs/performance-budgets.md` currently has real Lighthouse LCP/TTI numbers only for `/login`; picks and standings were left as documented Known Exceptions because an authenticated CLI run would require handing a live session cookie to Lighthouse. **Owner:** Kyle. **Target:** revisit during/after Epic 8 rehearsal, once a populated simulated season gives us a stable authenticated fixture to measure against without touching real league data.
+- **Real pick-submit NFR5 timing sample** — `docs/performance-budgets.md` NFR5 section accepted a documented exception because every dev-seed league is pre-season (`SEASON_NOT_READY`), so no real save-transaction timing sample was captured for pick submit (only login `authorize()` was sampled: 2096ms cold / 727ms warm). **Owner:** Kyle. **Target:** capture during Epic 8 rehearsal once a simulated week reaches an active pick-submission state — `logEvent` `durationMs` instrumentation is already wired into the picks route, so this only requires triggering a real submit and reading the log.
+
 ## Pre-production go-live: Vercel operational checklist (Epic 6 — operational, not code)
 
 > **Canonical copy moved to [`docs/deployment.md`](../../docs/deployment.md)** (Story 7.4). Do not maintain a second checklist here — update that doc instead.

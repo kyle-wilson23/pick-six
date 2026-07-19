@@ -11,6 +11,7 @@ import { getLeagueStandings, type StandingsEntry } from "@/lib/scoring/get-leagu
 export type TuesdayDigestData = {
   leagueName: string;
   leagueId: string;
+  isTestLeague: boolean;
   nflSeasonYear: number;
   weekNumber: number;
   standings: StandingsEntry[];
@@ -55,7 +56,7 @@ export async function getTuesdayDigestData({
 }): Promise<TuesdayDigestData> {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, isTestLeague: true },
   });
 
   if (!league) {
@@ -116,6 +117,7 @@ export async function getTuesdayDigestData({
   return {
     leagueName: league.name,
     leagueId: league.id,
+    isTestLeague: league.isTestLeague,
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     standings,

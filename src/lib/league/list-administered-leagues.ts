@@ -8,6 +8,7 @@ export type AdministeredLeagueWithSeasonRow = {
   league: {
     id: string;
     name: string;
+    isTestLeague: boolean;
     createdAt: Date;
   };
   season: null | {
@@ -24,6 +25,7 @@ export type AdministeredLeagueWithSeasonRow = {
 export type LeagueWithCurrentSeasonChunk = {
   id: string;
   name: string;
+  isTestLeague: boolean;
   createdAt: Date;
   seasons: Array<{
     id: string;
@@ -42,6 +44,7 @@ export function toAdministeredLeagueRows(
     league: {
       id: league.id,
       name: league.name,
+      isTestLeague: league.isTestLeague,
       createdAt: league.createdAt,
     },
     season: league.seasons[0] ?? null,

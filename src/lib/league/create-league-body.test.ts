@@ -38,4 +38,28 @@ describe("createLeagueBodySchema", () => {
       false,
     );
   });
+
+  it("defaults isTestLeague to false", () => {
+    const r = createLeagueBodySchema.safeParse({ name: "L" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.isTestLeague).toBe(false);
+    }
+  });
+
+  it("accepts explicit isTestLeague true and false", () => {
+    expect(createLeagueBodySchema.safeParse({ name: "L", isTestLeague: true }).success).toBe(true);
+    expect(createLeagueBodySchema.safeParse({ name: "L", isTestLeague: false }).success).toBe(true);
+    const r = createLeagueBodySchema.safeParse({ name: "L", isTestLeague: true });
+    if (r.success) {
+      expect(r.data.isTestLeague).toBe(true);
+    }
+  });
+
+  it("rejects non-boolean isTestLeague", () => {
+    expect(createLeagueBodySchema.safeParse({ name: "L", isTestLeague: "true" }).success).toBe(
+      false,
+    );
+    expect(createLeagueBodySchema.safeParse({ name: "L", isTestLeague: 1 }).success).toBe(false);
+  });
 });

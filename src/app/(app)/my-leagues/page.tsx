@@ -4,8 +4,9 @@ import Typography from "@mui/material/Typography";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import { CreateLeagueLinkButton } from "@/components/leagues/create-league-link-button";
+import { auth } from "@/lib/auth";
 import { describeSeasonForParticipant, listJoinedLeaguesWithCurrentSeason } from "@/lib/league/list-joined-leagues";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 
@@ -51,9 +52,12 @@ export default async function MyLeaguesPage() {
           {rows.map((row) => (
             <Paper key={row.league.id} variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1}>
-                <Typography variant="h6" component="h2">
-                  <Link href={`/leagues/${row.league.id}`}>{row.league.name}</Link>
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="h6" component="h2">
+                    <Link href={`/leagues/${row.league.id}`}>{row.league.name}</Link>
+                  </Typography>
+                  {row.league.isTestLeague ? <TestLeagueChip /> : null}
+                </Stack>
                 <Typography variant="body2" color="text.secondary">
                   Role: {row.role}
                 </Typography>

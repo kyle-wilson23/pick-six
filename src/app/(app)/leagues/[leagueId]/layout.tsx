@@ -30,6 +30,7 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
     <LeagueNavShell
       leagueId={leagueId}
       leagueName={access.league.name}
+      isTestLeague={access.league.isTestLeague}
       isAdmin={access.membership.role === LeagueMembershipRole.ADMIN}
       userDisplayName={userDisplayName}
     >

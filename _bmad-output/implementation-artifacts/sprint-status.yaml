@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-19'  # epic-7 retrospective
+  last_updated: '2026-07-19'  # story 8-1 code review complete → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -119,8 +119,8 @@ development_status:
   7-4-performance-and-deployment-hardening: done
   epic-7-retrospective: done
 
-  epic-8: backlog
-  8-1-test-league-flag-labeling-and-optional-global-gates: backlog
+  epic-8: in-progress
+  8-1-test-league-flag-labeling-and-optional-global-gates: done
   8-2-shortened-simulated-season-and-admin-driven-week-advancement: backlog
   8-3-simulated-odds-and-jailed-team-for-rehearsal: backlog
   8-4-simulated-game-results-and-scoring-reveal-cycle: backlog

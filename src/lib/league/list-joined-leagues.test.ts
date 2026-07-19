@@ -10,21 +10,22 @@ describe("mapMembershipsToJoinedRows", () => {
     const rows = mapMembershipsToJoinedRows([
       {
         role: LeagueMembershipRole.MEMBER,
-        league: { id: "a", name: "Alpha", createdAt, seasons: [] },
+        league: { id: "a", name: "Alpha", isTestLeague: false, createdAt, seasons: [] },
       },
       {
         role: LeagueMembershipRole.ADMIN,
-        league: { id: "b", name: "Beta", createdAt, seasons: [] },
+        league: { id: "b", name: "Beta", isTestLeague: true, createdAt, seasons: [] },
       },
     ]);
     expect(rows.map((r) => r.league.name)).toEqual(["Alpha", "Beta"]);
+    expect(rows.map((r) => r.league.isTestLeague)).toEqual([false, true]);
   });
 
   it("carries membership role for each league", () => {
     const rows = mapMembershipsToJoinedRows([
       {
         role: LeagueMembershipRole.ADMIN,
-        league: { id: "x", name: "Zed", createdAt, seasons: [] },
+        league: { id: "x", name: "Zed", isTestLeague: false, createdAt, seasons: [] },
       },
     ]);
     expect(rows[0]?.role).toBe(LeagueMembershipRole.ADMIN);
@@ -38,6 +39,7 @@ describe("mapMembershipsToJoinedRows", () => {
         league: {
           id: "league-1",
           name: "Q",
+          isTestLeague: true,
           createdAt,
           seasons: [
             {
@@ -52,6 +54,7 @@ describe("mapMembershipsToJoinedRows", () => {
         },
       },
     ]);
+    expect(rows[0]?.league.isTestLeague).toBe(true);
     expect(rows[0]?.season).toEqual({
       id: "season-1",
       nflSeasonYear: 2026,

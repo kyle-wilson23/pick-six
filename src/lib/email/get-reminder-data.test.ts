@@ -40,7 +40,11 @@ const SEASON_ID = "season-1";
 const SEASON_YEAR = 2026;
 
 function seedActiveWeekFixtures() {
-  mockLeagueFindUnique.mockResolvedValue({ id: LEAGUE_ID, name: "Test League" });
+  mockLeagueFindUnique.mockResolvedValue({
+    id: LEAGUE_ID,
+    name: "Test League",
+    isTestLeague: false,
+  });
   mockSeasonFindUnique.mockResolvedValue({
     id: SEASON_ID,
     nflSeasonYear: SEASON_YEAR,
@@ -132,5 +136,19 @@ describe("getReminderData", () => {
     expect(result.jailedTeamName).toBeNull();
     expect(result.jailedTeamAbbreviation).toBeNull();
     expect(result.picksUrl).toBe(`http://localhost:3000/leagues/${LEAGUE_ID}/picks`);
+  });
+
+  it("propagates isTestLeague: true from the league row", async () => {
+    mockLeagueFindUnique.mockResolvedValue({
+      id: LEAGUE_ID,
+      name: "Test League",
+      isTestLeague: true,
+    });
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockPickFindMany.mockResolvedValue([]);
+
+    const result = await getReminderData({ leagueId: LEAGUE_ID });
+
+    expect(result.isTestLeague).toBe(true);
   });
 });

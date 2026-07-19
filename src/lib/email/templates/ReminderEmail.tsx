@@ -9,6 +9,8 @@ import {
   Text,
 } from "@react-email/components";
 
+import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+
 export type ReminderEmailProps = {
   leagueName: string;
   weekNumber: number;
@@ -17,6 +19,7 @@ export type ReminderEmailProps = {
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
   reminderType: "wednesday" | "thursday";
+  isTestLeague?: boolean;
 };
 
 export function ReminderEmail({
@@ -27,6 +30,7 @@ export function ReminderEmail({
   jailedTeamAbbreviation,
   picksUrl,
   reminderType,
+  isTestLeague = false,
 }: ReminderEmailProps) {
   const jailedLabel =
     jailedTeamName != null && jailedTeamAbbreviation != null
@@ -48,6 +52,7 @@ export function ReminderEmail({
       <Preview>{previewText}</Preview>
       <Body style={{ fontFamily: "sans-serif", color: "#111" }}>
         <Container>
+          {isTestLeague ? <Text>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
           <Heading as="h1">
             {leagueName} — Week {weekNumber}
           </Heading>

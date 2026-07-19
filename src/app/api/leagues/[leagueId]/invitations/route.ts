@@ -23,7 +23,12 @@ import { createInvitationsBodySchema } from "@/lib/league/create-invitations-bod
 /** TTL for new invitations (AC1). */
 export const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
-type CreatedInvite = { rawToken: string; to: string; leagueName: string };
+type CreatedInvite = {
+  rawToken: string;
+  to: string;
+  leagueName: string;
+  isTestLeague: boolean;
+};
 
 export async function POST(
   request: NextRequest,
@@ -59,7 +64,7 @@ export async function POST(
       userId_leagueId: { userId: session.user.id, leagueId },
     },
     include: {
-      league: { select: { name: true } },
+      league: { select: { name: true, isTestLeague: true } },
     },
   });
 
@@ -86,6 +91,7 @@ export async function POST(
 
   const { emails } = parsed.data;
   const leagueName = membership.league.name;
+  const isTestLeague = membership.league.isTestLeague;
 
   const blocked = await prisma.leagueMembership.findMany({
     where: {
@@ -138,7 +144,7 @@ export async function POST(
             expiresAt,
           },
         });
-        created.push({ rawToken, to: email, leagueName });
+        created.push({ rawToken, to: email, leagueName, isTestLeague });
       }
       return created;
     });
@@ -148,6 +154,7 @@ export async function POST(
         to: row.to,
         rawToken: row.rawToken,
         leagueName: row.leagueName,
+        isTestLeague: row.isTestLeague,
       });
     }
 

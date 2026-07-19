@@ -1,6 +1,8 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
+import { allowTestLeagues } from "@/lib/league/allow-test-leagues";
+
 import { CreateLeagueForm } from "./create-league-form";
 
 export default function NewLeaguePage() {
@@ -23,7 +25,7 @@ export default function NewLeaguePage() {
         Name your league and choose the first NFL week when picks count. Week 1 is selected by
         default; pick a later week if your league starts mid-season.
       </Typography>
-      <CreateLeagueForm />
+      <CreateLeagueForm allowTestLeagues={allowTestLeagues()} />
     </Stack>
   );
 }

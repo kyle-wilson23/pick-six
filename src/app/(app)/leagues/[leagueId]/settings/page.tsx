@@ -73,6 +73,17 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
         </div>
         <div>
           <Typography component="dt" variant="subtitle2">
+            League type
+          </Typography>
+          <Typography component="dd" variant="body1">
+            {league.isTestLeague ? "Test / rehearsal" : "Production (real season)"}
+          </Typography>
+          <Typography component="dd" variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Set at creation only. For a real season, create a new production league.
+          </Typography>
+        </div>
+        <div>
+          <Typography component="dt" variant="subtitle2">
             League id
           </Typography>
           <Typography component="dd" variant="body1" sx={{ wordBreak: "break-all", fontFamily: "monospace" }}>

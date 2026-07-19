@@ -14,6 +14,7 @@ function serializeJoinedLeagueRow(row: JoinedLeagueWithCurrentSeasonRow) {
   return {
     id: row.league.id,
     name: row.league.name,
+    isTestLeague: row.league.isTestLeague,
     role: row.role,
     createdAt: row.league.createdAt.toISOString(),
     currentSeason: row.season

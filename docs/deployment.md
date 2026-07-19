@@ -35,7 +35,7 @@ Set in Vercel → **Settings → Environment Variables → Production**. Vercel 
 | `ODDS_API_KEY` | Odds snapshots | [The Odds API](https://the-odds-api.com/) |
 | `API_SPORTS_KEY` | NFL schedule sync | [API-Sports](https://api-sports.io/) |
 
-Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`, `RESEND_FROM` (local smoke / verified domain override), `API_SPORTS_HOST`.
+Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`, `RESEND_FROM` (local smoke / verified domain override), `API_SPORTS_HOST`, `ALLOW_TEST_LEAGUES` (ops toggle: unset/`true`/`1` allow test-league creation; `false`/`0` deny — not a secret).
 
 Cross-check [`.env.example`](../.env.example) whenever this table drifts.
 

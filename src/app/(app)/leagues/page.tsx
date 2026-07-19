@@ -3,9 +3,10 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { notFound } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import { AdminLeagueRowActions } from "@/components/leagues/admin-league-row-actions";
 import { CreateLeagueLinkButton } from "@/components/leagues/create-league-link-button";
+import { auth } from "@/lib/auth";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { listAdministeredLeaguesWithCurrentSeason } from "@/lib/league/list-administered-leagues";
 
@@ -50,9 +51,12 @@ export default async function AdminLeaguesListPage() {
           {rows.map((row) => (
             <Paper key={row.league.id} variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={1.5}>
-                <Typography variant="h6" component="h2">
-                  {row.league.name}
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="h6" component="h2">
+                    {row.league.name}
+                  </Typography>
+                  {row.league.isTestLeague ? <TestLeagueChip /> : null}
+                </Stack>
                 <Typography variant="body2" color="text.secondary">
                   {row.season
                     ? `Current season: ${row.season.nflSeasonYear} · First competition week ${row.season.firstCompetitionWeek}${

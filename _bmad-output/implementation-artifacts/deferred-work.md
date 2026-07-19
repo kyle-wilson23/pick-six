@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 8-1-test-league-flag-labeling-and-optional-global-gates (2026-07-19)
+
+- **No direct route-handler test for `TEST_LEAGUES_DISABLED` 403** — `src/app/api/leagues/route.ts` lines 112–122. Pre-existing project convention: no `route.ts` file anywhere in the codebase has a colocated integration test; the `isTestLeague` + `ALLOW_TEST_LEAGUES` gate logic itself is fully covered via `allow-test-leagues.test.ts` and `create-league-body.test.ts`. Revisit if/when route-level integration test infrastructure is established (see also the deferred 3.4 note on route-layer testing).
+
 ## Deferred from: code review of 7-2-structured-logging-and-admin-visible-health-signals (2026-07-06)
 
 - **`getEasternWallClock` uses `toLocaleString` round-trip** — `src/lib/cron/eastern-window.ts`. Pre-existing fragile ET conversion; new status helpers inherit it. Refactor to `Intl` or `Temporal` when cron/time logic is next touched.

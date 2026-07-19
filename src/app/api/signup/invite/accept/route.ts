@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       leagueId: result.leagueId,
       leagueName: result.leagueName,
+      isTestLeague: result.isTestLeague,
     });
   } catch (e) {
     if (e instanceof InviteAcceptError) {

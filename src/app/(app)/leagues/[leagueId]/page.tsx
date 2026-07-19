@@ -5,8 +5,10 @@ import { LeagueMembershipRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
+import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import { AdminLeagueRowActions } from "@/components/leagues/admin-league-row-actions";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { describeSeasonForParticipant } from "@/lib/league/list-joined-leagues";
@@ -74,9 +76,14 @@ export default async function LeagueHomePage({ params }: PageProps) {
         </Typography>
       </Stack>
 
-      <Typography variant="h4" component="h1">
-        {league.name}
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Typography variant="h4" component="h1">
+          {league.name}
+        </Typography>
+        {league.isTestLeague ? <TestLeagueChip size="medium" /> : null}
+      </Stack>
+
+      {league.isTestLeague ? <TestLeagueBanner /> : null}
 
       <Stack spacing={1}>
         <Typography variant="subtitle2" color="text.secondary">

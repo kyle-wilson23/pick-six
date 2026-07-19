@@ -9,6 +9,7 @@ import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-vi
 import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
 import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
 
+import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
 import { DeadlineCountdown } from "@/components/picks/DeadlineCountdown";
 import { JailedTeamCallout } from "@/components/picks/JailedTeamCallout";
 import { PicksPreviewBanner } from "@/components/picks/PicksPreviewBanner";
@@ -98,6 +99,8 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
       <Typography variant="h4" component="h1">
         Weekly picks
       </Typography>
+
+      {access.league.isTestLeague ? <TestLeagueBanner /> : null}
 
       {payload.isPreview ? <PicksPreviewBanner /> : null}
 

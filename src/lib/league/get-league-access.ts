@@ -13,6 +13,7 @@ export type LeagueAccess = {
   league: {
     id: string;
     name: string;
+    isTestLeague: boolean;
     createdAt: Date;
   };
 };
@@ -34,7 +35,7 @@ export const getLeagueAccess = cache(
         userId: true,
         leagueId: true,
         league: {
-          select: { id: true, name: true, createdAt: true },
+          select: { id: true, name: true, isTestLeague: true, createdAt: true },
         },
       },
     });

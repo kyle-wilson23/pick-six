@@ -3,7 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import FormControl from "@mui/material/FormControl";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import FormHelperText from "@mui/material/FormHelperText";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
@@ -15,10 +18,15 @@ const WEEK_OPTIONS = Array.from({ length: 18 }, (_, i) => i + 1);
 
 type ApiError = { error?: { code?: string; message?: string } };
 
-export function CreateLeagueForm() {
+type CreateLeagueFormProps = {
+  allowTestLeagues: boolean;
+};
+
+export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [firstCompetitionWeek, setFirstCompetitionWeek] = useState(1);
+  const [isTestLeague, setIsTestLeague] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -31,7 +39,11 @@ export function CreateLeagueForm() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, firstCompetitionWeek }),
+        body: JSON.stringify({
+          name,
+          firstCompetitionWeek,
+          isTestLeague: allowTestLeagues ? isTestLeague : false,
+        }),
       });
       const data: unknown = await res.json().catch(() => null);
       if (!res.ok) {
@@ -79,6 +91,24 @@ export function CreateLeagueForm() {
           ))}
         </Select>
       </FormControl>
+      {allowTestLeagues ? (
+        <FormControl>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isTestLeague}
+                onChange={(ev) => setIsTestLeague(ev.target.checked)}
+                name="isTestLeague"
+              />
+            }
+            label="Test / rehearsal league"
+          />
+          <FormHelperText>
+            For practice data only — not your real season league. This cannot be changed after
+            creation; start a new production league for the real season.
+          </FormHelperText>
+        </FormControl>
+      ) : null}
       {errorMessage ? (
         <Typography variant="body2" color="error">
           {errorMessage}

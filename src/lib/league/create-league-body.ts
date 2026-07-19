@@ -16,6 +16,8 @@ export const createLeagueBodySchema = z.object({
     .max(18, "Week must be at most 18")
     .optional()
     .default(1),
+  /** Create-time only; defaults to production (false). */
+  isTestLeague: z.boolean().optional().default(false),
 });
 
 export type CreateLeagueBody = z.infer<typeof createLeagueBodySchema>;

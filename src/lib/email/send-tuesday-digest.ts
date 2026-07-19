@@ -16,6 +16,7 @@ import {
 import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
+import { formatEmailSubject } from "@/lib/email/test-league-labeling";
 import { TuesdayDigestEmail } from "@/lib/email/templates/TuesdayDigestEmail";
 import { logEvent } from "@/lib/logging/log-event";
 
@@ -70,7 +71,10 @@ export async function sendTuesdayDigest({
             {
               from: getResendFrom(),
               to: [member.email],
-              subject: `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
+              subject: formatEmailSubject(
+                `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
+                data.isTestLeague,
+              ),
               react: createElement(TuesdayDigestEmail, {
                 leagueName: data.leagueName,
                 weekNumber: data.weekNumber,
@@ -85,6 +89,7 @@ export async function sendTuesdayDigest({
                 jailedTeamAbbreviation: data.jailedTeamAbbreviation,
                 picksUrl: data.picksUrl,
                 adminNote,
+                isTestLeague: data.isTestLeague,
               }),
             },
             {

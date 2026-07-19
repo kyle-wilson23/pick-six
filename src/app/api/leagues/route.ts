@@ -13,6 +13,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
+import { allowTestLeagues } from "@/lib/league/allow-test-leagues";
 import { createLeagueBodySchema } from "@/lib/league/create-league-body";
 import {
   type AdministeredLeagueWithSeasonRow,
@@ -24,6 +25,7 @@ function serializeAdminLeagueRow(row: AdministeredLeagueWithSeasonRow) {
   return {
     id: row.league.id,
     name: row.league.name,
+    isTestLeague: row.league.isTestLeague,
     createdAt: row.league.createdAt.toISOString(),
     currentSeason: row.season
       ? {
@@ -105,13 +107,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, firstCompetitionWeek } = parsed.data;
+  const { name, firstCompetitionWeek, isTestLeague } = parsed.data;
+
+  if (isTestLeague && !allowTestLeagues()) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "TEST_LEAGUES_DISABLED",
+          message: "Test / rehearsal league creation is disabled on this deployment",
+        },
+      },
+      { status: 403 },
+    );
+  }
+
   const nflSeasonYear = getCurrentNflSeasonYear();
 
   try {
     const { league, season } = await prisma.$transaction(async (tx) => {
       const leagueRow = await tx.league.create({
-        data: { name },
+        data: { name, isTestLeague },
       });
       const seasonRow = await tx.season.create({
         data: {
@@ -133,6 +148,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: league.id,
       name: league.name,
+      isTestLeague: league.isTestLeague,
       season: {
         id: season.id,
         nflSeasonYear: season.nflSeasonYear,

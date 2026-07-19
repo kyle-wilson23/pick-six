@@ -2,6 +2,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { notFound } from "next/navigation";
 
+import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
 import { StandingsTable } from "@/components/standings/StandingsTable";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -48,6 +49,8 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
       <Typography variant="h4" component="h1">
         Standings
       </Typography>
+
+      {access.league.isTestLeague ? <TestLeagueBanner /> : null}
 
       <StandingsTable standings={standings} currentMembershipId={membership.id} />
     </Stack>

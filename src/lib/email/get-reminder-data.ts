@@ -14,6 +14,7 @@ import {
 export type ReminderData = {
   leagueName: string;
   leagueId: string;
+  isTestLeague: boolean;
   nflSeasonYear: number;
   weekNumber: number;
   jailedTeamName: string | null;
@@ -46,7 +47,7 @@ export async function getReminderData({
 }): Promise<ReminderData> {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, isTestLeague: true },
   });
 
   if (!league) {
@@ -124,6 +125,7 @@ export async function getReminderData({
   return {
     leagueName: league.name,
     leagueId: league.id,
+    isTestLeague: league.isTestLeague,
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     jailedTeamName: jailedRow?.jailedTeam.name ?? null,

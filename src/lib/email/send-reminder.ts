@@ -16,6 +16,7 @@ import {
 import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
+import { formatEmailSubject } from "@/lib/email/test-league-labeling";
 import { ReminderEmail } from "@/lib/email/templates/ReminderEmail";
 import { logEvent } from "@/lib/logging/log-event";
 
@@ -23,9 +24,11 @@ function reminderSubject(
   data: ReminderData,
   reminderType: "wednesday" | "thursday",
 ): string {
-  return reminderType === "wednesday"
-    ? `[${data.leagueName}] Week ${data.weekNumber} — Don't Forget Your Pick`
-    : `[${data.leagueName}] Week ${data.weekNumber} — Pick Deadline in 1 Hour`;
+  const base =
+    reminderType === "wednesday"
+      ? `[${data.leagueName}] Week ${data.weekNumber} — Don't Forget Your Pick`
+      : `[${data.leagueName}] Week ${data.weekNumber} — Pick Deadline in 1 Hour`;
+  return formatEmailSubject(base, data.isTestLeague);
 }
 
 export async function sendReminder({
@@ -78,6 +81,7 @@ export async function sendReminder({
                 jailedTeamAbbreviation: data.jailedTeamAbbreviation,
                 picksUrl: data.picksUrl,
                 reminderType,
+                isTestLeague: data.isTestLeague,
               }),
             },
             {

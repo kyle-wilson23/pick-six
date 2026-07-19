@@ -3,6 +3,7 @@ import { getAppBaseUrl } from '@/lib/email/app-base-url';
 import { getResendFrom } from '@/lib/email/resend-from';
 import { resend } from '@/lib/email/resend-client';
 import { sendWithRetry } from '@/lib/email/send-with-retry';
+import { formatEmailSubject } from '@/lib/email/test-league-labeling';
 import { InvitationEmail } from '@/lib/email/templates/InvitationEmail';
 import { logEvent } from '@/lib/logging/log-event';
 
@@ -10,6 +11,7 @@ export type SendInvitationEmailInput = {
   to: string;
   rawToken: string;
   leagueName: string;
+  isTestLeague?: boolean;
 };
 
 /**
@@ -20,6 +22,7 @@ export async function sendInvitationEmail(
   input: SendInvitationEmailInput,
 ): Promise<void> {
   const signupUrl = `${getAppBaseUrl()}/signup/${input.rawToken}`;
+  const isTestLeague = input.isTestLeague === true;
 
   try {
     await sendWithRetry(async () => {
@@ -27,10 +30,14 @@ export async function sendInvitationEmail(
         {
           from: getResendFrom(),
           to: [input.to],
-          subject: `You're invited to join ${input.leagueName} on Pick Six`,
+          subject: formatEmailSubject(
+            `You're invited to join ${input.leagueName} on Pick Six`,
+            isTestLeague,
+          ),
           react: createElement(InvitationEmail, {
             leagueName: input.leagueName,
             signupUrl,
+            isTestLeague,
           }),
         },
         { idempotencyKey: `invitation:${input.rawToken}` },

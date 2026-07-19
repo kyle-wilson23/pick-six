@@ -8,6 +8,8 @@ import {
   Text,
 } from "@react-email/components";
 
+import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+
 export type TuesdayDigestEmailProps = {
   leagueName: string;
   weekNumber: number;
@@ -22,6 +24,7 @@ export type TuesdayDigestEmailProps = {
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
   adminNote: string | null;
+  isTestLeague?: boolean;
 };
 
 export function TuesdayDigestEmail({
@@ -32,6 +35,7 @@ export function TuesdayDigestEmail({
   jailedTeamAbbreviation,
   picksUrl,
   adminNote,
+  isTestLeague = false,
 }: TuesdayDigestEmailProps) {
   const jailedLabel =
     jailedTeamName != null && jailedTeamAbbreviation != null
@@ -42,6 +46,7 @@ export function TuesdayDigestEmail({
     <Html>
       <Body style={{ fontFamily: "sans-serif", color: "#111" }}>
         <Container>
+          {isTestLeague ? <Text>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
           <Heading as="h1">
             {leagueName} — Week {weekNumber}
           </Heading>

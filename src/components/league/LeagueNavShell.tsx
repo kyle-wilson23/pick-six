@@ -23,6 +23,7 @@ import { usePathname } from "next/navigation";
 import type { ReactElement, ReactNode } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import {
   buildLeagueTabHref,
   getActiveLeagueTab,
@@ -33,6 +34,7 @@ import {
 type LeagueNavShellProps = {
   leagueId: string;
   leagueName: string;
+  isTestLeague?: boolean;
   isAdmin: boolean;
   userDisplayName: string;
   children: ReactNode;
@@ -78,6 +80,7 @@ function renderDesktopTab(
 export function LeagueNavShell({
   leagueId,
   leagueName,
+  isTestLeague = false,
   isAdmin,
   userDisplayName,
   children,
@@ -119,14 +122,17 @@ export function LeagueNavShell({
                 PICK SIX
               </Typography>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                sx={{ flexShrink: 0, maxWidth: 160, display: { xs: "none", md: "block" } }}
+              <Stack
+                direction="row"
+                spacing={0.75}
+                alignItems="center"
+                sx={{ flexShrink: 0, maxWidth: 220, display: { xs: "none", md: "flex" } }}
               >
-                {leagueName}
-              </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 140 }}>
+                  {leagueName}
+                </Typography>
+                {isTestLeague ? <TestLeagueChip /> : null}
+              </Stack>
 
               <Box
                 component="nav"
@@ -176,6 +182,30 @@ export function LeagueNavShell({
               </Stack>
             </Toolbar>
           </AppBar>
+        ) : null}
+
+        {!isDesktop && isTestLeague ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent="center"
+            sx={{
+              position: "sticky",
+              top: 0,
+              zIndex: theme.zIndex.appBar,
+              px: 1.5,
+              py: 0.5,
+              bgcolor: "background.paper",
+              borderBottom: 1,
+              borderColor: "divider",
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
+              {leagueName}
+            </Typography>
+            <TestLeagueChip />
+          </Stack>
         ) : null}
 
         <Box

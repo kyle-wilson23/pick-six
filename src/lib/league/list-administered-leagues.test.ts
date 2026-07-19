@@ -10,13 +10,14 @@ describe("toAdministeredLeagueRows", () => {
       {
         id: "league-a",
         name: "Alpha",
+        isTestLeague: false,
         createdAt,
         seasons: [],
       },
     ]);
     expect(rows).toEqual([
       {
-        league: { id: "league-a", name: "Alpha", createdAt },
+        league: { id: "league-a", name: "Alpha", isTestLeague: false, createdAt },
         season: null,
       },
     ]);
@@ -28,6 +29,7 @@ describe("toAdministeredLeagueRows", () => {
       {
         id: "league-b",
         name: "Beta",
+        isTestLeague: true,
         createdAt,
         seasons: [
           {
@@ -41,6 +43,7 @@ describe("toAdministeredLeagueRows", () => {
         ],
       },
     ]);
+    expect(rows[0]?.league.isTestLeague).toBe(true);
     expect(rows[0]?.season).toEqual({
       id: "season-1",
       nflSeasonYear: 2026,
@@ -56,12 +59,14 @@ describe("toAdministeredLeagueRows", () => {
       {
         id: "1",
         name: "A",
+        isTestLeague: false,
         createdAt,
         seasons: [],
       },
       {
         id: "2",
         name: "B",
+        isTestLeague: false,
         createdAt,
         seasons: [],
       },

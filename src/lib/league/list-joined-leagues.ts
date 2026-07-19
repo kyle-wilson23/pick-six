@@ -9,7 +9,7 @@ import {
 import { getCurrentNflSeasonYear } from "./nfl-season";
 
 export type JoinedLeagueWithCurrentSeasonRow = {
-  league: { id: string; name: string; createdAt: Date };
+  league: { id: string; name: string; isTestLeague: boolean; createdAt: Date };
   role: LeagueMembershipRole;
   season: null | {
     id: string;

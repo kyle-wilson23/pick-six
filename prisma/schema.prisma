@@ -44,10 +44,12 @@ enum LeagueMembershipRole {
 /// FR1 league container. **Name is globally unique** in MVP (one tenant namespace).
 /// Children (`Season`, `LeagueMembership`, `Invitation`) use `onDelete: Cascade` from `League`.
 model League {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id           String   @id @default(cuid())
+  name         String   @unique
+  /// Epic 8: rehearsal/practice league (create-time only; not flipped post-create).
+  isTestLeague Boolean  @default(false) @map("is_test_league")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   seasons     Season[]
   memberships LeagueMembership[]

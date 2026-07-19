@@ -7,6 +7,7 @@ import { normalizeEmail } from "@/lib/normalize-email";
 export type AcceptLeagueInvitationResult = {
   leagueId: string | null;
   leagueName: string | null;
+  isTestLeague: boolean;
 };
 
 export class InviteAcceptError extends Error {
@@ -33,7 +34,7 @@ export async function acceptLeagueInvitation({
   return prisma.$transaction(async (tx) => {
     const invitation = await tx.invitation.findUnique({
       where: { tokenHash },
-      include: { league: { select: { name: true } } },
+      include: { league: { select: { name: true, isTestLeague: true } } },
     });
     if (!invitation || !isInvitationUsable(invitation, now)) {
       throw new InviteAcceptError("INVITE_BAD");
@@ -66,6 +67,7 @@ export async function acceptLeagueInvitation({
     return {
       leagueId: invitation.leagueId,
       leagueName: invitation.league?.name ?? null,
+      isTestLeague: invitation.league?.isTestLeague ?? false,
     };
   });
 }

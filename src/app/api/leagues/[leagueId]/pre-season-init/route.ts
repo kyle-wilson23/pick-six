@@ -72,6 +72,9 @@ export async function POST(
     where: {
       userId_leagueId: { userId: session.user.id, leagueId },
     },
+    include: {
+      league: { select: { isTestLeague: true } },
+    },
   });
 
   if (!membership || membership.role !== LeagueMembershipRole.ADMIN) {
@@ -95,19 +98,27 @@ export async function POST(
   }
 
   try {
+    // Story 8.2: for test leagues, starting pre-season also starts the simulation clock
+    // at firstCompetitionWeek. Production leagues leave simulatedCurrentWeek null forever.
     await prisma.season.updateMany({
       where: { id: season.id, preSeasonInitializedAt: null },
-      data: { preSeasonInitializedAt: new Date() },
+      data: {
+        preSeasonInitializedAt: new Date(),
+        ...(membership.league.isTestLeague
+          ? { simulatedCurrentWeek: season.firstCompetitionWeek }
+          : {}),
+      },
     });
 
     const updated = await prisma.season.findUniqueOrThrow({
       where: { id: season.id },
-      select: { id: true, preSeasonInitializedAt: true },
+      select: { id: true, preSeasonInitializedAt: true, simulatedCurrentWeek: true },
     });
 
     return NextResponse.json({
       seasonId: updated.id,
       preSeasonInitializedAt: updated.preSeasonInitializedAt?.toISOString() ?? null,
+      simulatedCurrentWeek: updated.simulatedCurrentWeek,
     });
   } catch (e) {
     console.error("POST /api/leagues/[leagueId]/pre-season-init failed", e);

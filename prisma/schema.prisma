@@ -73,6 +73,10 @@ model Season {
   preSeasonInitializedAt       DateTime? @map("pre_season_initialized_at") @db.Timestamptz
   /// **Story 2.7 / Epic 3:** when non-null, `first_competition_week` is immutable (first pick saved or competition-week deadline passed). Writers land in Epic 3.
   firstCompetitionWeekLockedAt DateTime? @map("first_competition_week_locked_at") @db.Timestamptz
+  /// **Story 8.2:** configured length of a test-league simulated season (1–18). Null for production leagues and legacy pre-8.2 test leagues.
+  simulationWeekCount          Int?      @map("simulation_week_count")
+  /// **Story 8.2:** admin-driven simulation clock pointer. Null until pre-season init on a test league; stays null forever for production leagues.
+  simulatedCurrentWeek         Int?      @map("simulated_current_week")
   createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

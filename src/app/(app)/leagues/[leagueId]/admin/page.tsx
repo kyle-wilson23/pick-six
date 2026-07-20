@@ -9,6 +9,7 @@ import { AdminEmailComposer } from "@/components/admin/AdminEmailComposer";
 import { AdminExportCsvButton } from "@/components/admin/AdminExportCsvButton";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
 import { AdminReminderControls } from "@/components/admin/AdminReminderControls";
+import { AdminSimulationControls } from "@/components/admin/AdminSimulationControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { AdminWeeklyEmailStatus } from "@/components/admin/AdminWeeklyEmailStatus";
 import { auth } from "@/lib/auth";
@@ -22,6 +23,7 @@ import {
 } from "@/lib/admin/build-submission-status";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
+import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { logEvent } from "@/lib/logging/log-event";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
@@ -46,11 +48,13 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   let payload: AdminSubmissionStatusPayload;
   let overrideData: Awaited<ReturnType<typeof buildAdminOverrideData>>;
   let auditEntries: Awaited<ReturnType<typeof getAuditLog>>;
+  let season: Awaited<ReturnType<typeof resolveCurrentSeasonForLeague>>;
   try {
-    [payload, overrideData, auditEntries] = await Promise.all([
+    [payload, overrideData, auditEntries, season] = await Promise.all([
       buildSubmissionStatus({ leagueId }),
       buildAdminOverrideData({ leagueId }),
       getAuditLog({ leagueId }),
+      resolveCurrentSeasonForLeague(prisma.season, leagueId),
     ]);
   } catch {
     notFound();
@@ -115,6 +119,15 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
         <Typography variant="body1" color="success.main">
           All participants have submitted picks this week
         </Typography>
+      ) : null}
+
+      {league.isTestLeague && season ? (
+        <AdminSimulationControls
+          leagueId={leagueId}
+          firstCompetitionWeek={season.firstCompetitionWeek}
+          simulationWeekCount={season.simulationWeekCount}
+          simulatedCurrentWeek={season.simulatedCurrentWeek}
+        />
       ) : null}
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="stretch">

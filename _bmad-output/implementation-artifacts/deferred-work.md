@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 8-2-shortened-simulated-season-and-admin-driven-week-advancement (2026-07-19)
+
+- **`readJsonObject` duplicated again** — `src/app/api/leagues/[leagueId]/simulation/advance-week/route.ts` copies the same 8-line body-parsing helper already flagged in the 5.1 review below. Now present in 14+ route files project-wide. Extract to a shared `src/lib/request-utils.ts` when the next route touches this — the case for doing so keeps getting stronger.
+- **AC8 points 3 & 4 (production-league no-op guarantees) verified by code inspection only, not by test** — `src/app/api/leagues/[leagueId]/simulation/advance-week/route.ts` (403 `NOT_TEST_LEAGUE`, no DB write) and `src/app/api/leagues/route.ts` (`isTestLeague: false` → persisted `simulationWeekCount` stays `NULL`). Matches confirmed project-wide convention (no `route.ts` has a colocated integration test, per 8.1 review); AC8.3/8.4 verified by code inspection and cross-checked by two independent review layers instead.
+
 ## Deferred from: code review of 8-1-test-league-flag-labeling-and-optional-global-gates (2026-07-19)
 
 - **No direct route-handler test for `TEST_LEAGUES_DISABLED` 403** — `src/app/api/leagues/route.ts` lines 112–122. Pre-existing project convention: no `route.ts` file anywhere in the codebase has a colocated integration test; the `isTestLeague` + `ALLOW_TEST_LEAGUES` gate logic itself is fully covered via `allow-test-leagues.test.ts` and `create-league-body.test.ts`. Revisit if/when route-level integration test infrastructure is established (see also the deferred 3.4 note on route-layer testing).

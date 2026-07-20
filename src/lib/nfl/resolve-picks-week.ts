@@ -1,8 +1,10 @@
-/** Pure resolution of which NFL regular-season week the picks UX should show (Story 3.6). */
+/** Pure resolution of which NFL regular-season week the picks UX should show (Story 3.6 / 8.2). */
 
 export type MinimalSeasonForPicksWeek = {
   preSeasonInitializedAt: Date | null;
   firstCompetitionWeek: number;
+  /** Story 8.2 — present when resolving via `resolveActiveWeekNumber` for test leagues. */
+  simulatedCurrentWeek?: number | null;
 } | null;
 
 export type MinimalNflGameForPicksWeek = {
@@ -52,15 +54,46 @@ export function resolvePicksWeekNumber(
 }
 
 /**
+ * Dispatcher for participant/admin "current week" (Story 8.2).
+ *
+ * - Test league with `simulatedCurrentWeek` set → use the simulation clock.
+ * - Otherwise (production, or test league not started) → kickoff-based `resolvePicksWeekNumber`.
+ *
+ * Production path is a pure passthrough (AC5 / AC8).
+ */
+export function resolveActiveWeekNumber(args: {
+  isTestLeague: boolean;
+  season: MinimalSeasonForPicksWeek;
+  gamesForYear: MinimalNflGameForPicksWeek[];
+  now?: Date;
+}): number {
+  const { isTestLeague, season, gamesForYear, now = new Date() } = args;
+  if (isTestLeague && season?.simulatedCurrentWeek != null) {
+    return season.simulatedCurrentWeek;
+  }
+  return resolvePicksWeekNumber(season, gamesForYear, now);
+}
+
+/**
  * Preview banner: pre-season gates, schedule gaps, clamped FCW viewing, or before first competition-window kickoff.
+ *
+ * Story 8.2: for test leagues, preview ends when pre-season is initialized (simulation start),
+ * skipping the real-kickoff gate that would permanently block rehearsal before the NFL season.
  */
 export function computePicksUiIsPreview(args: {
   season: { preSeasonInitializedAt: Date | null; firstCompetitionWeek: number } | null;
   resolvedWeekNumber: number;
   allSeasonGames: { weekNumber: number; kickoffAt: Date }[];
   now: Date;
+  /** Defaults to `false` so existing production call sites stay byte-identical. */
+  isTestLeague?: boolean;
 }): boolean {
-  const { season, resolvedWeekNumber, allSeasonGames, now } = args;
+  const { season, resolvedWeekNumber, allSeasonGames, now, isTestLeague = false } = args;
+
+  if (isTestLeague) {
+    return !season?.preSeasonInitializedAt;
+  }
+
   const fcw =
     typeof season?.firstCompetitionWeek === "number" ? season.firstCompetitionWeek : 1;
 

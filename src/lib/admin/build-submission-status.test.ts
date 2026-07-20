@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockSeasonFindUnique = vi.fn();
+const mockLeagueFindUnique = vi.fn();
 const mockNflGameFindMany = vi.fn();
 const mockMembershipFindMany = vi.fn();
 const mockPickFindMany = vi.fn();
@@ -8,6 +9,7 @@ const mockPickFindMany = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
     season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
+    league: { findUnique: (...args: unknown[]) => mockLeagueFindUnique(...args) },
     nflGame: { findMany: (...args: unknown[]) => mockNflGameFindMany(...args) },
     leagueMembership: { findMany: (...args: unknown[]) => mockMembershipFindMany(...args) },
     pick: { findMany: (...args: unknown[]) => mockPickFindMany(...args) },
@@ -93,6 +95,7 @@ describe("mergeSubmissionStatusParticipants", () => {
 describe("buildSubmissionStatus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLeagueFindUnique.mockResolvedValue({ isTestLeague: false });
   });
 
   it("returns graceful null payload when no season exists", async () => {
@@ -110,6 +113,7 @@ describe("buildSubmissionStatus", () => {
       nflSeasonYear: 2026,
       preSeasonInitializedAt: null,
       firstCompetitionWeek: 1,
+      simulatedCurrentWeek: null,
     });
 
     const payload = await buildSubmissionStatus({ leagueId: "league-1" });
@@ -125,6 +129,7 @@ describe("buildSubmissionStatus", () => {
       nflSeasonYear: 2026,
       preSeasonInitializedAt: new Date("2026-08-01T00:00:00.000Z"),
       firstCompetitionWeek: 1,
+      simulatedCurrentWeek: null,
     });
     mockNflGameFindMany.mockResolvedValue([
       { weekNumber: 1, kickoffAt: new Date("2026-09-11T20:00:00.000Z") },
@@ -157,5 +162,32 @@ describe("buildSubmissionStatus", () => {
     expect(payload.participants).toHaveLength(2);
     expect(payload.participants[0]?.submittedPick?.teamName).toBe("Kansas City Chiefs");
     expect(payload.participants[1]?.submittedPick).toBeNull();
+  });
+
+  it("test league: weekNumber follows simulatedCurrentWeek regardless of now (AC5)", async () => {
+    const now = new Date("2026-03-01T12:00:00.000Z");
+    mockLeagueFindUnique.mockResolvedValue({ isTestLeague: true });
+    mockSeasonFindUnique.mockResolvedValue({
+      id: "season-1",
+      nflSeasonYear: 2026,
+      preSeasonInitializedAt: new Date("2026-02-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: 3,
+      simulationWeekCount: 4,
+    });
+    mockNflGameFindMany.mockResolvedValue([]);
+    mockMembershipFindMany.mockResolvedValue([
+      {
+        id: "mem-1",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        user: { id: "user-1", name: "Alice", email: "alice@x.com" },
+      },
+    ]);
+    mockPickFindMany.mockResolvedValue([]);
+
+    const payload = await buildSubmissionStatus({ leagueId: "league-1" }, now);
+
+    expect(payload.weekNumber).toBe(3);
+    expect(payload.participants).toHaveLength(1);
   });
 });

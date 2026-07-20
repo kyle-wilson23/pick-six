@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, firstCompetitionWeek, isTestLeague } = parsed.data;
+  const { name, firstCompetitionWeek, isTestLeague, simulationWeekCount } = parsed.data;
 
   if (isTestLeague && !allowTestLeagues()) {
     return NextResponse.json(
@@ -133,6 +133,8 @@ export async function POST(request: NextRequest) {
           leagueId: leagueRow.id,
           nflSeasonYear,
           firstCompetitionWeek,
+          // Production leagues must never persist simulation metadata (AC2 / AC8).
+          simulationWeekCount: isTestLeague ? simulationWeekCount : null,
         },
       });
       await tx.leagueMembership.create({
@@ -154,6 +156,8 @@ export async function POST(request: NextRequest) {
         nflSeasonYear: season.nflSeasonYear,
         firstCompetitionWeek: season.firstCompetitionWeek,
         firstCompetitionWeekLockedAt: season.firstCompetitionWeekLockedAt?.toISOString() ?? null,
+        simulationWeekCount: season.simulationWeekCount,
+        simulatedCurrentWeek: season.simulatedCurrentWeek,
       },
     });
   } catch (e) {

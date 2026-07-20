@@ -9,15 +9,40 @@ import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { isSimulationComplete } from "@/lib/league/simulation-week";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 import { DeleteLeagueDialog } from "./delete-league-dialog";
 import { FirstCompetitionWeekSettings } from "./first-competition-week-settings";
 import { NflOddsAdminPanel } from "./nfl-odds-admin-panel";
-import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
   params: Promise<{ leagueId: string }>;
 };
+
+function formatCurrentSimulatedWeek(season: {
+  firstCompetitionWeek: number;
+  simulationWeekCount: number | null;
+  simulatedCurrentWeek: number | null;
+}): string {
+  if (season.simulatedCurrentWeek == null) {
+    return "Not started";
+  }
+  if (
+    season.simulationWeekCount != null &&
+    isSimulationComplete({
+      firstCompetitionWeek: season.firstCompetitionWeek,
+      simulationWeekCount: season.simulationWeekCount,
+      simulatedCurrentWeek: season.simulatedCurrentWeek,
+    })
+  ) {
+    return "Complete";
+  }
+  if (season.simulationWeekCount != null) {
+    return `Week ${season.simulatedCurrentWeek} of ${season.simulationWeekCount}`;
+  }
+  return `Week ${season.simulatedCurrentWeek}`;
+}
 
 export default async function LeagueSettingsPage({ params }: PageProps) {
   const { leagueId } = await params;
@@ -82,6 +107,26 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
             Set at creation only. For a real season, create a new production league.
           </Typography>
         </div>
+        {league.isTestLeague ? (
+          <>
+            <div>
+              <Typography component="dt" variant="subtitle2">
+                Simulation week count
+              </Typography>
+              <Typography component="dd" variant="body1">
+                {season?.simulationWeekCount != null ? season.simulationWeekCount : "Not configured"}
+              </Typography>
+            </div>
+            <div>
+              <Typography component="dt" variant="subtitle2">
+                Current simulated week
+              </Typography>
+              <Typography component="dd" variant="body1">
+                {season ? formatCurrentSimulatedWeek(season) : "Not started"}
+              </Typography>
+            </div>
+          </>
+        ) : null}
         <div>
           <Typography component="dt" variant="subtitle2">
             League id

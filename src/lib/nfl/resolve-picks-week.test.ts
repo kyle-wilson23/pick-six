@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   computePicksUiIsPreview,
+  resolveActiveWeekNumber,
   resolvePicksWeekNumber,
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
@@ -153,5 +154,100 @@ describe("computePicksUiIsPreview", () => {
         now: d("2026-09-01T12:00:00.000Z"),
       }),
     ).toBe(true);
+  });
+
+  it("test league: false when pre-season initialized even if now is far before real kickoff (AC6)", () => {
+    expect(
+      computePicksUiIsPreview({
+        season: {
+          preSeasonInitializedAt: d("2026-05-01T00:00:00.000Z"),
+          firstCompetitionWeek: 1,
+        },
+        resolvedWeekNumber: 1,
+        allSeasonGames: [{ weekNumber: 1, kickoffAt: d("2026-09-08T23:20:00.000Z") }],
+        now: d("2026-03-01T12:00:00.000Z"),
+        isTestLeague: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("test league: true when pre-season not initialized", () => {
+    expect(
+      computePicksUiIsPreview({
+        season: { preSeasonInitializedAt: null, firstCompetitionWeek: 1 },
+        resolvedWeekNumber: 1,
+        allSeasonGames: [],
+        now: d("2026-03-01T12:00:00.000Z"),
+        isTestLeague: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("production (isTestLeague false): identical to pre-8.2 kickoff-gated preview", () => {
+    const args = {
+      season: {
+        preSeasonInitializedAt: d("2026-05-01T00:00:00.000Z"),
+        firstCompetitionWeek: 1,
+      },
+      resolvedWeekNumber: 1,
+      allSeasonGames: [{ weekNumber: 1, kickoffAt: d("2026-09-08T23:20:00.000Z") }],
+      now: d("2026-03-01T12:00:00.000Z"),
+    };
+    expect(computePicksUiIsPreview({ ...args, isTestLeague: false })).toBe(true);
+    expect(computePicksUiIsPreview(args)).toBe(true);
+  });
+});
+
+describe("resolveActiveWeekNumber", () => {
+  it("test league with simulatedCurrentWeek returns the simulation pointer", () => {
+    const season: MinimalSeasonForPicksWeek = {
+      preSeasonInitializedAt: d("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: 3,
+    };
+    const games: MinimalNflGameForPicksWeek[] = [
+      { weekNumber: 1, kickoffAt: d("2026-09-04T00:20:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-11T00:20:00.000Z") },
+    ];
+    expect(
+      resolveActiveWeekNumber({
+        isTestLeague: true,
+        season,
+        gamesForYear: games,
+        now: d("2026-09-05T12:00:00.000Z"),
+      }),
+    ).toBe(3);
+  });
+
+  it("production path is byte-identical to resolvePicksWeekNumber (AC8)", () => {
+    const season: MinimalSeasonForPicksWeek = {
+      preSeasonInitializedAt: d("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: 99,
+    };
+    const games: MinimalNflGameForPicksWeek[] = [
+      { weekNumber: 1, kickoffAt: d("2026-09-04T00:20:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-11T00:20:00.000Z") },
+    ];
+    const now = d("2026-09-05T12:00:00.000Z");
+    expect(
+      resolveActiveWeekNumber({ isTestLeague: false, season, gamesForYear: games, now }),
+    ).toBe(resolvePicksWeekNumber(season, games, now));
+  });
+
+  it("test league without simulatedCurrentWeek falls through to resolvePicksWeekNumber", () => {
+    const season: MinimalSeasonForPicksWeek = {
+      preSeasonInitializedAt: d("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: null,
+    };
+    const games: MinimalNflGameForPicksWeek[] = [
+      { weekNumber: 1, kickoffAt: d("2026-09-04T00:20:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-11T00:20:00.000Z") },
+    ];
+    const now = d("2026-09-05T12:00:00.000Z");
+    expect(
+      resolveActiveWeekNumber({ isTestLeague: true, season, gamesForYear: games, now }),
+    ).toBe(resolvePicksWeekNumber(season, games, now));
   });
 });

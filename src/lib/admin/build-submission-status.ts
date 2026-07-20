@@ -1,7 +1,7 @@
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import {
-  resolvePicksWeekNumber,
+  resolveActiveWeekNumber,
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
@@ -63,12 +63,18 @@ export function mergeSubmissionStatusParticipants(
   });
 }
 
-function canResolveActiveWeek(
-  season: { preSeasonInitializedAt: Date | null } | null,
-  gamesWithKickoff: MinimalNflGameForPicksWeek[],
-): boolean {
+function canResolveActiveWeek(args: {
+  season: { preSeasonInitializedAt: Date | null; simulatedCurrentWeek?: number | null } | null;
+  gamesWithKickoff: MinimalNflGameForPicksWeek[];
+  isTestLeague: boolean;
+}): boolean {
+  const { season, gamesWithKickoff, isTestLeague } = args;
   if (!season || season.preSeasonInitializedAt == null) {
     return false;
+  }
+  // Test leagues use the simulation clock even when no NflGame rows exist yet (Story 8.2 / 8.3).
+  if (isTestLeague && season.simulatedCurrentWeek != null) {
+    return true;
   }
   return gamesWithKickoff.length > 0;
 }
@@ -80,7 +86,13 @@ export async function buildSubmissionStatus(
   const { leagueId } = args;
   const db = prismaSingleton;
 
-  const season = await resolveCurrentSeasonForLeague(db.season, leagueId);
+  const [season, leagueRow] = await Promise.all([
+    resolveCurrentSeasonForLeague(db.season, leagueId),
+    db.league.findUnique({
+      where: { id: leagueId },
+      select: { isTestLeague: true },
+    }),
+  ]);
 
   if (!season) {
     return { weekNumber: null, participants: [] };
@@ -89,6 +101,8 @@ export async function buildSubmissionStatus(
   if (season.preSeasonInitializedAt == null) {
     return { weekNumber: null, participants: [] };
   }
+
+  const isTestLeague = leagueRow?.isTestLeague ?? false;
 
   const minimalGames = await db.nflGame.findMany({
     where: { nflSeasonYear: season.nflSeasonYear },
@@ -102,16 +116,22 @@ export async function buildSubmissionStatus(
     .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
-  if (!canResolveActiveWeek(season, gamesForResolve)) {
+  if (!canResolveActiveWeek({ season, gamesWithKickoff: gamesForResolve, isTestLeague })) {
     return { weekNumber: null, participants: [] };
   }
 
   const seasonForResolve: MinimalSeasonForPicksWeek = {
     preSeasonInitializedAt: season.preSeasonInitializedAt,
     firstCompetitionWeek: season.firstCompetitionWeek,
+    simulatedCurrentWeek: season.simulatedCurrentWeek,
   };
 
-  const weekNumber = resolvePicksWeekNumber(seasonForResolve, gamesForResolve, now);
+  const weekNumber = resolveActiveWeekNumber({
+    isTestLeague,
+    season: seasonForResolve,
+    gamesForYear: gamesForResolve,
+    now,
+  });
 
   const [memberships, picks] = await Promise.all([
     db.leagueMembership.findMany({

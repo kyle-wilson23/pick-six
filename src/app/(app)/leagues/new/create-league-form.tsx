@@ -14,6 +14,8 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
+import { DEFAULT_SIMULATION_WEEK_COUNT } from "@/lib/league/simulation-week";
+
 const WEEK_OPTIONS = Array.from({ length: 18 }, (_, i) => i + 1);
 
 type ApiError = { error?: { code?: string; message?: string } };
@@ -27,6 +29,7 @@ export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
   const [name, setName] = useState("");
   const [firstCompetitionWeek, setFirstCompetitionWeek] = useState(1);
   const [isTestLeague, setIsTestLeague] = useState(false);
+  const [simulationWeekCount, setSimulationWeekCount] = useState(DEFAULT_SIMULATION_WEEK_COUNT);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -35,6 +38,7 @@ export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
     setErrorMessage(null);
     setSubmitting(true);
     try {
+      const creatingTestLeague = allowTestLeagues ? isTestLeague : false;
       const res = await fetch("/api/leagues", {
         method: "POST",
         credentials: "include",
@@ -42,7 +46,8 @@ export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
         body: JSON.stringify({
           name,
           firstCompetitionWeek,
-          isTestLeague: allowTestLeagues ? isTestLeague : false,
+          isTestLeague: creatingTestLeague,
+          ...(creatingTestLeague ? { simulationWeekCount } : {}),
         }),
       });
       const data: unknown = await res.json().catch(() => null);
@@ -106,6 +111,26 @@ export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
           <FormHelperText>
             For practice data only — not your real season league. This cannot be changed after
             creation; start a new production league for the real season.
+          </FormHelperText>
+        </FormControl>
+      ) : null}
+      {allowTestLeagues && isTestLeague ? (
+        <FormControl fullWidth>
+          <InputLabel id="simulation-week-count-label">Simulation week count</InputLabel>
+          <Select
+            labelId="simulation-week-count-label"
+            label="Simulation week count"
+            value={simulationWeekCount}
+            onChange={(ev) => setSimulationWeekCount(Number(ev.target.value))}
+          >
+            {WEEK_OPTIONS.map((w) => (
+              <MenuItem key={w} value={w}>
+                {w} week{w === 1 ? "" : "s"}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            How many weeks this rehearsal will run. Recommended: 4–6 weeks.
           </FormHelperText>
         </FormControl>
       ) : null}

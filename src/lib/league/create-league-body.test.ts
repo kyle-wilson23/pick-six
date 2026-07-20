@@ -62,4 +62,53 @@ describe("createLeagueBodySchema", () => {
     );
     expect(createLeagueBodySchema.safeParse({ name: "L", isTestLeague: 1 }).success).toBe(false);
   });
+
+  it("defaults simulationWeekCount to 4", () => {
+    const r = createLeagueBodySchema.safeParse({ name: "L" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.simulationWeekCount).toBe(4);
+    }
+  });
+
+  it("accepts simulationWeekCount 1–18 and coerces numeric strings", () => {
+    const r = createLeagueBodySchema.safeParse({
+      name: "L",
+      isTestLeague: true,
+      simulationWeekCount: "6",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.simulationWeekCount).toBe(6);
+    }
+  });
+
+  it("rejects simulationWeekCount outside 1–18", () => {
+    expect(
+      createLeagueBodySchema.safeParse({ name: "L", simulationWeekCount: 0 }).success,
+    ).toBe(false);
+    expect(
+      createLeagueBodySchema.safeParse({ name: "L", simulationWeekCount: 19 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects test-league sim that would run past Week 18", () => {
+    const r = createLeagueBodySchema.safeParse({
+      name: "L",
+      isTestLeague: true,
+      firstCompetitionWeek: 16,
+      simulationWeekCount: 4,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("does not apply sim bound refine when isTestLeague is false", () => {
+    const r = createLeagueBodySchema.safeParse({
+      name: "L",
+      isTestLeague: false,
+      firstCompetitionWeek: 16,
+      simulationWeekCount: 4,
+    });
+    expect(r.success).toBe(true);
+  });
 });

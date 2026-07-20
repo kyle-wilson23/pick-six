@@ -13,7 +13,7 @@ import {
 import { getEffectiveOddsLinesForWeek } from "@/lib/nfl/effective-odds";
 import {
   computePicksUiIsPreview,
-  resolvePicksWeekNumber,
+  resolveActiveWeekNumber,
 } from "@/lib/nfl/resolve-picks-week";
 import type { MinimalNflGameForPicksWeek, MinimalSeasonForPicksWeek } from "@/lib/nfl/resolve-picks-week";
 import { mapCurrentPick, mapSeasonPickedTeams } from "@/lib/picks/map-current-pick";
@@ -55,7 +55,13 @@ export async function buildLeaguePicksWeekView(
     };
   }
 
-  const season = await resolveCurrentSeasonForLeague(db.season, leagueId);
+  const [season, leagueRow] = await Promise.all([
+    resolveCurrentSeasonForLeague(db.season, leagueId),
+    db.league.findUnique({
+      where: { id: leagueId },
+      select: { isTestLeague: true },
+    }),
+  ]);
 
   if (!season) {
     return {
@@ -66,6 +72,7 @@ export async function buildLeaguePicksWeekView(
     };
   }
 
+  const isTestLeague = leagueRow?.isTestLeague ?? false;
   const nflSeasonYear = season.nflSeasonYear;
 
   const minimalGames = await db.nflGame.findMany({
@@ -83,9 +90,15 @@ export async function buildLeaguePicksWeekView(
   const seasonForResolve: MinimalSeasonForPicksWeek = {
     preSeasonInitializedAt: season.preSeasonInitializedAt,
     firstCompetitionWeek: season.firstCompetitionWeek,
+    simulatedCurrentWeek: season.simulatedCurrentWeek,
   };
 
-  const resolvedWeek = resolvePicksWeekNumber(seasonForResolve, gamesForResolve, now);
+  const resolvedWeek = resolveActiveWeekNumber({
+    isTestLeague,
+    season: seasonForResolve,
+    gamesForYear: gamesForResolve,
+    now,
+  });
   const targetWeek =
     explicitWeekNumber != null && explicitWeekNumber > 0 ? explicitWeekNumber : resolvedWeek;
 
@@ -112,6 +125,7 @@ export async function buildLeaguePicksWeekView(
     resolvedWeekNumber: targetWeek,
     allSeasonGames: gamesForResolve,
     now,
+    isTestLeague,
   });
 
   const oddsLines = await getEffectiveOddsLinesForWeek(db, nflSeasonYear, targetWeek);

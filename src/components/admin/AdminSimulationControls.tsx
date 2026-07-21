@@ -26,6 +26,13 @@ type ApiErrorBody = {
   error?: { code?: string; message?: string };
 };
 
+type ApplyOddsSuccessBody = {
+  weekNumber?: number;
+  gamesInWeek?: number;
+  jailedTeamAbbreviation?: string;
+  resolvedBy?: string;
+};
+
 export function AdminSimulationControls({
   leagueId,
   firstCompetitionWeek,
@@ -36,6 +43,10 @@ export function AdminSimulationControls({
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [oddsSubmitting, setOddsSubmitting] = useState(false);
+  const [oddsError, setOddsError] = useState<string | null>(null);
+  const [oddsSuccess, setOddsSuccess] = useState<string | null>(null);
 
   const notConfigured = simulationWeekCount == null;
   const notStarted = simulatedCurrentWeek == null;
@@ -81,9 +92,49 @@ export function AdminSimulationControls({
         return;
       }
       setOpen(false);
+      setOddsSuccess(null);
+      setOddsError(null);
       router.refresh();
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleApplyOddsSnapshot() {
+    if (simulatedCurrentWeek == null) return;
+    setOddsError(null);
+    setOddsSuccess(null);
+    setOddsSubmitting(true);
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/simulation/apply-odds-snapshot`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        const body = data as ApiErrorBody | null;
+        setOddsError(body?.error?.message ?? "Could not apply odds snapshot");
+        return;
+      }
+      const body = data as ApplyOddsSuccessBody | null;
+      if (!body) {
+        setOddsError("Received an unexpected response from the server");
+        return;
+      }
+      const week = body.weekNumber ?? simulatedCurrentWeek;
+      const games = body.gamesInWeek ?? 0;
+      const abbr = body.jailedTeamAbbreviation ?? "?";
+      const by = body.resolvedBy ?? "?";
+      setOddsSuccess(
+        `Applied fixture odds for Week ${week} — ${games} games, jailed team: ${abbr} (${by}).`,
+      );
+      router.refresh();
+    } catch {
+      setOddsError("Network error — could not reach the server");
+    } finally {
+      setOddsSubmitting(false);
     }
   }
 
@@ -112,7 +163,7 @@ export function AdminSimulationControls({
         </Typography>
         <Button
           variant="contained"
-          disabled={notConfigured || notStarted || complete || nextWeek == null}
+          disabled={notConfigured || notStarted || complete || nextWeek == null || oddsSubmitting}
           onClick={() => {
             setErrorMessage(null);
             setOpen(true);
@@ -120,6 +171,19 @@ export function AdminSimulationControls({
         >
           {nextWeek != null ? `Advance to Week ${nextWeek}` : "Advance week"}
         </Button>
+        <Button
+          variant="outlined"
+          disabled={notStarted || oddsSubmitting || submitting}
+          onClick={() => void handleApplyOddsSnapshot()}
+        >
+          {oddsSubmitting
+            ? "Applying…"
+            : simulatedCurrentWeek != null
+              ? `Apply odds snapshot for Week ${simulatedCurrentWeek}`
+              : "Apply odds snapshot"}
+        </Button>
+        {oddsSuccess ? <Alert severity="success">{oddsSuccess}</Alert> : null}
+        {oddsError ? <Alert severity="error">{oddsError}</Alert> : null}
       </Stack>
 
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">

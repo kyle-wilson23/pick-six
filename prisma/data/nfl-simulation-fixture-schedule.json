@@ -1,0 +1,50 @@
+[
+  {
+    "games": [
+      { "home": "PHI", "away": "DAL" },
+      { "home": "KC", "away": "BUF" },
+      { "home": "SF", "away": "SEA" },
+      { "home": "GB", "away": "MIN" }
+    ]
+  },
+  {
+    "games": [
+      { "home": "BAL", "away": "PIT" },
+      { "home": "MIA", "away": "NYJ" },
+      { "home": "LAR", "away": "ARI" },
+      { "home": "DET", "away": "CHI" }
+    ]
+  },
+  {
+    "games": [
+      { "home": "CIN", "away": "CLE" },
+      { "home": "HOU", "away": "IND" },
+      { "home": "DEN", "away": "LV" },
+      { "home": "NO", "away": "TB" }
+    ]
+  },
+  {
+    "games": [
+      { "home": "NE", "away": "NYG" },
+      { "home": "JAX", "away": "TEN" },
+      { "home": "LAC", "away": "DEN" },
+      { "home": "WAS", "away": "PHI" }
+    ]
+  },
+  {
+    "games": [
+      { "home": "KC", "away": "LV" },
+      { "home": "BUF", "away": "MIA" },
+      { "home": "DAL", "away": "WAS" },
+      { "home": "SF", "away": "ARI" }
+    ]
+  },
+  {
+    "games": [
+      { "home": "SEA", "away": "LAR" },
+      { "home": "GB", "away": "DET" },
+      { "home": "MIN", "away": "CHI" },
+      { "home": "PIT", "away": "BAL" }
+    ]
+  }
+]

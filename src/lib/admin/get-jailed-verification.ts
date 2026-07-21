@@ -5,7 +5,7 @@ import type { JailedCandidateAudit } from "@/lib/domain/jailed";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import {
-  resolvePicksWeekNumber,
+  resolveActiveWeekNumber,
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
@@ -118,6 +118,22 @@ function mapSlice(
   return slice.map((c) => toCandidateView(c, teamNameMap));
 }
 
+function canResolveActiveWeek(args: {
+  season: { preSeasonInitializedAt: Date | null; simulatedCurrentWeek?: number | null } | null;
+  gamesWithKickoff: MinimalNflGameForPicksWeek[];
+  isTestLeague: boolean;
+}): boolean {
+  const { season, gamesWithKickoff, isTestLeague } = args;
+  if (!season || season.preSeasonInitializedAt == null) {
+    return false;
+  }
+  // Test leagues use the simulation clock even when no NflGame rows exist yet (Story 8.2 / 8.3).
+  if (isTestLeague && season.simulatedCurrentWeek != null) {
+    return true;
+  }
+  return gamesWithKickoff.length > 0;
+}
+
 export async function getJailedVerification(
   args: { leagueId: string },
   db: PrismaClient = prismaSingleton,
@@ -125,10 +141,19 @@ export async function getJailedVerification(
 ): Promise<JailedVerificationView | null> {
   const { leagueId } = args;
 
-  const season = await resolveCurrentSeasonForLeague(db.season, leagueId);
+  const [season, leagueRow] = await Promise.all([
+    resolveCurrentSeasonForLeague(db.season, leagueId),
+    db.league.findUnique({
+      where: { id: leagueId },
+      select: { isTestLeague: true },
+    }),
+  ]);
+
   if (!season || season.preSeasonInitializedAt == null) {
     return null;
   }
+
+  const isTestLeague = leagueRow?.isTestLeague ?? false;
 
   const minimalGames = await db.nflGame.findMany({
     where: { nflSeasonYear: season.nflSeasonYear },
@@ -139,16 +164,22 @@ export async function getJailedVerification(
     .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
-  if (gamesForResolve.length === 0) {
+  if (!canResolveActiveWeek({ season, gamesWithKickoff: gamesForResolve, isTestLeague })) {
     return null;
   }
 
   const seasonForResolve: MinimalSeasonForPicksWeek = {
     preSeasonInitializedAt: season.preSeasonInitializedAt,
     firstCompetitionWeek: season.firstCompetitionWeek,
+    simulatedCurrentWeek: season.simulatedCurrentWeek,
   };
 
-  const weekNumber = resolvePicksWeekNumber(seasonForResolve, gamesForResolve, now);
+  const weekNumber = resolveActiveWeekNumber({
+    isTestLeague,
+    season: seasonForResolve,
+    gamesForYear: gamesForResolve,
+    now,
+  });
 
   const jailed = await db.nflWeekJailedTeam.findUnique({
     where: {

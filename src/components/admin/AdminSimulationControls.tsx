@@ -33,6 +33,12 @@ type ApplyOddsSuccessBody = {
   resolvedBy?: string;
 };
 
+type ApplyResultsSuccessBody = {
+  weekNumber?: number;
+  gamesFinalizedThisRun?: number;
+  scored?: number;
+};
+
 export function AdminSimulationControls({
   leagueId,
   firstCompetitionWeek,
@@ -47,6 +53,12 @@ export function AdminSimulationControls({
   const [oddsSubmitting, setOddsSubmitting] = useState(false);
   const [oddsError, setOddsError] = useState<string | null>(null);
   const [oddsSuccess, setOddsSuccess] = useState<string | null>(null);
+
+  const [resultsSubmitting, setResultsSubmitting] = useState(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
+  const [resultsSuccess, setResultsSuccess] = useState<string | null>(null);
+
+  const anyInFlight = submitting || oddsSubmitting || resultsSubmitting;
 
   const notConfigured = simulationWeekCount == null;
   const notStarted = simulatedCurrentWeek == null;
@@ -94,6 +106,8 @@ export function AdminSimulationControls({
       setOpen(false);
       setOddsSuccess(null);
       setOddsError(null);
+      setResultsSuccess(null);
+      setResultsError(null);
       router.refresh();
     } finally {
       setSubmitting(false);
@@ -104,6 +118,8 @@ export function AdminSimulationControls({
     if (simulatedCurrentWeek == null) return;
     setOddsError(null);
     setOddsSuccess(null);
+    setResultsError(null);
+    setResultsSuccess(null);
     setOddsSubmitting(true);
     try {
       const res = await fetch(`/api/leagues/${leagueId}/simulation/apply-odds-snapshot`, {
@@ -138,6 +154,45 @@ export function AdminSimulationControls({
     }
   }
 
+  async function handleSimulateResults() {
+    if (simulatedCurrentWeek == null) return;
+    setResultsError(null);
+    setResultsSuccess(null);
+    setOddsError(null);
+    setOddsSuccess(null);
+    setResultsSubmitting(true);
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/simulation/apply-results`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        const body = data as ApiErrorBody | null;
+        setResultsError(body?.error?.message ?? "Could not simulate results");
+        return;
+      }
+      const body = data as ApplyResultsSuccessBody | null;
+      if (!body) {
+        setResultsError("Received an unexpected response from the server");
+        return;
+      }
+      const week = body.weekNumber ?? simulatedCurrentWeek;
+      const finalized = body.gamesFinalizedThisRun ?? 0;
+      const scored = body.scored ?? 0;
+      setResultsSuccess(
+        `Simulated results for Week ${week} — ${finalized} games finalized, ${scored} picks scored.`,
+      );
+      router.refresh();
+    } catch {
+      setResultsError("Network error — could not reach the server");
+    } finally {
+      setResultsSubmitting(false);
+    }
+  }
+
   let statusLine: string;
   if (notConfigured) {
     statusLine = "Simulation week count is not configured for this league.";
@@ -163,7 +218,9 @@ export function AdminSimulationControls({
         </Typography>
         <Button
           variant="contained"
-          disabled={notConfigured || notStarted || complete || nextWeek == null || oddsSubmitting}
+          disabled={
+            notConfigured || notStarted || complete || nextWeek == null || anyInFlight
+          }
           onClick={() => {
             setErrorMessage(null);
             setOpen(true);
@@ -173,7 +230,7 @@ export function AdminSimulationControls({
         </Button>
         <Button
           variant="outlined"
-          disabled={notStarted || oddsSubmitting || submitting}
+          disabled={notStarted || anyInFlight}
           onClick={() => void handleApplyOddsSnapshot()}
         >
           {oddsSubmitting
@@ -182,8 +239,21 @@ export function AdminSimulationControls({
               ? `Apply odds snapshot for Week ${simulatedCurrentWeek}`
               : "Apply odds snapshot"}
         </Button>
+        <Button
+          variant="outlined"
+          disabled={notStarted || anyInFlight}
+          onClick={() => void handleSimulateResults()}
+        >
+          {resultsSubmitting
+            ? "Simulating…"
+            : simulatedCurrentWeek != null
+              ? `Simulate results for Week ${simulatedCurrentWeek}`
+              : "Simulate results"}
+        </Button>
         {oddsSuccess ? <Alert severity="success">{oddsSuccess}</Alert> : null}
         {oddsError ? <Alert severity="error">{oddsError}</Alert> : null}
+        {resultsSuccess ? <Alert severity="success">{resultsSuccess}</Alert> : null}
+        {resultsError ? <Alert severity="error">{resultsError}</Alert> : null}
       </Stack>
 
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">

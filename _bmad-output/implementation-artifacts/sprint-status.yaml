@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-07-28'  # code-review 9-3 → done
+last_updated: '2026-07-28'  # code-review 9-4 → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -136,7 +136,7 @@ development_status:
   9-1-league-scoped-scoring-scorenflweek-blast-radius: done  # Critical: scoreNflWeek must not score other leagues' picks from rehearsal finalize
   9-2-domain-provider-investigation: done  # Cloudflare Registrar+DNS; dual-use app URL + Resend; unblocks post-epic-9 Resend domain
   9-3-forgot-password-flow: done  # Kyle: missing forgot-password; evaluate Resend for reset mail
-  9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e: backlog  # Lighthouse + NFR5 + breaker e2e + deferred-work.md launch-risk triage
+  9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e: done  # Lighthouse + NFR5 + breaker e2e + deferred-work.md launch-risk triage
   9-5-app-shell-home-nav-scroll-breakpoints-loading: backlog  # No landing→home; carded lists max 3 + show more; recent visit sort both pages; nav+settings; scroll-top; full breakpoint pass; loading
   9-6-league-hub-and-picks-interaction-polish: backlog  # Hub pops + button CTAs; app-wide link color+underline; pick hover = individual green glow; hide retractable roof w/o weather
   9-7-email-html-layout-polish: backlog  # Full email layout pass; "make my picks" must be emphasized (not tiny)

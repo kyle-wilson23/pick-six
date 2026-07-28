@@ -38,6 +38,13 @@ vi.mock("@/lib/logging/log-event", () => ({
   logEvent: vi.fn(),
 }));
 
+import { logEvent } from "@/lib/logging/log-event";
+import { EMAIL_SEND_CONCURRENCY } from "./map-with-concurrency";
+import {
+  EMAIL_CIRCUIT_FAILURE_THRESHOLD,
+  EMAIL_CIRCUIT_OPEN_CODE,
+  createEmailCircuitBreaker,
+} from "./circuit-breaker";
 import { sendTuesdayDigest } from "./send-tuesday-digest";
 
 const LEAGUE_ID = "league-test";
@@ -64,6 +71,15 @@ const PRELOADED_DATA = {
     },
   ],
 };
+
+/** ≥4 members so abort-remaining is observable after threshold opens (Story 9.4 AC3). */
+function members(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    membershipId: `mem-${i + 1}`,
+    email: `member${i + 1}@example.com`,
+    displayName: `Member ${i + 1}`,
+  }));
+}
 
 describe("sendTuesdayDigest", () => {
   beforeEach(() => {
@@ -143,6 +159,103 @@ describe("sendTuesdayDigest", () => {
       failed: 0,
       suppressed: false,
       wouldSendCount: 0,
+    });
+  });
+
+  describe("circuit-breaker outage drill (Story 9.4 AC3)", () => {
+    it("opens after 3 consecutive Resend failures, logs EMAIL_CIRCUIT_OPEN, aborts remaining members", async () => {
+      // Production-like path — never suppress (suppress bypasses Resend + breaker).
+      mockGetTestLeagueEmailMode.mockReturnValue("send");
+      mockResendSend.mockRejectedValue(new Error("Resend unavailable"));
+
+      // Worst-case Resend claims before abort: concurrency + (threshold - 1).
+      // memberCount must exceed that so lessThan(memberCount) cannot flake.
+      const maxClaimsBeforeAbort =
+        EMAIL_SEND_CONCURRENCY + (EMAIL_CIRCUIT_FAILURE_THRESHOLD - 1);
+      const memberCount = maxClaimsBeforeAbort + 2;
+      const breaker = createEmailCircuitBreaker();
+
+      const result = await sendTuesdayDigest({
+        leagueId: LEAGUE_ID,
+        preloadedData: {
+          ...PRELOADED_DATA,
+          isTestLeague: false,
+          members: members(memberCount),
+        },
+        breaker,
+      });
+
+      expect(breaker.open).toBe(true);
+      expect(breaker.consecutiveFailures).toBe(EMAIL_CIRCUIT_FAILURE_THRESHOLD);
+      expect(mockResendSend.mock.calls.length).toBeGreaterThanOrEqual(
+        EMAIL_CIRCUIT_FAILURE_THRESHOLD,
+      );
+      expect(mockResendSend.mock.calls.length).toBeLessThanOrEqual(
+        maxClaimsBeforeAbort,
+      );
+      expect(mockResendSend.mock.calls.length).toBeLessThan(memberCount);
+
+      expect(logEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: EMAIL_CIRCUIT_OPEN_CODE,
+          action: "circuit_open",
+          leagueId: LEAGUE_ID,
+          context: expect.objectContaining({
+            consecutiveFailures: EMAIL_CIRCUIT_FAILURE_THRESHOLD,
+            remainingAborted: true,
+          }),
+        }),
+      );
+
+      expect(result).toMatchObject({
+        sent: 0,
+        failed: memberCount,
+        suppressed: false,
+        sentAt: null,
+      });
+    });
+
+    it("shared breaker aborts a second league without further Resend calls", async () => {
+      mockGetTestLeagueEmailMode.mockReturnValue("send");
+      mockResendSend.mockRejectedValue(new Error("Resend unavailable"));
+
+      const breaker = createEmailCircuitBreaker();
+      const leagueA = {
+        ...PRELOADED_DATA,
+        isTestLeague: false,
+        members: members(4),
+      };
+      const leagueBId = "league-b";
+      const leagueB = {
+        ...PRELOADED_DATA,
+        leagueId: leagueBId,
+        isTestLeague: false,
+        members: members(3),
+      };
+
+      const first = await sendTuesdayDigest({
+        leagueId: LEAGUE_ID,
+        preloadedData: leagueA,
+        breaker,
+      });
+      expect(breaker.open).toBe(true);
+      expect(first.failed).toBe(4);
+
+      const resendAfterFirst = mockResendSend.mock.calls.length;
+
+      const second = await sendTuesdayDigest({
+        leagueId: leagueBId,
+        preloadedData: leagueB,
+        breaker,
+      });
+
+      expect(mockResendSend.mock.calls.length).toBe(resendAfterFirst);
+      expect(second).toMatchObject({
+        sent: 0,
+        failed: 3,
+        suppressed: false,
+        sentAt: null,
+      });
     });
   });
 });

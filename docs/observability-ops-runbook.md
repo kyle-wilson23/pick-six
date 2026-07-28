@@ -80,6 +80,7 @@ Expected: `401` with `{ "error": { "code": "UNAUTHORIZED", ... } }`.
 |------|--------|
 | Cron HTTP **500** when `failed > 0` | **Resolved by 7.4** — same JSON body; 200 for success / `outside_window` |
 | Resend circuit breaker | **Resolved by 7.4** — after 3 consecutive provider failures, abort remaining; `code: EMAIL_CIRCUIT_OPEN` |
+| Circuit-breaker outage drill | **Resolved by Story 9.4** — Vitest in `send-tuesday-digest.test.ts` (mocked Resend failures; never use suppress mode). Filter logs: `"code":"EMAIL_CIRCUIT_OPEN"` |
 | `maxDuration = 300` on cron routes | **Resolved by 7.4** — route-segment export |
 | External uptime monitor | **Documented** in [deployment.md](./deployment.md) — ops configures cron-job.org / Better Stack |
 | Scoring / pick-deadline structured logging | Still **post-launch** |

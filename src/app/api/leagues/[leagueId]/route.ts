@@ -67,7 +67,8 @@ export async function DELETE(
     );
   }
 
-  const wasTestLeague = league.isTestLeague;
+  // Narrowed by authorizeLeagueDelete → not league_not_found; TS does not track that.
+  const wasTestLeague = league!.isTestLeague;
 
   try {
     const deleted = await prisma.league.deleteMany({ where: { id: leagueId } });

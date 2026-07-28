@@ -6,12 +6,13 @@ Lab measurements for Pick Six primary routes. Companion to [deployment.md](./dep
 
 | Setting | Value |
 |---------|--------|
-| Date | 2026-07-12 |
-| App | `npm run build` then `npm run start` (local production server on `127.0.0.1:3010`) |
+| Date | **2026-07-28** (authenticated picks/standings + pick-submit; login numbers retained from 2026-07-12 / 2026-07-19) |
+| App | `npm run build` then `npm run start` (local production server on `127.0.0.1:3010` / `localhost:3010`) |
 | Tool | [Lighthouse](https://github.com/GoogleChrome/lighthouse) **12.8.2** CLI |
 | Modes | **Mobile** (`--form-factor=mobile`, simulated throttling) and **Desktop** (`--preset=desktop`, simulated throttling) |
 | Chrome | Headless (`--headless --no-sandbox --disable-gpu`) |
 | Scope | Performance category only |
+| Auth | Session cookie after seed login (`dev@example.com` / `devpassword123`); passed via Lighthouse `--extra-headers` `Cookie` |
 
 ```bash
 npm run build
@@ -26,7 +27,7 @@ npx lighthouse@12.8.2 http://127.0.0.1:3010/login \
   --throttling-method=simulate --chrome-flags="--headless --no-sandbox --disable-gpu"
 ```
 
-**Authenticated routes (picks / standings):** Sign in first (seed user `dev@example.com` / `devpassword123` after `npm run db:seed`), then run the same Lighthouse commands against `/leagues/<leagueId>/picks` and `/leagues/<leagueId>/standings`. Unauthenticated runs redirect to `/login` and are **not** a valid stand-in for those pages.
+**Authenticated routes (picks / standings):** Sign in first (seed user `dev@example.com` / `devpassword123` after `npm run db:seed`), then run the same Lighthouse commands against `/leagues/<leagueId>/picks` and `/leagues/<leagueId>/standings` with a session `Cookie` header (Chrome user-data-dir after manual login, or Auth.js credentials callback → cookie jar). Unauthenticated runs redirect to `/login` and are **not** a valid stand-in for those pages.
 
 **Lab vs field:** Simulated mobile throttling is conservative vs a good local Wi‑Fi phone. Vercel cold starts and Neon wake can add latency in production — see exceptions below.
 
@@ -36,11 +37,11 @@ npx lighthouse@12.8.2 http://127.0.0.1:3010/login \
 
 | Metric | Target (PRD) | Routes | Lab result (this run) |
 |--------|--------------|--------|------------------------|
-| Initial page load (≈ LCP) | ≤ **3s** (**NFR1**) | Login, league picks, league standings | **Login mobile LCP 2.34s** ✅ · Login desktop LCP **0.67s** ✅ · Picks/standings: authenticated Lighthouse run not completed this pass — see Known exceptions |
+| Initial page load (≈ LCP) | ≤ **3s** (**NFR1**) | Login, league picks, league standings | **Login** mobile 2.34s ✅ / desktop 0.67s ✅ · **Picks** mobile **3.39s** ⚠️ / desktop 0.82s ✅ · **Standings** mobile **3.01s** ⚠️ / desktop 0.67s ✅ — see Known exceptions for mobile LCP |
 | Subsequent navigation | ≤ **1s** (**NFR2**) | Client nav between league tabs (picks ↔ standings ↔ home) | Soft RSC navigation after shell load; spot-check with Chrome DevTools Performance (Interaction → next paint). Expected **≪ 1s** once JS/CSS cached — no full document reload |
-| TTI | ≤ **4s** (**NFR3**) | Same primary workflows | **Login mobile TTI 3.36s** ✅ · Login desktop TTI **0.67s** ✅ |
+| TTI | ≤ **4s** (**NFR3**) | Same primary workflows | **Login** mobile 3.36s ✅ / desktop 0.67s ✅ · **Picks** mobile 3.78s ✅ / desktop 0.82s ✅ · **Standings** mobile 3.12s ✅ / desktop 0.67s ✅ |
 
-### Login — Lighthouse 12.8.2 detail (local `start`)
+### Login — Lighthouse 12.8.2 detail (local `start`, 2026-07-12)
 
 | Form factor | Perf score | FCP | LCP | TTI | TBT | Speed Index |
 |-------------|------------|-----|-----|-----|-----|-------------|
@@ -48,6 +49,24 @@ npx lighthouse@12.8.2 http://127.0.0.1:3010/login \
 | Desktop (simulated) | 100 | 0.21s | **0.67s** | **0.67s** | 0ms | 0.21s |
 
 Server TTFB for `GET /login` (curl `time_starttransfer`, warm local): ~**19ms** (excludes WAN).
+
+### Picks — Lighthouse 12.8.2 detail (authenticated, local `start`, 2026-07-28)
+
+League: Willy League (`/leagues/cmoz5x3rx0003pa9kd1qqvul6/picks`), seed admin session, warm route hit before lab run. Final URL confirmed **not** `/login`.
+
+| Form factor | Perf score | FCP | LCP | TTI | TBT | Speed Index |
+|-------------|------------|-----|-----|-----|-----|-------------|
+| Mobile (simulated) | 91 | 0.93s | **3.39s** ⚠️ | **3.78s** ✅ | 79ms | 1.22s |
+| Desktop (simulated) | 99 | 0.26s | **0.82s** ✅ | **0.82s** ✅ | 0ms | 0.41s |
+
+### Standings — Lighthouse 12.8.2 detail (authenticated, local `start`, 2026-07-28)
+
+Same league `/standings`, authenticated, warm. Final URL confirmed **not** `/login`.
+
+| Form factor | Perf score | FCP | LCP | TTI | TBT | Speed Index |
+|-------------|------------|-----|-----|-----|-----|-------------|
+| Mobile (simulated) | 95 | 0.76s | **3.01s** ⚠️ | **3.12s** ✅ | 48ms | 0.76s |
+| Desktop (simulated) | 100 | 0.21s | **0.67s** ✅ | **0.67s** ✅ | 0ms | 0.30s |
 
 ---
 
@@ -60,17 +79,21 @@ Server TTFB for `GET /login` (curl `time_starttransfer`, warm local): ~**19ms** 
 | **Login** | Credentials `authorize` in `src/lib/auth.ts` | Log: `action: "login"`, `context.durationMs` — covers DB user lookup + bcrypt compare (server boundary) |
 | **Pick submit** | `POST /api/leagues/[leagueId]/picks` | Log: `action: "pick_submit"`, `context.durationMs` — covers CSRF/auth/membership + Prisma transaction |
 
-**Measured samples (2026-07-19, local `npm run start` on port 3010, real Neon DB, seed user `dev@example.com`):**
+**Measured samples — login (2026-07-19, local `npm run start` on port 3010, real Neon DB, seed user `dev@example.com`):**
 
 | Flow | Sample | `durationMs` |
 |------|--------|--------------|
 | Login (`authorize`) | 1st request (cold Neon connection) | **2096ms** ⚠️ exceeds 1s |
 | Login (`authorize`) | 2nd request (warm connection) | **727ms** ✅ |
-| Pick submit | — | not captured this pass (see note below) |
 
-**Note — pick submit not captured:** All seed leagues in this dev environment are pre-season (`preSeasonInitializedAt` is `null`), so a real `POST` returns `SEASON_NOT_READY` before reaching the pick-save transaction — not a representative sample of the full mutation. Getting a genuine sample requires an initialized season (`pre-season-init`) in a real or rehearsal league; deferred to when Epic 8 rehearsal mode or a live season is available rather than mutating this dev league's state for a one-off timing check.
+**Measured samples — pick submit (2026-07-28, local `npm run start` on port 3010, Willy League initialized season, week 1 still open, success path `message: "pick submit completed"`):**
 
-**Cold-start exception (NFR5):** The first `authorize()` call after idle exceeded the 1s target (2096ms) — almost entirely a cold Neon connection-pool handshake (bcrypt cost factor is constant across both samples). This is the same class of cold-start latency already called out in Known Exceptions below; warm requests (727ms) are within budget. No code fix applied — first-request-after-idle latency is a Neon/Vercel cold-start characteristic, not a regression in this story's code.
+| Flow | Sample | `durationMs` |
+|------|--------|--------------|
+| Pick submit | 1st successful save this session | **453ms** ✅ |
+| Pick submit | 2nd successful save (warm) | **425ms** ✅ |
+
+**Cold-start exception (NFR5):** The first `authorize()` call after idle exceeded the 1s target (2096ms) — almost entirely a cold Neon connection-pool handshake (bcrypt cost factor is constant across both samples). This is the same class of cold-start latency already called out in Known Exceptions below; warm requests (727ms) are within budget. Pick-submit warm samples (425–453ms) are within budget. No code fix applied — first-request-after-idle latency is a Neon/Vercel cold-start characteristic, not a regression in app code.
 
 Reproduce: sign in or submit a pick while watching Vercel/local logs for the JSON `durationMs` field.
 
@@ -84,10 +107,11 @@ Reproduce: sign in or submit a pick while watching Vercel/local logs for the JSO
 | **Picks SSR + weather** | First render may call OpenWeatherMap for outdoor games; Story 7.4 adds a **10-minute in-memory TTL** so Sunday traffic does not re-hit the API every navigation. Cold miss can still add up to ~3s provider timeout (fail-soft → null). |
 | **Large local logo set** | NFL logos are local `next/image` assets — fine for MVP; first visit may pay decode cost already reflected in LCP. |
 | **Unauthenticated Lighthouse on picks/standings** | Redirects to login — do not treat as picks/standings budget evidence. |
-| **Authenticated picks/standings Lighthouse accepted as unmeasured for now** | The 2026-07-19 code-review re-measure pass captured real login `durationMs` samples (see NFR5 above) but stopped short of an authenticated Lighthouse run against picks/standings — doing so needs a live session cookie handed to the Lighthouse CLI. Accepted as a known exception rather than have an automated pass do further credential handling; run the method documented above against `/leagues/<leagueId>/picks` and `/leagues/<leagueId>/standings` whenever this is next revisited (e.g. before first real season). |
-| **Pick-submit NFR5 sample accepted as unmeasured for now** | Every seed league in this dev environment is pre-season (`preSeasonInitializedAt` is `null`), so a real `POST` returns `SEASON_NOT_READY` before reaching the pick-save transaction. Accepted as a known exception rather than activate a dev league's season for a one-off timing check; re-measure once a real or rehearsal season is active. |
+| ~~**Authenticated picks/standings Lighthouse accepted as unmeasured for now**~~ | **Resolved by Story 9.4 (2026-07-28)** — authenticated Lighthouse 12.8.2 recorded above. **Desktop** LCP/TTI meet NFR1/NFR3. **Mobile** TTI meets NFR3; **mobile LCP** is slightly over 3s (picks 3.39s, standings 3.01s) under simulated throttling. |
+| **Mobile LCP slightly over NFR1 on picks/standings (Owner: Kyle)** | Re-accepted for first real season: lab mobile throttling is conservative; desktop and all TTI budgets pass; MVP ~14 users on warm paths. Revisit if field reports slow first paint on phones (Story 9.5 loading polish / weather cold-miss may help picks). |
+| ~~**Pick-submit NFR5 sample accepted as unmeasured for now**~~ | **Resolved by Story 9.4 (2026-07-28)** — success-path samples 453ms / 425ms recorded above (warm Neon). |
 
-Empty preferred when budgets are met on warm, authenticated runs. Re-check picks/standings LCP/TTI after sign-in before first real season.
+Empty preferred when budgets are met on warm, authenticated runs.
 
 ---
 

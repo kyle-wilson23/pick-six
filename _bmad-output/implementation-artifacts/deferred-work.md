@@ -2,6 +2,35 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Launch-risk triage (Story 9.4 — 2026-07-28)
+
+Classifies remaining **open** launch-relevant deferred items before first real season. Disposition is exactly one of **Promote** / **Accept** / **Park**. Evidence for measurement closeouts lives in [`docs/performance-budgets.md`](../../docs/performance-budgets.md); circuit-breaker drill in `src/lib/email/send-tuesday-digest.test.ts`.
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| Authenticated Lighthouse picks/standings | **Resolved (9.4)** | Evidence in performance-budgets.md; mobile LCP Known Exception re-accepted (Kyle) |
+| Pick-submit NFR5 `durationMs` sample | **Resolved (9.4)** | Warm success samples 453ms / 425ms in budgets doc |
+| Email circuit-breaker e2e under outage | **Resolved (9.4)** | Vitest drill: Resend always-fail, ≥4 members, `EMAIL_CIRCUIT_OPEN`, shared breaker across leagues |
+| Hobby ±1 hr negative-drift silent-skip | **Accept** | Owner: Kyle — AdminWeeklyEmailStatus + manual send + ops runbook already mitigate |
+| Circuit-breaker `failed` conflates errors vs aborted skips | **Accept** | Owner: Kyle — AC allows consistent failed/skipped counting; ops use `EMAIL_CIRCUIT_OPEN` logs |
+| Circuit-open logs omit skipped-member count | **Accept** | Owner: Kyle — `remainingAborted: true` + aggregate `failed` sufficient for MVP |
+| Email TOCTOU / duplicate send (cron + admin) | **Accept** | Owner: Kyle — Resend 24h idempotency backstop; 7.4 AC8 out of scope |
+| External uptime monitor not configured in prod | **Park** | Tracked as `post-epic-9-vercel-production-env-and-cron` / deployment checklist |
+| NFR46 scoring/deadline structured logs | **Park** | Post-launch per observability-scope decision |
+| N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users; revisit if timeouts |
+| Weather cache failure TTL / eviction | **Park** | Fail-soft UX; not launch-blocking |
+| UI polish (hub, links, home, loading, email HTML) | **Promote (owned)** | Stories **9.5–9.7** already in sprint-status — do not re-create |
+| Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | **9.2** decision done; ops in `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel…` |
+| Password-reset CTA plaintext / token cleanup | **Park (owned)** | **9.7** email HTML polish / ops park |
+
+No additional Promote items created in 9.4 — launch risks are either Accepted with owner or already owned by 9.5–9.7 / post-epic-9.
+
+---
+
+## Deferred from: code review of 9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e.md (2026-07-28)
+
+- **AC5 triage did not disposition every still-open deferred bullet** (e.g. CSV formula-injection, bulk-export audit log, `sentAt` upsert desync) — launch-risk subset only in this story. Deferred: future planned `deferred-work.md` pass.
+
 ## Deferred from: code review of 9-3-forgot-password-flow.md (2026-07-28)
 
 - **Password-reset email has Button CTA only (no plaintext URL fallback)** — `PasswordResetEmail.tsx` mirrors InvitationEmail-class structure with a single button; clients that strip buttons leave no link. Story 9.7 owns member-facing email HTML polish (including reset template).
@@ -329,12 +358,12 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: Epic 7 retrospective (2026-07-19)
 
-- ~~**Authenticated Lighthouse re-measure for picks/standings**~~ — **Promoted to Story 9.4** (Epic 8 retrospective 2026-07-28). Was Owner: Kyle; target was during/after Epic 8 rehearsal. `docs/performance-budgets.md` still has real Lighthouse numbers only for `/login` until 9.4 closes.
-- ~~**Real pick-submit NFR5 timing sample**~~ — **Promoted to Story 9.4** (Epic 8 retrospective 2026-07-28). Was Owner: Kyle; `logEvent` `durationMs` already wired on picks route.
+- ~~**Authenticated Lighthouse re-measure for picks/standings**~~ — **Resolved by Story 9.4** (2026-07-28). Evidence: `docs/performance-budgets.md` picks/standings Lighthouse tables (authenticated, Lighthouse 12.8.2). Mobile LCP slightly over NFR1 re-accepted with owner Kyle.
+- ~~**Real pick-submit NFR5 timing sample**~~ — **Resolved by Story 9.4** (2026-07-28). Evidence: `docs/performance-budgets.md` NFR5 table — success-path `durationMs` 453ms / 425ms.
 
 ## Deferred from: Epic 8 retrospective (2026-07-28)
 
-- ~~**Email circuit-breaker e2e under simulated outage**~~ — **Promoted to Story 9.4**. Epic 7 retro committed this to Story 8.5; 8.5 suppress mode bypasses Resend/breaker, so the drill never ran. Success: prove `EMAIL_CIRCUIT_OPEN` aborts remaining sends for a cron/admin invocation.
+- ~~**Email circuit-breaker e2e under simulated outage**~~ — **Resolved by Story 9.4** (2026-07-28). Evidence: Vitest drill in `src/lib/email/send-tuesday-digest.test.ts` (Resend always-fail, ≥4 members, never suppress; asserts `EMAIL_CIRCUIT_OPEN` + abort remaining + shared breaker across leagues).
 - **Tracking note:** Launch blockers (scoring isolation, domain investigation, forgot-password, UI polish) are **sprint-status Epic 9 stories**, not deferred bullets. Ops go-live items renamed `post-epic-8-*` → `post-epic-9-*`.
 
 ## Pre-production go-live: Vercel operational checklist (Epic 6 — operational, not code)

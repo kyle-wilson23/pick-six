@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 8-6-rehearsal-runbook-for-invited-participants (2026-07-28)
+
+- **Simulation/email error-recovery paths omitted from rehearsal runbook** — `docs/rehearsal-runbook.md` documents the happy-path week loop only. Edge cases not covered: apply-results before odds (`SIMULATION_GAMES_NOT_LOADED`), advance without results (pointer-only), Tuesday `ALREADY_SENT` / force resend, email UI before mark-ready, missing season (`SEASON_NOT_FOUND`), delete API non-OK. AC1–AC5 do not require failure/recovery docs; revisit if rehearsal operators get stuck in practice.
+
 ## Deferred from: story 8-5-email-and-scheduled-jobs-in-rehearsal (2026-07-27)
 
 - **`get-weekly-email-status.ts` real-Eastern-clock status inference is cosmetically wrong for rehearsal leagues** — `src/lib/admin/get-weekly-email-status.ts` infers `pending` / `not_sent` / `skipped` using real Eastern wall-clock day/hour (`isOnOrAfterEasternDayHour`), not the simulated week clock. For a rehearsal league viewed on a real Saturday, the admin dashboard card may show misleading labels even though manual send buttons work correctly (AC1 fixes week targeting; this card is read-only display only). Not cited by Story 8.5 ACs; revisit if reported as confusing in practice.

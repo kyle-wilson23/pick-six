@@ -67,7 +67,8 @@ The app lives under `src/` (App Router).
 ## Docs 📚
 
 **Production deploy / backups / critical windows:** [`docs/deployment.md`](docs/deployment.md).  
-**Performance budgets:** [`docs/performance-budgets.md`](docs/performance-budgets.md).
+**Performance budgets:** [`docs/performance-budgets.md`](docs/performance-budgets.md).  
+**Pre-season rehearsal runbook:** [`docs/rehearsal-runbook.md`](docs/rehearsal-runbook.md).
 
 Planning outputs live under [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/) — start with [`prd.md`](_bmad-output/planning-artifacts/prd.md) for scope and requirements.
 

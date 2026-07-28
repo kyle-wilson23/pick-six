@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-28'  # story 8-5 → done (code review complete)
+  last_updated: '2026-07-28'  # story 8-6 → done (code review complete)
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -125,19 +125,21 @@ development_status:
   8-3-simulated-odds-and-jailed-team-for-rehearsal: done
   8-4-simulated-game-results-and-scoring-reveal-cycle: done
   8-5-email-and-scheduled-jobs-in-rehearsal: done
-  8-6-rehearsal-runbook-for-invited-participants: backlog
+  8-6-rehearsal-runbook-for-invited-participants: done
   8-7-delete-test-league-and-data-cleanup: backlog
   epic-8-retrospective: optional
 
   # ---- UI fixes ------------------------------------------------------------
   # TODO: There should be no landing page. There should just be a "home" page combining a short list of your leagues, leagues you admin, and a create league button. Maybe each list is surrounded in a card, and the list is limited to 3 leagues with a show more button that will take you to the existing, dedicated league list pages. On both pages, leagues should be sorted by most recently visited.
   # TODO: Every page on desktop renders with the page title beneath the top nav menu. I can then scroll up to reveal the page title. Pages should render entirely scrolled to the top when navigated to.
-  # TODO: The nav menu should be consistently everywhere, on every page. Nav links specific to league actions can be hidden until you're drilled into a league, but there always needs to be a link shown that can land you back at the home page.
+  # TODO: The nav menu should be consistently everywhere, on every page. Nav links specific to league actions can be hidden until you're drilled into a league, but there always needs to be a link shown that can land you back at the home page. There is also no "settings" link in the nav menu for admins.
   # TODO: The league landing page as a member needs more love. The "league hub" area needs to be more distinguished from the rest of the page. It needs to pop more. The links maybe need to be buttons so my eyes are more drawn to them.
   # TODO: Styling of links needs to be redone across the entire app. There's nothing to distinguish links from other text. Consider colour and underline.
   # TODO: Hover state of individual picks needs to actually be the individual pick instead of the whole matchup card. Maybe we can provide a background green glow to individual picks.
+  # TODO: Can we hide the "retractable roof" tag from matchups if the weather API doesn't return results?
   # TODO: The page layout breakpoints seem broken. On a desktop breakpoint, the page width on many pages is very small/skinny. Do a full pass on all pages and their layout breakpoints and responsiveness to support both desktop and mobile.
   # TODO: Can we make the layout of all emails that are received prettier? If we have control over that, I'd like a full pass on the full layout - but in particular, the font size of the "make my picks" link is really small and should be called out more.
+  # TODO: Better loading effects when navigating to a page. Even just a loading spinner or animation will do.
 
   # ---- Other ------------------------------------------------------------
   # TODO: We're missing a forgot password flow. Can Resend help us support this?

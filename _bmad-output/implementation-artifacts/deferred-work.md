@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-3-forgot-password-flow.md (2026-07-28)
+
+- **Password-reset email has Button CTA only (no plaintext URL fallback)** — `PasswordResetEmail.tsx` mirrors InvitationEmail-class structure with a single button; clients that strip buttons leave no link. Story 9.7 owns member-facing email HTML polish (including reset template).
+- **No expiry/consumed cleanup for `password_reset_tokens`** — table grows with superseded/expired rows; no cron or retention job in 9.3. Add ops cleanup if table size becomes an issue.
+
 ## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)
 
 - **DMARC omitted from email DNS plan** — `docs/domain-provider-decision.md` covers SPF/DKIM (/MX return-path) for Resend verify but not DMARC. Fine for Story 9.2 investigation scope; add DMARC guidance during `post-epic-9-resend-domain-and-from-address` if deliverability/spoofing hardening is desired before production inbox traffic.

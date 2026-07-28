@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { checkLeagueDeleteRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
+import { checkLeagueDeleteRateLimit, checkPasswordResetRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
 
 function rateLimitClientKey(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -24,9 +24,14 @@ function rateLimitClientKey(request: NextRequest): string {
   return `local:${createHash("sha256").update(ua).digest("hex").slice(0, 16)}`;
 }
 
-/** Same sliding window as credential sign-in (NFR12). */
+/**
+ * POSTs that use a sliding-window rate limit in this proxy.
+ * Forgot/reset use the dedicated `password-reset` bucket; others use `sign-in` (NFR12).
+ */
 const RATE_LIMITED_POST_PATHS = new Set([
   "/api/auth/callback/credentials",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/signup/invite",
   "/api/signup/invite/accept",
   "/api/leagues",
@@ -49,6 +54,13 @@ function shouldRateLimitPost(pathname: string): boolean {
   );
 }
 
+function checkPostRateLimit(pathname: string, clientKey: string): boolean {
+  if (pathname === "/api/auth/forgot-password" || pathname === "/api/auth/reset-password") {
+    return checkPasswordResetRateLimit(clientKey);
+  }
+  return checkSignInRateLimit(clientKey);
+}
+
 /**
  * Sets `x-pathname` for matched routes (see `config.matcher`). `src/app/(app)/layout.tsx`
  * uses it for post-login `callbackUrl`. When adding authenticated pages under `(app)` whose
@@ -61,7 +73,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.set("x-pathname", pathname);
 
   if (request.method === "POST" && shouldRateLimitPost(pathname)) {
-    if (!checkSignInRateLimit(rateLimitClientKey(request))) {
+    if (!checkPostRateLimit(pathname, rateLimitClientKey(request))) {
       return NextResponse.json(
         { error: { code: "RATE_LIMITED", message: "Too many requests" } },
         { status: 429 },
@@ -84,6 +96,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/api/auth/callback/credentials",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     "/api/signup/invite",
     "/api/signup/invite/accept",
     "/api/leagues",

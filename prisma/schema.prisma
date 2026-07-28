@@ -27,9 +27,10 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  accounts          Account[]
-  sessions          Session[]
-  leagueMemberships LeagueMembership[]
+  accounts             Account[]
+  sessions             Session[]
+  leagueMemberships    LeagueMembership[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
 }
@@ -380,4 +381,21 @@ model Invitation {
 
   @@index([leagueId, invitedEmail])
   @@map("invitations")
+}
+
+/// Single-use password reset token (Story 9.3). Raw token is never stored — only SHA-256 hash.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique @map("token_hash")
+  userId     String    @map("user_id")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  /// Partial unique index in migration: one pending row per user (`consumed_at IS NULL`).
+  @@map("password_reset_tokens")
 }

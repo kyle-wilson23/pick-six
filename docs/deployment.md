@@ -136,6 +136,8 @@ Domain verification, production `from` address replacement, and full production 
 
 **Dual-use domain (Story 9.2 — decided):** One product domain serves as both the **public app URL** (Vercel custom domain + `AUTH_URL`) and the **Resend sending-domain** foundation (SPF/DKIM + `RESEND_FROM`). Registrar/DNS: **Cloudflare Registrar + Cloudflare DNS** (fresh purchase). See [`docs/domain-provider-decision.md`](./domain-provider-decision.md) for hostname plan (app host + mail send subdomain) and next DNS steps (web → email → smoke). Email provider remains Resend ([`email-provider-decision.md`](./email-provider-decision.md)).
 
+**Forgot-password (Story 9.3 — implemented):** Password reset mail is sent via the same Resend + React Email stack as invites and digests (no second provider). Reset links use `AUTH_URL` / `getAppBaseUrl()`. Production domain verify and `RESEND_FROM` cutover remain **post–Epic 9** — local smoke may use `onboarding@resend.dev` per [`email-local-smoke-test-runbook.md`](./email-local-smoke-test-runbook.md).
+
 **Execution is still post–Epic 9** (do not mark these done from the investigation alone):
 
 - `post-epic-9-vercel-production-env-and-cron` — Vercel custom domain + Production `AUTH_URL` (+ env/cron)

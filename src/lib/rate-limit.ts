@@ -2,6 +2,8 @@
  * Sliding-window rate limits keyed by **namespace + client** (see `rateLimitClientKey` in `src/proxy.ts`).
  *
  * - **Sign-in** (NFR12): 10 attempts / 15 minutes per namespace `sign-in`.
+ * - **Password reset** (Story 9.3): 8 attempts / 15 minutes per namespace `password-reset` — dedicated
+ *   bucket for forgot-password + reset-confirm POSTs (separate from sign-in).
  * - **League delete** (FR61): 5 DELETEs / 15 minutes per namespace `league-delete` — stricter cap for
  *   irreversible destructive actions; enforced only on `DELETE /api/leagues/[leagueId]` (no subpath).
  *
@@ -11,6 +13,10 @@
 
 const SIGN_IN_WINDOW_MS = 15 * 60 * 1000;
 const SIGN_IN_MAX_ATTEMPTS = 10;
+
+const PASSWORD_RESET_WINDOW_MS = 15 * 60 * 1000;
+/** Story 9.3 — 8 / 15 min per client (within the 5–10 band; dedicated bucket, not sign-in). */
+const PASSWORD_RESET_MAX_ATTEMPTS = 8;
 
 const LEAGUE_DELETE_WINDOW_MS = 15 * 60 * 1000;
 const LEAGUE_DELETE_MAX_ATTEMPTS = 5;
@@ -41,6 +47,16 @@ export function checkSignInRateLimit(clientKey: string): boolean {
     clientKey,
     SIGN_IN_MAX_ATTEMPTS,
     SIGN_IN_WINDOW_MS,
+  );
+}
+
+/** `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` (proxy matcher). */
+export function checkPasswordResetRateLimit(clientKey: string): boolean {
+  return checkSlidingWindow(
+    "password-reset",
+    clientKey,
+    PASSWORD_RESET_MAX_ATTEMPTS,
+    PASSWORD_RESET_WINDOW_MS,
   );
 }
 

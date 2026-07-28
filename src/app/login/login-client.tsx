@@ -31,12 +31,30 @@ export function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const alertRef = useRef<HTMLDivElement>(null);
+  const [resetBanner, setResetBanner] = useState(
+    () => searchParams.get("reset") === "1",
+  );
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   /** Auth failure: mark fields invalid without duplicating the alert message in helperText. */
   const [authInvalid, setAuthInvalid] = useState(false);
   const [focusNonce, setFocusNonce] = useState(0);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!resetBanner) return;
+    alertRef.current?.focus();
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("reset") === "1") {
+      url.searchParams.delete("reset");
+      const qs = url.searchParams.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`,
+      );
+    }
+  }, [resetBanner]);
 
   useEffect(() => {
     if (focusNonce > 0) {
@@ -48,6 +66,7 @@ export function LoginClient() {
     setError(message);
     setFieldErrors(nextFields);
     setAuthInvalid(fromAuth);
+    setResetBanner(false);
     setFocusNonce((n) => n + 1);
   }
 
@@ -151,6 +170,16 @@ export function LoginClient() {
             >
               {error}
             </Alert>
+          ) : resetBanner ? (
+            <Alert
+              ref={alertRef}
+              id="login-form-success"
+              severity="success"
+              tabIndex={-1}
+              role="status"
+            >
+              Your password was updated. Sign in with your new password.
+            </Alert>
           ) : null}
           <TextField
             name="email"
@@ -195,6 +224,9 @@ export function LoginClient() {
           <Button type="submit" variant="contained" size="large" disabled={pending} fullWidth>
             {pending ? "Logging in…" : "Login"}
           </Button>
+          <Link component={NextLink} href="/forgot-password" variant="body2">
+            Forgot password?
+          </Link>
         </Stack>
 
         <Link component={NextLink} href="/" variant="body2" color="text.secondary">

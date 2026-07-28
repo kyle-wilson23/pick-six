@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-1-league-scoped-scoring-scorenflweek-blast-radius.md (2026-07-28)
+
+- **Cross-league isolation test reimplements filter in mock** — `src/lib/scoring/score-nfl-week.test.ts` blast-radius case mocks `pick.findMany` to filter by `where.season.leagueId`, so it mostly proves “update what findMany returned.” AC3.1/AC3.2 where-clause asserts and AC3.3’s “score layer” wording are already satisfied; strengthen later with a thinner mock or orchestration-level two-league test if desired.
+
 ## Deferred from: code review of 8-7-delete-test-league-and-data-cleanup.md (2026-07-28)
 
 - **Per-week jailed cleanup N+1 inside transaction** — `cleanupOrphanTestFixtureData` loops affected weeks with per-week `nflGame.count` + conditional `nflWeekJailedTeam.deleteMany` inside `$transaction`. Fine for short rehearsal week sets; batch/optimize later if cleanup latency or lock duration becomes an issue.
@@ -24,7 +28,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 8-4-simulated-game-results-and-scoring-reveal-cycle (2026-07-20)
 
-- ~~**Cross-league scoring blast radius via unscoped `scoreNflWeek`**~~ — **Promoted to Story 9.1** (Epic 8 retrospective 2026-07-28 — launch blocker). Forensic detail retained: `applySimulationWeekResults` → `finalizeNflWeek` → `scoreNflWeek` is not league-scoped; `scoreNflWeek`'s `Pick` query (`src/lib/scoring/score-nfl-week.ts`) filters only by `nflWeekNumber` + `season.nflSeasonYear`. AC2 provenance guards `NflGame` writes, not cross-league `Pick` scoring.
+- ~~**Cross-league scoring blast radius via unscoped `scoreNflWeek`**~~ — **Resolved by Story 9.1** (Epic 8 retrospective 2026-07-28 — launch blocker). Forensic detail retained: `applySimulationWeekResults` → `finalizeNflWeek` → `scoreNflWeek` was not league-scoped; `scoreNflWeek`'s `Pick` query (`src/lib/scoring/score-nfl-week.ts`) filtered only by `nflWeekNumber` + `season.nflSeasonYear`. AC2 provenance guards `NflGame` writes, not cross-league `Pick` scoring. **Fix:** optional `leagueId` on `scoreNflWeek` / `finalizeNflWeek` (production admin path omits it); required `leagueId` on `applySimulationWeekResults` and the simulation apply-results route.
 - **Odds-line `some` filter can match a game that later becomes real via natural-key collision** — `NflGame`'s natural key is `(nflSeasonYear, weekNumber, homeTeamId, awayTeamId)` with real `Team` FKs. If a rehearsal fixture's matchup for a week exactly coincides with the real schedule's matchup for that week, Story 3.9's upsert-by-natural-key sync attaches a real-sourced odds line to the same row that already carries a `test_fixture` line (rather than creating a new row), and AC2's `some`-based candidate filter would still select it for fake-score finalization. Requires exact matchup coincidence (not just the same week), so lower probability than the fixture+real-mix risk below, but the same underlying class — documented here as a sharper sub-case of that entry.
 - **`readJsonObject` duplicated a fifth time** — `src/app/api/leagues/[leagueId]/simulation/apply-results/route.ts` copies the same helper again (see 8.1–8.3 / 5.1 deferred notes). Still not extracted; acceptable per existing convention.
 - **No colocated test file for `AdminSimulationControls.tsx`** — the component has zero tests despite now housing three distinct fetch-driven handlers with their own error branches. Pre-existing gap (the first two buttons were also untested before this story); revisit if/when a UI-component testing convention is established for this codebase.

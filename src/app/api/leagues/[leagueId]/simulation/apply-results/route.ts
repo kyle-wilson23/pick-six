@@ -128,6 +128,7 @@ export async function POST(
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: season.nflSeasonYear,
       weekNumber: season.simulatedCurrentWeek,
+      leagueId,
     });
 
     if (!result.ok) {

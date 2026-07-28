@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-28'  # epic-8 retrospective → done; epic-9 backlog + post-epic-9 rename
+last_updated: '2026-07-28'  # code-review 9-1 → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -132,8 +132,8 @@ development_status:
   # Epic 9 — Pre-season polish & launch hardening (from epic-8 retro 2026-07-28)
   # Ordered blockers before production deploy. FULL ACs + Kyle verbatim source requirements: epics.md Epic 9.
   # create-story / dev-story MUST copy source requirements without softening (cards required, limit 3, green glow, etc.).
-  epic-9: backlog
-  9-1-league-scoped-scoring-scorenflweek-blast-radius: backlog  # Critical: scoreNflWeek must not score other leagues' picks from rehearsal finalize
+  epic-9: in-progress
+  9-1-league-scoped-scoring-scorenflweek-blast-radius: done  # Critical: scoreNflWeek must not score other leagues' picks from rehearsal finalize
   9-2-domain-provider-investigation: backlog  # Kyle: investigate domain providers; unblocks post-epic-9 Resend domain
   9-3-forgot-password-flow: backlog  # Kyle: missing forgot-password; evaluate Resend for reset mail
   9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e: backlog  # Lighthouse + NFR5 + breaker e2e + deferred-work.md launch-risk triage

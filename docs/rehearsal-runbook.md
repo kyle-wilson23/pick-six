@@ -79,6 +79,8 @@ This starts the simulation clock: `simulatedCurrentWeek` is set to `firstCompeti
 
 **Route:** `/leagues/{leagueId}/admin` — **Simulation** section (`src/components/admin/AdminSimulationControls.tsx`)
 
+**Safety — league-scoped scoring:** **Simulate results** scores picks **only for the test league you are administering**. Other leagues (including production) that share the same NFL `(season year, week)` are not affected — their picks stay unscored even when fixture games make the global week fully finalized.
+
 Repeat steps 1–4 for **every** simulated week, including the final week. Then advance (step 5) only when a next week exists.
 
 When the pointer is on the **last** configured week, status reads *"Simulation complete — Week {n} of {count}."* and **"Advance to Week …"** is disabled — but you must still run **Apply odds snapshot → picks → Simulate results** for that final week before you are done.

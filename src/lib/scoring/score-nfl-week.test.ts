@@ -25,17 +25,19 @@ function makePrisma({
   picks?: MockPick[];
   pickUpdate?: ReturnType<typeof vi.fn>;
 } = {}) {
+  const pickFindMany = vi.fn().mockResolvedValue(picks);
   return {
     nflGame: {
       findMany: vi.fn().mockResolvedValue(finalGames),
     },
     pick: {
-      findMany: vi.fn().mockResolvedValue(picks),
+      findMany: pickFindMany,
     },
     $transaction: vi.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
       fn({ pick: { update: pickUpdate } }),
     ),
-  } as unknown as PrismaClient;
+    _pickFindMany: pickFindMany,
+  } as unknown as PrismaClient & { _pickFindMany: ReturnType<typeof vi.fn> };
 }
 
 const FINAL_HOME_WIN = {
@@ -203,5 +205,104 @@ describe("scoreNflWeek", () => {
     expect(outcomes).toContainEqual({ outcome: "WIN", pointsEarned: 1 });
     expect(outcomes).toContainEqual({ outcome: "WIN", pointsEarned: 2 });
     expect(outcomes).toContainEqual({ outcome: "LOSS", pointsEarned: 0 });
+  });
+
+  it("without leagueId, pick query filters by year and week only", async () => {
+    const prisma = makePrisma({
+      finalGames: [FINAL_HOME_WIN],
+      picks: [{ id: "pick-1", teamId: HOME, antiJailedBonus: false }],
+    });
+
+    await scoreNflWeek(prisma, { nflSeasonYear: SEASON_YEAR, weekNumber: WEEK });
+
+    expect(prisma._pickFindMany).toHaveBeenCalledWith({
+      where: {
+        nflWeekNumber: WEEK,
+        season: { nflSeasonYear: SEASON_YEAR },
+      },
+      select: { id: true, teamId: true, antiJailedBonus: true },
+    });
+  });
+
+  it("with leagueId, pick query includes season.leagueId", async () => {
+    const LEAGUE_ID = "league-test-1";
+    const prisma = makePrisma({
+      finalGames: [FINAL_HOME_WIN],
+      picks: [{ id: "pick-1", teamId: HOME, antiJailedBonus: false }],
+    });
+
+    await scoreNflWeek(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
+    });
+
+    expect(prisma._pickFindMany).toHaveBeenCalledWith({
+      where: {
+        nflWeekNumber: WEEK,
+        season: { nflSeasonYear: SEASON_YEAR, leagueId: LEAGUE_ID },
+      },
+      select: { id: true, teamId: true, antiJailedBonus: true },
+    });
+  });
+
+  it("with empty-string leagueId, still scopes (does not fall through to unscoped)", async () => {
+    const prisma = makePrisma({
+      finalGames: [FINAL_HOME_WIN],
+      picks: [{ id: "pick-1", teamId: HOME, antiJailedBonus: false }],
+    });
+
+    await scoreNflWeek(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: "",
+    });
+
+    expect(prisma._pickFindMany).toHaveBeenCalledWith({
+      where: {
+        nflWeekNumber: WEEK,
+        season: { nflSeasonYear: SEASON_YEAR, leagueId: "" },
+      },
+      select: { id: true, teamId: true, antiJailedBonus: true },
+    });
+  });
+
+  it("with leagueId, only picks returned by scoped query are updated (cross-league isolation)", async () => {
+    const LEAGUE_T = "league-test";
+    const LEAGUE_P = "league-prod";
+    const allPicks = [
+      { id: "pick-test", teamId: HOME, antiJailedBonus: false, leagueId: LEAGUE_T },
+      { id: "pick-prod", teamId: AWAY, antiJailedBonus: false, leagueId: LEAGUE_P },
+    ];
+    const pickUpdate = vi.fn().mockResolvedValue({});
+    const pickFindMany = vi.fn().mockImplementation(
+      ({ where }: { where: { season?: { leagueId?: string } } }) => {
+        const leagueId = where.season?.leagueId;
+        const filtered = leagueId
+          ? allPicks.filter((p) => p.leagueId === leagueId)
+          : allPicks;
+        return Promise.resolve(
+          filtered.map(({ id, teamId, antiJailedBonus }) => ({ id, teamId, antiJailedBonus })),
+        );
+      },
+    );
+    const prisma = {
+      nflGame: { findMany: vi.fn().mockResolvedValue([FINAL_HOME_WIN]) },
+      pick: { findMany: pickFindMany },
+      $transaction: vi.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
+        fn({ pick: { update: pickUpdate } }),
+      ),
+    } as unknown as PrismaClient;
+
+    const result = await scoreNflWeek(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: LEAGUE_T,
+    });
+
+    expect(result).toEqual({ ok: true, scored: 1, skipped: 0 });
+    expect(pickUpdate).toHaveBeenCalledOnce();
+    expect(pickUpdate.mock.calls[0]![0].where).toEqual({ id: "pick-test" });
+    expect(JSON.stringify(pickUpdate.mock.calls)).not.toContain("pick-prod");
   });
 });

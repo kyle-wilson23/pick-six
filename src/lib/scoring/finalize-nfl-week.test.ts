@@ -156,6 +156,28 @@ describe("finalizeNflWeek", () => {
     });
   });
 
+  it("forwards optional leagueId to scoreNflWeek", async () => {
+    vi.mocked(scoreNflWeek).mockClear();
+    const prisma = makePrisma([game("FINAL")]);
+    vi.mocked(scoreNflWeek).mockResolvedValueOnce({
+      ok: true,
+      scored: 5,
+      skipped: 0,
+    });
+
+    await finalizeNflWeek(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: "league-scoped",
+    });
+
+    expect(vi.mocked(scoreNflWeek)).toHaveBeenCalledWith(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: "league-scoped",
+    });
+  });
+
   it("is idempotent on re-run", async () => {
     vi.mocked(scoreNflWeek).mockClear();
     const prisma = makePrisma([game("FINAL"), game("FINAL")]);

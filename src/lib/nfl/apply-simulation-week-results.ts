@@ -33,14 +33,15 @@ export type ApplySimulationWeekResultsResult =
  * Safety: only games that carry at least one `test_fixture`-sourced odds line are candidates —
  * real synced games sharing the same global `(year, week)` are never force-finalized.
  *
- * Not league-scoped — callers must gate on `isTestLeague` before invoking (Story 8.4 AC7).
+ * Pick scoring is league-scoped via required `leagueId` (passed through to `finalizeNflWeek`).
+ * Callers must gate on `isTestLeague` before invoking (Story 8.4 AC7).
  */
 export async function applySimulationWeekResults(
   prisma: PrismaClient,
-  params: { nflSeasonYear: number; weekNumber: number },
+  params: { nflSeasonYear: number; weekNumber: number; leagueId: string },
   now: Date = new Date(),
 ): Promise<ApplySimulationWeekResultsResult> {
-  const { nflSeasonYear, weekNumber } = params;
+  const { nflSeasonYear, weekNumber, leagueId } = params;
 
   const candidates = await prisma.nflGame.findMany({
     where: {
@@ -98,7 +99,7 @@ export async function applySimulationWeekResults(
     });
   }
 
-  const finalized = await finalizeNflWeek(prisma, { nflSeasonYear, weekNumber });
+  const finalized = await finalizeNflWeek(prisma, { nflSeasonYear, weekNumber, leagueId });
   if (!finalized.ok) {
     return {
       ok: false,

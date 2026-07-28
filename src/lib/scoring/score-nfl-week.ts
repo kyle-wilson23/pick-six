@@ -7,12 +7,17 @@ export type ScoreNflWeekResult =
   | { ok: false; code: string; message: string; httpStatus: number };
 
 /**
- * Score all picks for a season week whose games are FINAL.
+ * Score picks for a season week whose games are FINAL.
+ *
+ * When `opts.leagueId` is provided, only picks belonging to seasons for that league
+ * are scored (`season: { nflSeasonYear, leagueId }`). When omitted, all picks for the
+ * NFL year+week are scored (production admin multi-league path — Story 5.2).
+ *
  * Idempotent — re-running updates outcomes and refreshes scoredAt.
  */
 export async function scoreNflWeek(
   prisma: PrismaClient,
-  opts: { nflSeasonYear: number; weekNumber: number },
+  opts: { nflSeasonYear: number; weekNumber: number; leagueId?: string },
 ): Promise<ScoreNflWeekResult> {
   try {
     const finalGames = await prisma.nflGame.findMany({
@@ -48,7 +53,11 @@ export async function scoreNflWeek(
     const picks = await prisma.pick.findMany({
       where: {
         nflWeekNumber: opts.weekNumber,
-        season: { nflSeasonYear: opts.nflSeasonYear },
+        season: {
+          nflSeasonYear: opts.nflSeasonYear,
+          // Use !== undefined (not truthy) so "" cannot silently fall through to unscoped scoring.
+          ...(opts.leagueId !== undefined ? { leagueId: opts.leagueId } : {}),
+        },
       },
       select: { id: true, teamId: true, antiJailedBonus: true },
     });

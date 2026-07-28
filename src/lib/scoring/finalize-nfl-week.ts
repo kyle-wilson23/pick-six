@@ -27,7 +27,7 @@ export function isWeekFullyFinalized(
  */
 export async function finalizeNflWeek(
   prisma: PrismaClient,
-  opts: { nflSeasonYear: number; weekNumber: number },
+  opts: { nflSeasonYear: number; weekNumber: number; leagueId?: string },
 ): Promise<FinalizeNflWeekResult> {
   try {
     const games = await prisma.nflGame.findMany({

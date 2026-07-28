@@ -20,6 +20,7 @@ import { deriveFixtureGameResult } from "@/lib/domain/derive-fixture-game-result
 
 const SEASON_YEAR = 2026;
 const WEEK = 3;
+const LEAGUE_ID = "league-test-abc";
 
 type MockGame = {
   id: string;
@@ -89,6 +90,7 @@ describe("applySimulationWeekResults", () => {
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
 
     expect(result).toEqual({
@@ -153,6 +155,7 @@ describe("applySimulationWeekResults", () => {
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
 
     expect(result.ok).toBe(true);
@@ -220,6 +223,7 @@ describe("applySimulationWeekResults", () => {
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
 
     expect(result).toEqual({
@@ -273,6 +277,7 @@ describe("applySimulationWeekResults", () => {
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
 
     expect(result).toEqual({
@@ -306,6 +311,7 @@ describe("applySimulationWeekResults", () => {
     const result = await applySimulationWeekResults(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
 
     expect(result).toMatchObject({
@@ -318,6 +324,7 @@ describe("applySimulationWeekResults", () => {
     expect(vi.mocked(finalizeNflWeek)).toHaveBeenCalledWith(prisma, {
       nflSeasonYear: SEASON_YEAR,
       weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
     });
   });
 });

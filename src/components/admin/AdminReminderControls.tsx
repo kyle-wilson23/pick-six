@@ -37,6 +37,8 @@ export function AdminReminderControls({
   const [sendingThursday, setSendingThursday] = useState(false);
   const [wednesdayMessage, setWednesdayMessage] = useState<string | null>(null);
   const [thursdayMessage, setThursdayMessage] = useState<string | null>(null);
+  const [wednesdayInfo, setWednesdayInfo] = useState<string | null>(null);
+  const [thursdayInfo, setThursdayInfo] = useState<string | null>(null);
   const [wednesdayError, setWednesdayError] = useState<string | null>(null);
   const [thursdayError, setThursdayError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
@@ -47,6 +49,16 @@ export function AdminReminderControls({
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
+    // A fresh load means the active week may have changed (e.g. admin just
+    // advanced the rehearsal clock) — any alert from the *previous* week's
+    // send attempt (like "Already sent") is stale and must not linger.
+    setWednesdayMessage(null);
+    setThursdayMessage(null);
+    setWednesdayInfo(null);
+    setThursdayInfo(null);
+    setWednesdayError(null);
+    setThursdayError(null);
+    setConfigError(null);
     try {
       const res = await fetch(configUrl);
       if (!res.ok) {
@@ -85,6 +97,8 @@ export function AdminReminderControls({
       reminderType === "wednesday" ? setSendingWednesday : setSendingThursday;
     const setMessage =
       reminderType === "wednesday" ? setWednesdayMessage : setThursdayMessage;
+    const setInfo =
+      reminderType === "wednesday" ? setWednesdayInfo : setThursdayInfo;
     const setError =
       reminderType === "wednesday" ? setWednesdayError : setThursdayError;
     const setSentAt =
@@ -92,6 +106,7 @@ export function AdminReminderControls({
 
     setSending(true);
     setMessage(null);
+    setInfo(null);
     setError(null);
 
     try {
@@ -102,6 +117,8 @@ export function AdminReminderControls({
         failed?: number;
         skipped?: number;
         sentAt?: string | null;
+        suppressed?: boolean;
+        wouldSendCount?: number;
         error?: { code: string; message: string };
       };
 
@@ -112,6 +129,16 @@ export function AdminReminderControls({
 
       if (!res.ok) {
         throw new Error(data.error?.message ?? "Send failed");
+      }
+
+      if (data.suppressed) {
+        if (data.sentAt) {
+          setSentAt(data.sentAt);
+        }
+        setInfo(
+          `Rehearsal sends are suppressed (TEST_LEAGUE_EMAIL_MODE=suppress) — would have reached ${data.wouldSendCount ?? 0} member(s). No email was sent.`,
+        );
+        return;
       }
 
       const sent = data.sent ?? 0;
@@ -179,6 +206,9 @@ export function AdminReminderControls({
             {wednesdayMessage != null ? (
               <Alert severity="success" sx={{ py: 0 }}>{wednesdayMessage}</Alert>
             ) : null}
+            {wednesdayInfo != null ? (
+              <Alert severity="info" sx={{ py: 0 }}>{wednesdayInfo}</Alert>
+            ) : null}
             {wednesdayError != null ? (
               <Alert severity="warning" sx={{ py: 0 }}>{wednesdayError}</Alert>
             ) : null}
@@ -201,6 +231,9 @@ export function AdminReminderControls({
             ) : null}
             {thursdayMessage != null ? (
               <Alert severity="success" sx={{ py: 0 }}>{thursdayMessage}</Alert>
+            ) : null}
+            {thursdayInfo != null ? (
+              <Alert severity="info" sx={{ py: 0 }}>{thursdayInfo}</Alert>
             ) : null}
             {thursdayError != null ? (
               <Alert severity="warning" sx={{ py: 0 }}>{thursdayError}</Alert>

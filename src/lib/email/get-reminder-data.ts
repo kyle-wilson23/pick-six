@@ -6,7 +6,7 @@ import {
 } from "@/lib/email/get-tuesday-digest-data";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import {
-  resolvePicksWeekNumber,
+  resolveActiveWeekNumber,
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
@@ -30,21 +30,25 @@ export type ReminderData = {
 
 export { LeagueNotFoundError, NoActiveWeekError };
 
-function canResolveActiveWeek(
-  season: { preSeasonInitializedAt: Date | null } | null,
-  gamesWithKickoff: MinimalNflGameForPicksWeek[],
-): boolean {
+function canResolveActiveWeek(args: {
+  season: { preSeasonInitializedAt: Date | null; simulatedCurrentWeek?: number | null } | null;
+  gamesWithKickoff: MinimalNflGameForPicksWeek[];
+  isTestLeague: boolean;
+}): boolean {
+  const { season, gamesWithKickoff, isTestLeague } = args;
   if (!season || season.preSeasonInitializedAt == null) {
     return false;
+  }
+  if (isTestLeague && season.simulatedCurrentWeek != null) {
+    return true;
   }
   return gamesWithKickoff.length > 0;
 }
 
-export async function getReminderData({
-  leagueId,
-}: {
-  leagueId: string;
-}): Promise<ReminderData> {
+export async function getReminderData(
+  { leagueId }: { leagueId: string },
+  now: Date = new Date(),
+): Promise<ReminderData> {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
     select: { id: true, name: true, isTestLeague: true },
@@ -72,16 +76,28 @@ export async function getReminderData({
     .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
-  if (!canResolveActiveWeek(season, gamesForResolve)) {
+  if (
+    !canResolveActiveWeek({
+      season,
+      gamesWithKickoff: gamesForResolve,
+      isTestLeague: league.isTestLeague,
+    })
+  ) {
     throw new NoActiveWeekError();
   }
 
   const seasonForResolve: MinimalSeasonForPicksWeek = {
     preSeasonInitializedAt: season.preSeasonInitializedAt,
     firstCompetitionWeek: season.firstCompetitionWeek,
+    simulatedCurrentWeek: season.simulatedCurrentWeek,
   };
 
-  const weekNumber = resolvePicksWeekNumber(seasonForResolve, gamesForResolve);
+  const weekNumber = resolveActiveWeekNumber({
+    isTestLeague: league.isTestLeague,
+    season: seasonForResolve,
+    gamesForYear: gamesForResolve,
+    now,
+  });
 
   const [jailedRow, memberships, picks] = await Promise.all([
     prisma.nflWeekJailedTeam.findUnique({

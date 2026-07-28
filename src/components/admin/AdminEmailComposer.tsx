@@ -33,6 +33,7 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
   const [sending, setSending] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
+  const [sendInfo, setSendInfo] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const configUrl = `/api/leagues/${leagueId}/email/tuesday-config`;
@@ -41,6 +42,13 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
+    // A fresh load means the active week may have changed (e.g. admin just
+    // advanced the rehearsal clock) — any alert from the *previous* week's
+    // send/save attempt (like "Already sent") is stale and must not linger.
+    setSaveMessage(null);
+    setSendMessage(null);
+    setSendInfo(null);
+    setSendError(null);
     try {
       const res = await fetch(configUrl);
       if (!res.ok) {
@@ -67,9 +75,9 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
     }
   }, [weekNumber, loadConfig]);
 
-  async function handleSave() {
+  async function handleSave(): Promise<boolean> {
     if (activeWeekNumber == null) {
-      return;
+      return true;
     }
     setSaving(true);
     setSaveMessage(null);
@@ -89,8 +97,10 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
       setBodyText(data.bodyText ?? "");
       setSentAt(data.sentAt);
       setSaveMessage("Saved");
+      return true;
     } catch {
       setSaveMessage("Could not save email note");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -106,14 +116,26 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
   async function handleSend(force = false) {
     setSending(true);
     setSendMessage(null);
+    setSendInfo(null);
     setSendError(null);
     try {
+      // Persist any unsaved note text first — "Send Now" reads bodyText from the
+      // DB, not from this component's local state, so a note typed but never
+      // explicitly "Saved" would otherwise be silently dropped from the email.
+      // If the save fails, abort the send rather than silently sending stale text.
+      const saved = await handleSave();
+      if (!saved) {
+        setSendError("Could not save note — send aborted. Try again.");
+        return;
+      }
       const url = force ? `${sendUrl}?force=true` : sendUrl;
       const res = await fetch(url, { method: "POST" });
       const data = (await res.json()) as {
         sent?: number;
         failed?: number;
         sentAt?: string | null;
+        suppressed?: boolean;
+        wouldSendCount?: number;
         error?: { code: string; message: string };
       };
 
@@ -124,6 +146,16 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
 
       if (!res.ok) {
         throw new Error(data.error?.message ?? "Send failed");
+      }
+
+      if (data.suppressed) {
+        if (data.sentAt) {
+          setSentAt(data.sentAt);
+        }
+        setSendInfo(
+          `Rehearsal sends are suppressed (TEST_LEAGUE_EMAIL_MODE=suppress) — would have reached ${data.wouldSendCount ?? 0} member(s). No email was sent.`,
+        );
+        return;
       }
 
       const sent = data.sent ?? 0;
@@ -200,14 +232,15 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
           <Alert severity="success">{sendMessage}</Alert>
         ) : null}
 
+        {sendInfo != null ? (
+          <Alert severity="info">{sendInfo}</Alert>
+        ) : null}
+
         {sendError != null ? (
           <Alert severity="warning">{sendError}</Alert>
         ) : null}
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" color="info" onClick={handleSave} disabled={loading || saving}>
-            {saving ? "Saving…" : "Save note"}
-          </Button>
           <Button
             variant="outlined"
             color="info"

@@ -25,14 +25,6 @@ vi.mock("@/lib/email/app-base-url", () => ({
   getAppBaseUrl: () => mockGetAppBaseUrl(),
 }));
 
-vi.mock("@/lib/nfl/resolve-picks-week", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/nfl/resolve-picks-week")>();
-  return {
-    ...actual,
-    resolvePicksWeekNumber: vi.fn(() => 3),
-  };
-});
-
 import { getReminderData } from "./get-reminder-data";
 
 const LEAGUE_ID = "league-1";
@@ -149,6 +141,31 @@ describe("getReminderData", () => {
 
     const result = await getReminderData({ leagueId: LEAGUE_ID });
 
+    expect(result.isTestLeague).toBe(true);
+  });
+
+  it("test league: weekNumber follows simulatedCurrentWeek regardless of now", async () => {
+    const now = new Date("2026-03-01T12:00:00.000Z");
+    mockLeagueFindUnique.mockResolvedValue({
+      id: LEAGUE_ID,
+      name: "Test League",
+      isTestLeague: true,
+    });
+    mockSeasonFindUnique.mockResolvedValue({
+      id: SEASON_ID,
+      nflSeasonYear: SEASON_YEAR,
+      preSeasonInitializedAt: new Date("2026-02-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: 3,
+      simulationWeekCount: 4,
+    });
+    mockNflGameFindMany.mockResolvedValue([]);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockPickFindMany.mockResolvedValue([]);
+
+    const result = await getReminderData({ leagueId: LEAGUE_ID }, now);
+
+    expect(result.weekNumber).toBe(3);
     expect(result.isTestLeague).toBe(true);
   });
 });

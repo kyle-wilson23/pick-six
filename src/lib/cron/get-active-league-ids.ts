@@ -8,6 +8,7 @@ export async function getActiveLeagueIds(): Promise<string[]> {
     where: {
       nflSeasonYear: getCurrentNflSeasonYear(),
       preSeasonInitializedAt: { not: null },
+      league: { isTestLeague: false },
     },
     select: { leagueId: true },
   });

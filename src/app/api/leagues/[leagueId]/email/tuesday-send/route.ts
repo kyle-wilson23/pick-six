@@ -89,6 +89,8 @@ export async function POST(
       sent: result.sent,
       failed: result.failed,
       sentAt: result.sentAt?.toISOString() ?? null,
+      suppressed: result.suppressed,
+      wouldSendCount: result.wouldSendCount,
     });
   } catch (e) {
     if (e instanceof NoActiveWeekError) {

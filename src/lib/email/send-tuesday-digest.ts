@@ -17,6 +17,7 @@ import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { formatEmailSubject } from "@/lib/email/test-league-labeling";
+import { getTestLeagueEmailMode } from "@/lib/email/test-league-email-mode";
 import { TuesdayDigestEmail } from "@/lib/email/templates/TuesdayDigestEmail";
 import { logEvent } from "@/lib/logging/log-event";
 
@@ -34,16 +35,14 @@ export async function sendTuesdayDigest({
    * callers (e.g. the admin manual-send route).
    */
   breaker?: EmailCircuitBreaker;
-}): Promise<{ sent: number; failed: number; sentAt: Date | null }> {
+}): Promise<{
+  sent: number;
+  failed: number;
+  sentAt: Date | null;
+  suppressed: boolean;
+  wouldSendCount: number;
+}> {
   const data = preloadedData ?? (await getTuesdayDigestData({ leagueId }));
-
-  const breaker = providedBreaker ?? createEmailCircuitBreaker();
-
-  if (breaker.open) {
-    // Circuit already open from an earlier league in this invocation — abort
-    // this league entirely without attempting any member sends.
-    return { sent: 0, failed: data.members.length, sentAt: null };
-  }
 
   const config = await prisma.leagueWeekEmailConfig.findUnique({
     where: {
@@ -57,6 +56,71 @@ export async function sendTuesdayDigest({
   });
 
   const adminNote = config?.bodyText ?? null;
+
+  if (data.isTestLeague && getTestLeagueEmailMode() === "suppress") {
+    const wouldSendCount = data.members.length;
+    // Only record sentAt when there's actually something that would have been
+    // sent — mirrors the real-send path, which likewise only upserts when
+    // sent > 0, so a suppressed no-recipient run doesn't falsely mark the
+    // week as "sent."
+    const now = wouldSendCount > 0 ? new Date() : null;
+
+    if (now != null) {
+      await prisma.leagueWeekEmailConfig.upsert({
+        where: {
+          leagueId_nflSeasonYear_weekNumber: {
+            leagueId,
+            nflSeasonYear: data.nflSeasonYear,
+            weekNumber: data.weekNumber,
+          },
+        },
+        create: {
+          leagueId,
+          nflSeasonYear: data.nflSeasonYear,
+          weekNumber: data.weekNumber,
+          bodyText: adminNote,
+          sentAt: now,
+        },
+        update: {
+          sentAt: now,
+        },
+      });
+    }
+
+    logEvent({
+      level: "info",
+      domain: "email",
+      action: "tuesday_digest_suppressed",
+      leagueId,
+      weekNumber: data.weekNumber,
+      message: "tuesday digest suppressed for test league",
+      context: {
+        wouldSendCount,
+      },
+    });
+
+    return {
+      sent: 0,
+      failed: 0,
+      sentAt: now,
+      suppressed: true,
+      wouldSendCount,
+    };
+  }
+
+  const breaker = providedBreaker ?? createEmailCircuitBreaker();
+
+  if (breaker.open) {
+    // Circuit already open from an earlier league in this invocation — abort
+    // this league entirely without attempting any member sends.
+    return {
+      sent: 0,
+      failed: data.members.length,
+      sentAt: null,
+      suppressed: false,
+      wouldSendCount: 0,
+    };
+  }
 
   let sent = 0;
   let failed = 0;
@@ -185,5 +249,5 @@ export async function sendTuesdayDigest({
     },
   });
 
-  return { sent, failed, sentAt };
+  return { sent, failed, sentAt, suppressed: false, wouldSendCount: 0 };
 }

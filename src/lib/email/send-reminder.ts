@@ -17,6 +17,7 @@ import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
 import { formatEmailSubject } from "@/lib/email/test-league-labeling";
+import { getTestLeagueEmailMode } from "@/lib/email/test-league-email-mode";
 import { ReminderEmail } from "@/lib/email/templates/ReminderEmail";
 import { logEvent } from "@/lib/logging/log-event";
 
@@ -47,16 +48,85 @@ export async function sendReminder({
    * callers (e.g. the admin manual-send route).
    */
   breaker?: EmailCircuitBreaker;
-}): Promise<{ sent: number; failed: number; skipped: number; sentAt: Date | null }> {
+}): Promise<{
+  sent: number;
+  failed: number;
+  skipped: number;
+  sentAt: Date | null;
+  suppressed: boolean;
+  wouldSendCount: number;
+}> {
   const data = preloadedData ?? (await getReminderData({ leagueId }));
 
-  const breaker = providedBreaker ?? createEmailCircuitBreaker();
   const skipped = data.submittedCount;
+
+  if (data.isTestLeague && getTestLeagueEmailMode() === "suppress") {
+    const wouldSendCount = data.outstandingMembers.length;
+    // Only record the reminder's sentAt when there's actually something that
+    // would have been sent — mirrors the real-send path, which likewise only
+    // upserts when sent > 0, so a suppressed no-recipient run doesn't falsely
+    // mark the reminder as "sent."
+    const now = wouldSendCount > 0 ? new Date() : null;
+    const reminderField =
+      reminderType === "wednesday" ? "wednesdayReminderSentAt" : "thursdayReminderSentAt";
+
+    if (now != null) {
+      await prisma.leagueWeekEmailConfig.upsert({
+        where: {
+          leagueId_nflSeasonYear_weekNumber: {
+            leagueId,
+            nflSeasonYear: data.nflSeasonYear,
+            weekNumber: data.weekNumber,
+          },
+        },
+        create: {
+          leagueId,
+          nflSeasonYear: data.nflSeasonYear,
+          weekNumber: data.weekNumber,
+          [reminderField]: now,
+        },
+        update: {
+          [reminderField]: now,
+        },
+      });
+    }
+
+    logEvent({
+      level: "info",
+      domain: "email",
+      action: "reminder_suppressed",
+      leagueId,
+      weekNumber: data.weekNumber,
+      message: `${reminderType} reminder suppressed for test league`,
+      context: {
+        reminderType,
+        wouldSendCount,
+      },
+    });
+
+    return {
+      sent: 0,
+      failed: 0,
+      skipped,
+      sentAt: now,
+      suppressed: true,
+      wouldSendCount,
+    };
+  }
+
+  const breaker = providedBreaker ?? createEmailCircuitBreaker();
 
   if (breaker.open) {
     // Circuit already open from an earlier league in this invocation — abort
     // this league entirely without attempting any member sends.
-    return { sent: 0, failed: data.outstandingMembers.length, skipped, sentAt: null };
+    return {
+      sent: 0,
+      failed: data.outstandingMembers.length,
+      skipped,
+      sentAt: null,
+      suppressed: false,
+      wouldSendCount: 0,
+    };
   }
 
   let sent = 0;
@@ -186,5 +256,5 @@ export async function sendReminder({
     },
   });
 
-  return { sent, failed, skipped, sentAt };
+  return { sent, failed, skipped, sentAt, suppressed: false, wouldSendCount: 0 };
 }

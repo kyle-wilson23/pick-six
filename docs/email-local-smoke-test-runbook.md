@@ -38,6 +38,7 @@ When `RESEND_FROM` is **unset**, senders fall back to `Pick Six <noreply@yourdom
 
 - **Sender:** Use `Pick Six <onboarding@resend.dev>` via `RESEND_FROM`.
 - **Recipients:** Only the **email on your Resend account** or addresses on a **verified domain**. For smoke test, invite members using your Resend account email.
+- **Reserved domains always rejected:** `example.com` / `example.net` / `example.org` are RFC 2606 documentation-only domains — Resend hard-rejects them as a recipient (`Invalid "to" field... use our testing email address instead`) no matter what your account/domain setup is. **Never invite a test-league member with an `@example.com`-style address.** Use one of Resend's real testing addresses instead: `delivered@resend.dev` (simulates success), `bounced@resend.dev`, `complained@resend.dev` — labels work too (`delivered+willy@resend.dev`) if you want distinct per-member addresses for a rehearsal league.
 - **Limits:** 100 emails/day, 3,000/month. Keep the test league small (≤6 members × 4 email types per full cycle ≈ 24 sends).
 
 See [email-provider-decision.md](./email-provider-decision.md) § Free tier limits.
@@ -197,6 +198,7 @@ curl -s "$BASE/api/cron/thursday-reminder" \
 |---------|--------------|-----|
 | Email not delivered; Resend error about domain | Wrong `from` | Set `RESEND_FROM=Pick Six <onboarding@resend.dev>` |
 | Resend rejects recipient | Sandbox restriction | Send only to Resend account email or verified domain |
+| `Invalid "to" field... domains like example.com` | Recipient is `@example.com`/`.net`/`.org` (reserved, hard-blocked by Resend) | Re-invite the member with `delivered@resend.dev` (or `delivered+label@resend.dev`) instead — no env/code setting can make Resend accept a reserved domain |
 | Daily send cap hit | Free tier 100/day | Wait 24h or reduce test league size |
 | Admin shows "No active week for email" | Pre-season not initialized | Run pre-season init on admin dashboard |
 | Tuesday send 409 `ALREADY_SENT` | Idempotency guard | Expected on re-send; use force only if intentional |

@@ -16,6 +16,7 @@ type ApiError = { error?: { code?: string; message?: string } };
 type DeleteLeagueDialogProps = {
   leagueId: string;
   leagueName: string;
+  isTestLeague?: boolean;
 };
 
 const CONFIRM_TOKEN = 'delete';
@@ -23,6 +24,7 @@ const CONFIRM_TOKEN = 'delete';
 export function DeleteLeagueDialog({
   leagueId,
   leagueName,
+  isTestLeague = false,
 }: DeleteLeagueDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -57,6 +59,11 @@ export function DeleteLeagueDialog({
         typeof (data as ApiError).error?.message === 'string'
           ? (data as ApiError).error!.message!
           : 'Request failed';
+      // League row may already be gone when fixture cleanup fails (500).
+      if (/league was deleted/i.test(msg)) {
+        router.replace('/leagues');
+        return;
+      }
       setErrorMessage(msg);
     } finally {
       setSubmitting(false);
@@ -93,6 +100,20 @@ export function DeleteLeagueDialog({
               future league-scoped data) will be removed permanently. User
               accounts are not deleted.
             </Typography>
+            {isTestLeague ? (
+              <Typography
+                variant='body2'
+                color='text.secondary'
+              >
+                Rehearsal leagues share global practice schedule and odds data.
+                If this is your <strong>last</strong> rehearsal league, those
+                shared leftovers are removed too so they do not linger into the
+                real season. If other rehearsal leagues still exist, the shared
+                data stays until the last one is deleted. Practice data is not
+                retained for season history — retention rules apply to
+                real-season participant data, not test leagues.
+              </Typography>
+            ) : null}
             <TextField
               autoFocus
               fullWidth

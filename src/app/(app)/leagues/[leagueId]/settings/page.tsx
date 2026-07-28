@@ -204,7 +204,11 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
       </Stack>
 
       <Stack sx={{ mt: 6, pt: 1 }}>
-        <DeleteLeagueDialog leagueId={leagueId} leagueName={league.name} />
+        <DeleteLeagueDialog
+          leagueId={leagueId}
+          leagueName={league.name}
+          isTestLeague={league.isTestLeague}
+        />
       </Stack>
     </Stack>
   );

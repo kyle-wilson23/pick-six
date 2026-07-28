@@ -2,7 +2,7 @@
 
 End-to-end guide for league admins running a **pre-season dry run** with invited testers. Covers the full rehearsal lifecycle: create a test league → invite → simulate weeks → optional emails → delete when finished.
 
-**Scope:** Every capability documented here already ships in the app (Stories 8.1–8.5, 2.8). This runbook does not add new features — it assembles the admin click-order and participant messaging in one place.
+**Scope:** Every capability documented here already ships in the app (Stories 8.1–8.7, 2.8). This runbook does not add new features — it assembles the admin click-order and participant messaging in one place.
 
 **Related docs:**
 
@@ -138,21 +138,20 @@ When rehearsal is complete:
 4. Type **`delete`** in **"Type delete to confirm"**.
 5. Click **"Delete permanently"** (`DELETE /api/leagues/[leagueId]` → redirect to `/leagues`).
 
-### What delete removes — and what it does not (Story 8.7 gap)
+### What delete removes (Story 8.7)
 
-**Does remove** (everything scoped to `leagueId`):
+**Always removes** (everything scoped to `leagueId`):
 
-- The league, its season, memberships, invitations, and picks
+- The league, its season, memberships, invitations, picks, audit entries, and league email config
 
-**Does not remove** (global fixture rows created during rehearsal):
+**Global rehearsal fixtures** (not scoped to `leagueId`):
 
-- `NflGame` fixture rows
-- `OddsSnapshotRun` rows with `source: "test_fixture"`
-- `NflGameOddsLine` and `NflWeekJailedTeam` rows tied to those fixtures
+- During rehearsal, the app creates shared `NflGame`, `OddsSnapshotRun` (`source: "test_fixture"`), `NflGameOddsLine`, and `NflWeekJailedTeam` rows. These are visible across test leagues, not tied to one league row.
+- When you delete a test league and **other rehearsal leagues still exist**, those shared fixtures **stay** until the last test league is deleted.
+- When you delete the **last** remaining test league, the server automatically removes `test_fixture` snapshot runs, fixture-only games (including any simulated scores), and jailed-team rows for weeks that no longer have any games. Games that also carry real synced odds are **kept**.
+- Practice/rehearsal data is **not retained** for season history (NFR25 applies to real-season participant data, not test leagues).
 
-These leftovers carry **no `leagueId`**. They are harmless in normal use — invisible to any real league unless a future real week happens to collide on the same `(nflSeasonYear, weekNumber)` natural key (documented, accepted, low-probability risk — see [`deferred-work.md`](../_bmad-output/implementation-artifacts/deferred-work.md)).
-
-**Full automated cleanup** of global fixture rows is tracked as **Story 8.7** (`8-7-delete-test-league-and-data-cleanup`, currently `backlog`). If you run a rehearsal before 8.7 ships, this gap is **accepted and documented** — not a bug to work around manually.
+Production leagues use the same delete flow; global fixture cleanup runs **only** when the deleted league was a test league and no other test leagues remain.
 
 ---
 
@@ -209,4 +208,4 @@ This table is a **sign-off aid only** — a rehearsal is not blocked on filling 
 | **Admin override** | Admin submits/changes a pick on behalf of a participant (incl. post-deadline); entry in audit log | Epic 4 | | | |
 | **Weekly email cycle** | Tuesday digest (or suppressed equivalent) reflects correct simulated week and content | Story 8.5 AC1 | | | |
 | **Test league labeling** | Banner and **"Test"** chip appear as expected. In **`send`** mode, also verify **`[TEST]`** email subject; in **`suppress`** mode, verify the admin would-send alert instead (no inbox mail) | Story 8.1 | | | |
-| **Delete cleanup** | League deletes cleanly per [delete section scope](#what-delete-removes--and-what-it-does-not-story-87-gap); no unexpected errors | Story 2.8 (+ 8.7 gap documented) | | | |
+| **Delete cleanup** | League deletes cleanly; when deleting the **last** test league, global fixture rows are removed (see [delete section](#what-delete-removes-story-87)); deleting one of several test leagues leaves shared fixtures in place | Story 8.7 | | | |

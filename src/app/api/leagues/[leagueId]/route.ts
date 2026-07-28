@@ -15,6 +15,7 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { authorizeLeagueDelete } from "@/lib/league/delete-league-authorization";
+import { handlePostTestLeagueDeleteFixtureCleanup } from "@/lib/nfl/cleanup-rehearsal-fixtures";
 
 export async function DELETE(
   request: NextRequest,
@@ -36,7 +37,10 @@ export async function DELETE(
   const { leagueId } = await context.params;
 
   const [league, membership] = await Promise.all([
-    prisma.league.findUnique({ where: { id: leagueId }, select: { id: true } }),
+    prisma.league.findUnique({
+      where: { id: leagueId },
+      select: { id: true, isTestLeague: true },
+    }),
     prisma.leagueMembership.findUnique({
       where: {
         userId_leagueId: { userId: session.user.id, leagueId },
@@ -63,6 +67,8 @@ export async function DELETE(
     );
   }
 
+  const wasTestLeague = league.isTestLeague;
+
   try {
     const deleted = await prisma.league.deleteMany({ where: { id: leagueId } });
     if (deleted.count === 0) {
@@ -87,6 +93,28 @@ export async function DELETE(
       timestamp: new Date().toISOString(),
     }),
   );
+
+  if (!wasTestLeague) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const fixtureOutcome = await handlePostTestLeagueDeleteFixtureCleanup(prisma, {
+    actorUserId: session.user.id,
+    leagueId,
+  });
+
+  if (fixtureOutcome.outcome === "cleanup_failed") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "INTERNAL_ERROR",
+          message:
+            "The league was deleted, but rehearsal fixture cleanup failed. Contact support or retry cleanup.",
+        },
+      },
+      { status: 500 },
+    );
+  }
 
   return new NextResponse(null, { status: 204 });
 }

@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)
+
+- **DMARC omitted from email DNS plan** — `docs/domain-provider-decision.md` covers SPF/DKIM (/MX return-path) for Resend verify but not DMARC. Fine for Story 9.2 investigation scope; add DMARC guidance during `post-epic-9-resend-domain-and-from-address` if deliverability/spoofing hardening is desired before production inbox traffic.
+- **Auth.js cookie / apex vs www canonical session guidance** — Hostname plan allows apex or `www` as primary without documenting session cookie `Domain=` / `__Host-` implications when both hosts are attached. Belongs with `post-epic-9-vercel-production-env-and-cron` when setting Production `AUTH_URL` to the canonical host and enforcing redirect.
+
 ## Deferred from: code review of 9-1-league-scoped-scoring-scorenflweek-blast-radius.md (2026-07-28)
 
 - **Cross-league isolation test reimplements filter in mock** — `src/lib/scoring/score-nfl-week.test.ts` blast-radius case mocks `pick.findMany` to filter by `where.season.leagueId`, so it mostly proves “update what findMany returned.” AC3.1/AC3.2 where-clause asserts and AC3.3’s “score layer” wording are already satisfied; strengthen later with a thinner mock or orchestration-level two-league test if desired.
@@ -286,7 +291,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: Story 6.1 — transactional email integration (2026-07-04)
 
-- **Replace placeholder Resend `from` domain before production go-live** — `src/lib/email/send-invitation-email.ts` uses `Pick Six <noreply@yourdomain.com>` with a `// TODO: replace with verified Resend domain` comment. Real delivery to non-sandbox recipients requires a **verified sending domain** in Resend (SPF/DKIM DNS records; propagation can take up to 48 hours). Until configured: update the `from` address to your verified domain (e.g. `noreply@yourdomain.com`) and confirm sends in the Resend dashboard. Setup steps: [Resend domain docs](https://resend.com/docs/dashboard/domains/introduction); prerequisites also in `docs/email-provider-decision.md`. For local/dev smoke tests only, Resend's sandbox `from` (`onboarding@resend.dev`) can be used temporarily — do not ship that to production.
+- **Replace placeholder Resend `from` domain before production go-live** — `src/lib/email/resend-from.ts` (`getResendFrom()` / `DEFAULT_FROM`) still uses `Pick Six <noreply@yourdomain.com>` until a verified sending domain is configured. Real delivery to non-sandbox recipients requires a **verified sending domain** in Resend (SPF/DKIM DNS records; propagation can take up to 48 hours). Until configured: set Production `RESEND_FROM` to your verified identity and confirm sends in the Resend dashboard. Setup steps: [Resend domain docs](https://resend.com/docs/dashboard/domains/introduction); prerequisites also in `docs/email-provider-decision.md` and [`docs/domain-provider-decision.md`](../../docs/domain-provider-decision.md). For local/dev smoke tests only, Resend's sandbox `from` (`onboarding@resend.dev`) can be used temporarily — do not ship that to production. **Story 9.2:** registrar/DNS = Cloudflare (dual-use hostname plan); **cutover execution still post-epic-9** (`post-epic-9-resend-domain-and-from-address`) — do not strike as resolved until verify + `RESEND_FROM` ship.
 - ~~**Invites page copy still references console logs**~~ — Resolved in Story 6.6: `invite-participants-form.tsx` and `invites/page.tsx` now reflect that invitation emails are sent to recipients.
 
 ## Deferred from: code review of 6-2-tuesday-6-00-pm-league-email-content-and-admin-preview (2026-07-04)

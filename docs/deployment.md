@@ -28,7 +28,7 @@ Set in Vercel → **Settings → Environment Variables → Production**. Vercel 
 | `DATABASE_URL` | Pooled Postgres (Neon `-pooler` host) | Neon dashboard → Connect |
 | `DIRECT_URL` | Direct Postgres for migrations | Neon dashboard → Connect (non-pooler) |
 | `AUTH_SECRET` | Session signing | `openssl rand -base64 32` |
-| `AUTH_URL` | Absolute site URL for Auth.js callbacks | `https://your-app.vercel.app` |
+| `AUTH_URL` | Absolute site URL for Auth.js callbacks (post–Epic 9: product hostname from [domain-provider-decision.md](./domain-provider-decision.md) — dual-use web + email domain) | `https://your-app.vercel.app` until custom domain attach |
 | `RESEND_API_KEY` | Transactional email | [Resend dashboard](https://resend.com/) → API Keys |
 | `RESEND_WEBHOOK_SECRET` | Webhook signature verification | Resend → Webhooks |
 | `CRON_SECRET` | Cron route auth (`Authorization: Bearer …`) | `openssl rand -hex 32` — **no trailing newlines** |
@@ -132,10 +132,14 @@ Team practice:
 
 ## Email / Resend go-live (post–Epic 9 handoff)
 
-Domain verification, production `from` address replacement, and full production inbox smoke remain **ops stories after Epic 9** — do not treat them as complete when this doc ships. Domain **provider choice** is Epic 9 Story 9.2; DNS/SPF/DKIM cutover is the post-epic item below.
+Domain verification, production `from` address replacement, and full production inbox smoke remain **ops stories after Epic 9** — do not treat them as complete when this doc ships.
 
-- `post-epic-9-vercel-production-env-and-cron` — apply Production env + confirm crons
-- `post-epic-9-resend-domain-and-from-address` — SPF/DKIM + replace placeholder `from` (depends on Story 9.2)
+**Dual-use domain (Story 9.2 — decided):** One product domain serves as both the **public app URL** (Vercel custom domain + `AUTH_URL`) and the **Resend sending-domain** foundation (SPF/DKIM + `RESEND_FROM`). Registrar/DNS: **Cloudflare Registrar + Cloudflare DNS** (fresh purchase). See [`docs/domain-provider-decision.md`](./domain-provider-decision.md) for hostname plan (app host + mail send subdomain) and next DNS steps (web → email → smoke). Email provider remains Resend ([`email-provider-decision.md`](./email-provider-decision.md)).
+
+**Execution is still post–Epic 9** (do not mark these done from the investigation alone):
+
+- `post-epic-9-vercel-production-env-and-cron` — Vercel custom domain + Production `AUTH_URL` (+ env/cron)
+- `post-epic-9-resend-domain-and-from-address` — SPF/DKIM + replace placeholder `from` (depends on Story 9.2 decision doc)
 - `post-epic-9-production-smoke-test` — real inbox invite + digest + reminders
 
 Track status in [`sprint-status.yaml`](../_bmad-output/implementation-artifacts/sprint-status.yaml). See also Epic 8 retrospective (`epic-8-retro-2026-07-28.md`) for why the gate moved from post–Epic 8 to post–Epic 9.

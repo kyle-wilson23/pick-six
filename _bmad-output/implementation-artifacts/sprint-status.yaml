@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-  last_updated: '2026-07-28'  # story 8-7 → done
+  last_updated: '2026-07-28'  # epic-8 retrospective → done; epic-9 backlog + post-epic-9 rename
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -119,7 +119,7 @@ development_status:
   7-4-performance-and-deployment-hardening: done
   epic-7-retrospective: done
 
-  epic-8: in-progress
+  epic-8: done
   8-1-test-league-flag-labeling-and-optional-global-gates: done
   8-2-shortened-simulated-season-and-admin-driven-week-advancement: done
   8-3-simulated-odds-and-jailed-team-for-rehearsal: done
@@ -127,27 +127,23 @@ development_status:
   8-5-email-and-scheduled-jobs-in-rehearsal: done
   8-6-rehearsal-runbook-for-invited-participants: done
   8-7-delete-test-league-and-data-cleanup: done
-  epic-8-retrospective: optional
+  epic-8-retrospective: done
 
-  # ---- UI fixes ------------------------------------------------------------
-  # TODO: There should be no landing page. There should just be a "home" page combining a short list of your leagues, leagues you admin, and a create league button. Maybe each list is surrounded in a card, and the list is limited to 3 leagues with a show more button that will take you to the existing, dedicated league list pages. On both pages, leagues should be sorted by most recently visited.
-  # TODO: Every page on desktop renders with the page title beneath the top nav menu. I can then scroll up to reveal the page title. Pages should render entirely scrolled to the top when navigated to.
-  # TODO: The nav menu should be consistently everywhere, on every page. Nav links specific to league actions can be hidden until you're drilled into a league, but there always needs to be a link shown that can land you back at the home page. There is also no "settings" link in the nav menu for admins.
-  # TODO: The league landing page as a member needs more love. The "league hub" area needs to be more distinguished from the rest of the page. It needs to pop more. The links maybe need to be buttons so my eyes are more drawn to them.
-  # TODO: Styling of links needs to be redone across the entire app. There's nothing to distinguish links from other text. Consider colour and underline.
-  # TODO: Hover state of individual picks needs to actually be the individual pick instead of the whole matchup card. Maybe we can provide a background green glow to individual picks.
-  # TODO: Can we hide the "retractable roof" tag from matchups if the weather API doesn't return results?
-  # TODO: The page layout breakpoints seem broken. On a desktop breakpoint, the page width on many pages is very small/skinny. Do a full pass on all pages and their layout breakpoints and responsiveness to support both desktop and mobile.
-  # TODO: Can we make the layout of all emails that are received prettier? If we have control over that, I'd like a full pass on the full layout - but in particular, the font size of the "make my picks" link is really small and should be called out more.
-  # TODO: Better loading effects when navigating to a page. Even just a loading spinner or animation will do.
+  # Epic 9 — Pre-season polish & launch hardening (from epic-8 retro 2026-07-28)
+  # Ordered blockers before production deploy. FULL ACs + Kyle verbatim source requirements: epics.md Epic 9.
+  # create-story / dev-story MUST copy source requirements without softening (cards required, limit 3, green glow, etc.).
+  epic-9: backlog
+  9-1-league-scoped-scoring-scorenflweek-blast-radius: backlog  # Critical: scoreNflWeek must not score other leagues' picks from rehearsal finalize
+  9-2-domain-provider-investigation: backlog  # Kyle: investigate domain providers; unblocks post-epic-9 Resend domain
+  9-3-forgot-password-flow: backlog  # Kyle: missing forgot-password; evaluate Resend for reset mail
+  9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e: backlog  # Lighthouse + NFR5 + breaker e2e + deferred-work.md launch-risk triage
+  9-5-app-shell-home-nav-scroll-breakpoints-loading: backlog  # No landing→home; carded lists max 3 + show more; recent visit sort both pages; nav+settings; scroll-top; full breakpoint pass; loading
+  9-6-league-hub-and-picks-interaction-polish: backlog  # Hub pops + button CTAs; app-wide link color+underline; pick hover = individual green glow; hide retractable roof w/o weather
+  9-7-email-html-layout-polish: backlog  # Full email layout pass; "make my picks" must be emphasized (not tiny)
+  epic-9-retrospective: optional
 
-  # ---- Other ------------------------------------------------------------
-  # TODO: We're missing a forgot password flow. Can Resend help us support this?
-  # TODO: Do we need to do an investigation into domain providers?
-  # TODO: Address deferred-work.md before moving on?
-
-  # Post-Epic 8 — production launch gate (must complete before first real NFL season; deploy after all epics)
-  # Detailed checklist: deferred-work.md § "Pre-production go-live: Vercel operational checklist"
-  post-epic-8-vercel-production-env-and-cron: backlog  # Production env vars (.env.example); deploy vercel.json crons; CRON_SECRET; redeploy after env changes
-  post-epic-8-resend-domain-and-from-address: backlog  # Verify sending domain (SPF/DKIM); replace noreply@yourdomain.com in all email senders
-  post-epic-8-production-smoke-test: backlog  # Real inbox: invite + Tuesday digest + reminders; confirm Resend dashboard; optional prod cron curl
+  # Post-Epic 9 — production launch gate (must complete before first real NFL season; after Epic 9)
+  # Detailed checklist: docs/deployment.md
+  post-epic-9-vercel-production-env-and-cron: backlog  # Production env vars (.env.example); deploy vercel.json crons; CRON_SECRET; redeploy after env changes
+  post-epic-9-resend-domain-and-from-address: backlog  # Depends on 9.2; verify sending domain (SPF/DKIM); replace noreply@yourdomain.com
+  post-epic-9-production-smoke-test: backlog  # Real inbox: invite + Tuesday digest + reminders; confirm Resend dashboard; optional prod cron curl

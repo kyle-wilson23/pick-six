@@ -24,7 +24,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 8-4-simulated-game-results-and-scoring-reveal-cycle (2026-07-20)
 
-- **Cross-league scoring blast radius via unscoped `scoreNflWeek`** — `applySimulationWeekResults` → `finalizeNflWeek` → `scoreNflWeek` is not league-scoped: `scoreNflWeek`'s `Pick` query (`src/lib/scoring/score-nfl-week.ts:48-54`) filters only by `nflWeekNumber` + `season.nflSeasonYear`, with no `leagueId` anywhere in the chain. If a production league shares the same `(nflSeasonYear, weekNumber)` as a test league's `simulatedCurrentWeek` and its real games for that week haven't been synced/finalized yet, a test-league admin clicking "Simulate results" would satisfy `isWeekFullyFinalized` on the fixture games alone and trigger `scoreNflWeek`, scoring the production league's already-submitted picks with fake fixture winner data. AC2's provenance guard only protects the `NflGame.status/score` write, not this downstream cross-league `Pick` write — the root cause (`scoreNflWeek`/`finalizeNflWeek` unscoped by league) predates this story and both functions are on the AC8 do-not-touch list. Accepted risk, same category as the fixture+real-mix note below; revisit if a league-scoped scoring pass is ever undertaken (candidate for Story 8.7 or a dedicated hardening story).
+- ~~**Cross-league scoring blast radius via unscoped `scoreNflWeek`**~~ — **Promoted to Story 9.1** (Epic 8 retrospective 2026-07-28 — launch blocker). Forensic detail retained: `applySimulationWeekResults` → `finalizeNflWeek` → `scoreNflWeek` is not league-scoped; `scoreNflWeek`'s `Pick` query (`src/lib/scoring/score-nfl-week.ts`) filters only by `nflWeekNumber` + `season.nflSeasonYear`. AC2 provenance guards `NflGame` writes, not cross-league `Pick` scoring.
 - **Odds-line `some` filter can match a game that later becomes real via natural-key collision** — `NflGame`'s natural key is `(nflSeasonYear, weekNumber, homeTeamId, awayTeamId)` with real `Team` FKs. If a rehearsal fixture's matchup for a week exactly coincides with the real schedule's matchup for that week, Story 3.9's upsert-by-natural-key sync attaches a real-sourced odds line to the same row that already carries a `test_fixture` line (rather than creating a new row), and AC2's `some`-based candidate filter would still select it for fake-score finalization. Requires exact matchup coincidence (not just the same week), so lower probability than the fixture+real-mix risk below, but the same underlying class — documented here as a sharper sub-case of that entry.
 - **`readJsonObject` duplicated a fifth time** — `src/app/api/leagues/[leagueId]/simulation/apply-results/route.ts` copies the same helper again (see 8.1–8.3 / 5.1 deferred notes). Still not extracted; acceptable per existing convention.
 - **No colocated test file for `AdminSimulationControls.tsx`** — the component has zero tests despite now housing three distinct fetch-driven handlers with their own error branches. Pre-existing gap (the first two buttons were also untested before this story); revisit if/when a UI-component testing convention is established for this codebase.
@@ -75,7 +75,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of pre-epic-7-manual-email-flow-smoke-test (2026-07-05)
 
-- **AC8 Resend message IDs not captured** — Smoke test results confirm delivery in inbox/dashboard but do not record per-send message IDs; optional hardening before production smoke test (`post-epic-8-production-smoke-test`).
+- **AC8 Resend message IDs not captured** — Smoke test results confirm delivery in inbox/dashboard but do not record per-send message IDs; optional hardening before production smoke test (`post-epic-9-production-smoke-test`).
 - **Thin unit coverage for `acceptLeagueInvitation`** — Only error-class tests exist; membership upsert and invite consumption paths verified manually during AC3 smoke test.
 - **No unit test for `already_registered` signup preview branch** — New preview status branch covered by manual invite flow only.
 - **Concurrent duplicate accept requests** — Parallel accept POSTs can race on invite consumption. **Out of scope for 7.4** (AC8); revisit if invite abuse appears.
@@ -315,14 +315,19 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: Epic 7 retrospective (2026-07-19)
 
-- **Authenticated Lighthouse re-measure for picks/standings** — `docs/performance-budgets.md` currently has real Lighthouse LCP/TTI numbers only for `/login`; picks and standings were left as documented Known Exceptions because an authenticated CLI run would require handing a live session cookie to Lighthouse. **Owner:** Kyle. **Target:** revisit during/after Epic 8 rehearsal, once a populated simulated season gives us a stable authenticated fixture to measure against without touching real league data.
-- **Real pick-submit NFR5 timing sample** — `docs/performance-budgets.md` NFR5 section accepted a documented exception because every dev-seed league is pre-season (`SEASON_NOT_READY`), so no real save-transaction timing sample was captured for pick submit (only login `authorize()` was sampled: 2096ms cold / 727ms warm). **Owner:** Kyle. **Target:** capture during Epic 8 rehearsal once a simulated week reaches an active pick-submission state — `logEvent` `durationMs` instrumentation is already wired into the picks route, so this only requires triggering a real submit and reading the log.
+- ~~**Authenticated Lighthouse re-measure for picks/standings**~~ — **Promoted to Story 9.4** (Epic 8 retrospective 2026-07-28). Was Owner: Kyle; target was during/after Epic 8 rehearsal. `docs/performance-budgets.md` still has real Lighthouse numbers only for `/login` until 9.4 closes.
+- ~~**Real pick-submit NFR5 timing sample**~~ — **Promoted to Story 9.4** (Epic 8 retrospective 2026-07-28). Was Owner: Kyle; `logEvent` `durationMs` already wired on picks route.
+
+## Deferred from: Epic 8 retrospective (2026-07-28)
+
+- ~~**Email circuit-breaker e2e under simulated outage**~~ — **Promoted to Story 9.4**. Epic 7 retro committed this to Story 8.5; 8.5 suppress mode bypasses Resend/breaker, so the drill never ran. Success: prove `EMAIL_CIRCUIT_OPEN` aborts remaining sends for a cron/admin invocation.
+- **Tracking note:** Launch blockers (scoring isolation, domain investigation, forgot-password, UI polish) are **sprint-status Epic 9 stories**, not deferred bullets. Ops go-live items renamed `post-epic-8-*` → `post-epic-9-*`.
 
 ## Pre-production go-live: Vercel operational checklist (Epic 6 — operational, not code)
 
 > **Canonical copy moved to [`docs/deployment.md`](../../docs/deployment.md)** (Story 7.4). Do not maintain a second checklist here — update that doc instead.
 >
-> Post–Epic 8 handoff items (`post-epic-8-vercel-production-env-and-cron`, `post-epic-8-resend-domain-and-from-address`, `post-epic-8-production-smoke-test`) remain tracked in `sprint-status.yaml`.
+> Post–Epic 9 handoff items (`post-epic-9-vercel-production-env-and-cron`, `post-epic-9-resend-domain-and-from-address`, `post-epic-9-production-smoke-test`) remain tracked in `sprint-status.yaml`. (Renamed from post-epic-8 at Epic 8 retrospective 2026-07-28.)
 
 ~~**Context:** Stories 6.1–6.5 implement transactional email and cron orchestration in code. Before the first real NFL-season weekly cycle in production, a deployer must complete the Vercel-side configuration below.~~
 

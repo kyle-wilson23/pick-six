@@ -59,7 +59,7 @@ The PRD lists **53 NFRs** that constrain architecture:
 - **Integrations:** At least one **NFL odds** provider (server-side fetch and cache), **transactional email**, optional **weather** per UX spec, and **game results** (source TBD in architecture). **Story 3.2** decision record: **`docs/nfl-odds-integration.md`** (The Odds API for weekly snapshots; **`NflGame`** schedule remains seed/JSON until a follow-up). See **`epics.md`** Story 3.2.
 - **Runtime constraints:** No websockets required for MVP (manual refresh acceptable); odds **static for the week** after Tuesday snapshot; picks hidden from peers until Tuesday reveal.
 - **Deployment:** Must fit **Vercel/Netlify-class** hosting per NFR53; scheduled work may need platform cron or an external scheduler.
-- **Epics/stories:** See **`_bmad-output/planning-artifacts/epics.md`** for user stories and acceptance criteria (solutioning 2026). PRD defines **61 FRs (FR1–FR61)**; epics add operational and UX-adjacent requirements (mid-season start, pre-season preview, logos, rehearsal leagues).
+- **Epics/stories:** See **`_bmad-output/planning-artifacts/epics.md`** for user stories and acceptance criteria (solutioning 2026). PRD defines **61 FRs (FR1–FR61)**; epics add operational and UX-adjacent requirements (mid-season start, pre-season preview, logos, rehearsal leagues, pre-season polish / launch hardening).
 
 ### Cross-Cutting Concerns Identified
 

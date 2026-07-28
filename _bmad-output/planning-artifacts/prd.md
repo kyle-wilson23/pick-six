@@ -1247,6 +1247,7 @@ _The numbered FRs/NFRs above remain the contractual requirement set. The followi
 | **Pre-season Week 1 preview** | Off-season / pre-kickoff: fetch and display **Week 1** odds and weather where APIs allow; clear “preview / not pickable” when picks are not open. | Epic 3 — Stories 3.1–3.2, 3.6 |
 | **Team logos** | Real NFL team images for `TeamLogo` (assets or provider); licensing; fallback to abbreviation. | Epic 3 — Story 3.8 |
 | **Rehearsal / test leagues** | League-level test flag; simulated weeks, fixture odds, admin-driven advancement; optional email policy; **delete league** cleanup. | Epic 8 |
+| **Pre-season polish & launch hardening** | League-scoped scoring isolation; domain-provider decision; forgot-password; Epic 7 measurement/drill carryovers; UI polish. Production env/Resend/`from`/smoke = **post-epic-9**. | Epic 9 |
 | **Production league deletion (admin)** | Irreversible delete with high-friction UX; contractual requirement **FR61**; acceptance criteria in **Story 2.8**. Distinct from **Epic 8.7** (test/rehearsal league cleanup). | Epic 2 — Story 2.8 |
 
 These do **not** replace or renumber existing FRs; they extend MVP delivery planning and operational readiness.

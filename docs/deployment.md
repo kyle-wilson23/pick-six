@@ -130,27 +130,28 @@ Team practice:
 
 ---
 
-## Email / Resend go-live (post–Epic 8 handoff)
+## Email / Resend go-live (post–Epic 9 handoff)
 
-Domain verification, production `from` address replacement, and full production inbox smoke remain **ops stories after Epic 8** — do not treat them as complete when this doc ships:
+Domain verification, production `from` address replacement, and full production inbox smoke remain **ops stories after Epic 9** — do not treat them as complete when this doc ships. Domain **provider choice** is Epic 9 Story 9.2; DNS/SPF/DKIM cutover is the post-epic item below.
 
-- `post-epic-8-vercel-production-env-and-cron` — apply Production env + confirm crons
-- `post-epic-8-resend-domain-and-from-address` — SPF/DKIM + replace placeholder `from`
-- `post-epic-8-production-smoke-test` — real inbox invite + digest + reminders
+- `post-epic-9-vercel-production-env-and-cron` — apply Production env + confirm crons
+- `post-epic-9-resend-domain-and-from-address` — SPF/DKIM + replace placeholder `from` (depends on Story 9.2)
+- `post-epic-9-production-smoke-test` — real inbox invite + digest + reminders
 
-Track status in [`sprint-status.yaml`](../_bmad-output/implementation-artifacts/sprint-status.yaml).
+Track status in [`sprint-status.yaml`](../_bmad-output/implementation-artifacts/sprint-status.yaml). See also Epic 8 retrospective (`epic-8-retro-2026-07-28.md`) for why the gate moved from post–Epic 8 to post–Epic 9.
 
 ---
 
 ## Pre-production checklist (summary)
 
+- [ ] Epic 9 launch blockers done (scoring isolation, forgot-password, domain decision, carryovers, UI polish)
 - [ ] Production env vars set (table above); never `NEXT_PUBLIC_*` for secrets
 - [ ] `npm run db:migrate:deploy` against production URLs when schema changed
 - [ ] `vercel.json` crons visible on production; `CRON_SECRET` set; redeployed
 - [ ] Cron smoke: 401 without secret; 200 / expected window body with secret
 - [ ] Neon snapshot before season start (and before risky migrates)
 - [ ] External monitor pointed at cron URL with Bearer secret (optional but recommended)
-- [ ] Resend domain / `from` / inbox smoke — complete via **post-epic-8-*** items
+- [ ] Resend domain / `from` / inbox smoke — complete via **post-epic-9-*** items
 - [ ] Avoid deploys in Tue 5–7 PM ET and Thu 7–9 PM ET
 
-Success: env + migrate + cron smoke + (when post-epic-8 done) real inbox delivery confirmed.
+Success: Epic 9 complete + env + migrate + cron smoke + (when post-epic-9 done) real inbox delivery confirmed.

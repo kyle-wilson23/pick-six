@@ -2,7 +2,7 @@
 
 Manual verification of Epic 6 email flows in **local development** before Epic 7 observability work begins. This runbook supports story `pre-epic-7-manual-email-flow-smoke-test`.
 
-**Scope:** Local dev only (`localhost:3000`). Production deploy, domain verification, and Vercel cron are tracked separately in `deferred-work.md` § [Pre-production go-live: Vercel operational checklist](../_bmad-output/implementation-artifacts/deferred-work.md#pre-production-go-live-vercel-operational-checklist-epic-6--operational-not-code) and sprint-status `post-epic-8-*`.
+**Scope:** Local dev only (`localhost:3000`). Production deploy, domain verification, and Vercel cron are tracked separately in `deferred-work.md` § [Pre-production go-live: Vercel operational checklist](../_bmad-output/implementation-artifacts/deferred-work.md#pre-production-go-live-vercel-operational-checklist-epic-6--operational-not-code) and sprint-status `post-epic-9-*`.
 
 **Provider reference:** [email-provider-decision.md](./email-provider-decision.md)
 

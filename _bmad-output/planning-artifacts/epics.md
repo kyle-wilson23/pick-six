@@ -166,6 +166,7 @@ NFR53: System must support deployment to standard web hosting platforms (Vercel,
 - **Mid-season league start:** At **league creation**, admins can set the **first NFL week** when competition begins (e.g. Week 1 or Week 8 if deployment is late). See **Story 2.7**; Epic 3+ must respect this for “current week” and picks.
 - **Team logos:** UX `TeamLogo` currently specifies abbreviation-in-circle; **Story 3.8** implements real logos (see Epic 3).
 - **Pre-season rehearsal / simulation mode:** Run a multi-week league dry run with invited users before the real NFL season—non-real-time week advancement, simulated odds and results, controlled email behavior. Prefer **test leagues** (per-league flag) plus optional global toggles; **deletable** when done. **Epic 8** (no additional numbered FR beyond **FR1–FR61**; rehearsal is a delivery wrapper).
+- **Pre-season polish & launch hardening:** Before production season go-live, close launch blockers surfaced by rehearsal and prior retros—league-scoped scoring isolation, domain-provider research, forgot-password, Epic 7 measurement/drill carryovers, and UI polish. **Epic 9**. Production env/cron/Resend/`from`/inbox smoke remain **post-epic-9** ops items.
 - Email deep links to pick flow; no-tutorial-first-use for core screens.
 
 **From project context (`docs/project-context.md`):**
@@ -188,6 +189,7 @@ NFR53: System must support deployment to standard web hosting platforms (Vercel,
 | FR58–FR59 | Epic 3 | Season/week state (with Epic 5 for outcomes) |
 | Team logos (UX `TeamLogo`; extends visual treatment for FR14–FR18) | Epic 3 — Story 3.8 | Discovery + implementation: static licensed assets, provider logo URLs, or API—compliance documented |
 | Rehearsal / simulation mode (pre-season dry run; product) | Epic 8 | Test/rehearsal **leagues** (primary), optional env toggles, **delete** when finished—see stories |
+| Pre-season polish & launch hardening (product + ops readiness) | Epic 9 | League-scoped scoring; domain investigation; forgot-password; Epic 7 carryovers; UI polish — before post-epic-9 deploy |
 | First NFL week / mid-season start (product) | Epic 2 — Story 2.7 | League begins at Week *N* (1–18); prior weeks skipped for competition |
 
 ## Epic List
@@ -240,7 +242,13 @@ League admins can run a **multi-week dry run** with real invited users **before*
 
 **Configuration model:** Prefer **per-league** **test / rehearsal leagues** (create a league as a test league, or set a league-level flag)—easy to distinguish from a real season league. Optional **deployment or env toggles** can gate test features globally if desired. **Test leagues can be deleted** when the dry run is over (cleanup story).
 
-**FRs covered:** None new in PRD; **reuses** core FR behavior in a controlled context. **Depends on:** Epics 1–7 being complete or near-complete (implement last).
+**FRs covered:** None new in PRD; **reuses** core FR behavior in a controlled context. **Depends on:** Epics 1–7 being complete or near-complete.
+
+### Epic 9: Pre-season polish and launch hardening
+
+Close **launch blockers** before the first real NFL season: harden scoring so rehearsal cannot corrupt production picks, complete domain and auth recovery prerequisites, finish Epic 7 measurement/drill carryovers, and ship agreed UI polish. **Production env / cron / Resend domain / inbox smoke** remain **post-epic-9** ops checklist items (not stories in this epic).
+
+**FRs covered:** Strengthens existing auth (FR8–FR11) and scoring isolation assumptions; no new numbered FRs. **Depends on:** Epic 8 rehearsal complete (isolation bug discovered under simulation).
 
 ---
 
@@ -1074,13 +1082,169 @@ So that leftover simulated data does not clutter the app and we can start clean 
 
 ---
 
+## Epic 9: Pre-season polish and launch hardening
+
+**Goal:** Make the product **safe and usable for the first real NFL season** after Epic 8 rehearsal—close scoring isolation, auth recovery, domain prerequisites, measurement/drill carryovers, and agreed UI polish. **Do not** treat this epic as optional polish relative to production go-live.
+
+**Depends on:** Epic 8 complete. **Unblocks:** `post-epic-9-*` production ops checklist.
+
+**Agent instruction:** Stories 9.2–9.7 include **Source requirements (Kyle)** blocks. `create-story` / `dev-story` / code-review **must copy these requirements into story files and treat them as binding**—do not rephrase into softer optional language (e.g. cards are required, list limit is 3, pick hover is a green glow, breakpoint and email work are full passes).
+
+### Story 9.1: League-scoped scoring (`scoreNflWeek` blast radius)
+
+As a league admin running rehearsal alongside (or before) a production league,
+I want finalize/score paths to respect **league boundaries**,
+So that simulating results in a test league cannot score another league's picks with fixture winners.
+
+**Acceptance Criteria:**
+
+**Given** a test league and a non-test league that share the same `(nflSeasonYear, weekNumber)`
+**When** an admin runs Simulate results (or equivalent finalize/score) for the test league
+**Then** only picks belonging to the intended league(s) are scored—**never** another league's picks via unscoped `scoreNflWeek`
+**And** tests prove the cross-league blast radius cannot recur
+**And** rehearsal runbook / deferred-work note the fix (strike the 8.4 deferred finding as resolved)
+
+---
+
+### Story 9.2: Domain-provider investigation
+
+As the project lead preparing production email,
+I want a **documented decision** on domain registrar / DNS provider,
+So that we can verify SPF/DKIM and a real Resend sending domain before production inbox traffic.
+
+**Source requirement (Kyle — do not soften):** "Do we need to do an investigation into domain providers?"
+
+**Acceptance Criteria:**
+
+**Given** production email currently uses a placeholder `from` address
+**When** the investigation completes
+**Then** a short decision doc (or section in `docs/deployment.md`) records: provider options considered, choice, and next DNS steps
+**And** the decision explicitly unblocks `post-epic-9-resend-domain-and-from-address`
+**And** no production Resend domain cutover is required in this story (execution stays post-epic-9)
+
+---
+
+### Story 9.3: Forgot-password flow
+
+As a user who forgot their password,
+I want a **secure reset via email**,
+So that invited participants can recover access before / during the real season without admin intervention.
+
+**Source requirement (Kyle — do not soften):** "We're missing a forgot password flow. Can Resend help us support this?"
+
+**Acceptance Criteria:**
+
+**Given** a registered user with a known email
+**When** they request a password reset
+**Then** they receive a time-limited reset link and can set a new password
+**And** the implementation evaluates and documents whether **Resend** (existing email stack) is the send path for reset mail—prefer Resend unless a blocking reason is recorded
+**And** the flow is rate-limited and does not leak whether an email is registered beyond agreed UX
+**And** `.env.example` / deployment docs note any new secrets or templates
+
+---
+
+### Story 9.4: Epic 7 carryovers — Lighthouse, NFR5, circuit-breaker e2e
+
+As the team preparing for production,
+I want the **open Epic 7 measurement and failure-path drills** completed,
+So that performance budgets and email outage behavior are evidenced—not only unit-tested.
+
+**Acceptance Criteria:**
+
+**Given** a rehearsal (or stable authenticated) fixture exists
+**When** this story completes
+**Then** authenticated Lighthouse numbers for picks and standings are recorded in `docs/performance-budgets.md` (or Known Exceptions explicitly re-accepted with rationale)
+**And** at least one real pick-submit `durationMs` sample is captured for NFR5
+**And** a scripted or documented e2e drill proves `EMAIL_CIRCUIT_OPEN` aborts the remaining cron/admin send invocation under simulated provider failure
+**And** Epic 7 deferred entries for these items are struck as resolved or re-accepted with owner sign-off
+**And** `deferred-work.md` is triaged for any remaining **launch-risk** items (promote to a sprint-status story, accept with owner+rationale, or explicitly park)—addresses Kyle's "Address deferred-work.md before moving on?"
+
+---
+
+### Story 9.5: App shell — home, nav, scroll, breakpoints, loading
+
+As a signed-in user,
+I want a coherent **home shell and navigation**,
+So that I am never stranded without a way home and pages don't feel broken on desktop/mobile.
+
+**Source requirements (Kyle — verbatim; do not soften in create-story / dev-story):**
+
+1. There should be **no landing page**. There should just be a **"home" page** combining a short list of your leagues, leagues you admin, and a create league button. **Each list is surrounded in a card**, and the list is **limited to 3 leagues** with a **show more** button that takes you to the existing, dedicated league list pages. **On both pages** (home and dedicated list pages), leagues should be sorted by **most recently visited**.
+2. Every page on desktop renders with the page title beneath the top nav menu — the user can scroll up to reveal the page title. **Pages should render entirely scrolled to the top when navigated to.**
+3. The **nav menu should be consistently everywhere**, on every page. Nav links specific to league actions can be hidden until you're drilled into a league, but there **always** needs to be a link that lands you back at the **home** page. There is also **no "settings" link in the nav menu for admins** today — add it.
+4. The page layout **breakpoints seem broken**. On a desktop breakpoint, the page width on many pages is very small/skinny. **Do a full pass on all pages** and their layout breakpoints and responsiveness to support both desktop and mobile.
+5. **Better loading effects** when navigating to a page. Even just a loading spinner or animation will do.
+
+**Acceptance Criteria:**
+
+**Given** the current marketing-style landing vs separate league lists
+**When** this story ships
+**Then** there is **no** marketing/landing entry for signed-in users—only a **home** page
+**And** home shows: (1) leagues you play, (2) leagues you admin, (3) create-league button
+**And** **each** of those lists is **surrounded in a card**
+**And** each list shows **at most 3 leagues**, with a **Show more** control that navigates to the existing dedicated league list page
+**And** leagues are sorted by **most recently visited** on **home and** on the dedicated league list pages
+**And** the nav menu appears **consistently on every page**; league-specific nav links may hide until inside a league; a **Home** link is always visible; admins have a **Settings** link in nav when applicable
+**And** after client navigation, the document scroll position is **top** (pages must not open mid-scroll with the title buried under the sticky nav)
+**And** a **full pass** fixes layout breakpoints/responsiveness across pages so desktop is not oddly skinny and mobile remains usable
+**And** navigating to a page shows a loading spinner or equivalent loading animation
+
+---
+
+### Story 9.6: League hub and picks interaction polish
+
+As a participant,
+I want the **league hub and picks UI** to be visually clear and interactive,
+So that I can find actions quickly and understand what I'm selecting.
+
+**Source requirements (Kyle — verbatim; do not soften in create-story / dev-story):**
+
+1. The league landing page as a member needs more love. The **"league hub"** area needs to be more distinguished from the rest of the page. It needs to **pop more**. The links maybe need to be **buttons** so eyes are more drawn to them.
+2. **Styling of links** needs to be redone **across the entire app**. There's nothing to distinguish links from other text. Consider **colour and underline**.
+3. **Hover state of individual picks** needs to actually be the **individual pick** instead of the whole matchup card. Provide a **background green glow** to individual picks.
+4. **Hide the "retractable roof" tag** from matchups if the weather API doesn't return results.
+
+**Acceptance Criteria:**
+
+**Given** the member league landing and picks matchup cards
+**When** this story ships
+**Then** the member **league hub** is visually distinguished from the rest of the page (it "pops")
+**And** primary hub actions are **buttons** (or equivalently prominent CTAs), not plain text links alone
+**And** **app-wide** link styling distinguishes links from body text using **color and underline** (theme-level, not one-off)
+**And** hover/focus on a pick applies to the **individual team pick** only—not the whole matchup card—and uses a **background green glow** on that pick
+**And** the **"retractable roof"** (or equivalent) weather tag is **hidden** when the weather API returns no results
+
+---
+
+### Story 9.7: Email HTML layout polish
+
+As a participant receiving league emails,
+I want **clear, readable email layout**,
+So that the primary action (make my picks) is obvious on mobile and desktop clients.
+
+**Source requirements (Kyle — verbatim; do not soften in create-story / dev-story):**
+
+1. Make the layout of **all emails that are received prettier**. Full pass on the full layout if we have control over that.
+2. In particular, the font size of the **"make my picks" link is really small** and should be called out more.
+
+**Acceptance Criteria:**
+
+**Given** the transactional email templates we control (invites, Tuesday digest, reminders, and any other member-facing mail)
+**When** this story ships
+**Then** a **full layout pass** improves typography, spacing, and hierarchy across those templates
+**And** the **"make my picks"** (or equivalent) deep link is visually emphasized—**not** small body-sized text; it must read as a primary CTA
+**And** changes are verified against at least one real client or Resend preview
+
+---
+
+
 ## Workflow validation summary (Step 4)
 
-- **FR coverage:** FR1–FR61 each appear in the FR Coverage Map and in at least one story acceptance path; scoring FR54 appears in Epic 3 (validation) and Epic 5 (points). **Team logos** are tracked in the coverage map (UX extension; **Story 3.8**). **Epic 8** is a **post-MVP rehearsal** capability (not a numbered FR); it exercises existing FRs under simulation. **Story 8.7** covers **deleting** test leagues; **Story 2.8** covers **FR61** (production admin delete).
-- **NFR spot-check:** **NFR5** and **NFR8** are explicitly in **Story 7.4** acceptance criteria; other NFRs are cited per story inventory and ACs.
+- **FR coverage:** FR1–FR61 each appear in the FR Coverage Map and in at least one story acceptance path; scoring FR54 appears in Epic 3 (validation) and Epic 5 (points). **Team logos** are tracked in the coverage map (UX extension; **Story 3.8**). **Epic 8** is a **post-MVP rehearsal** capability (not a numbered FR); it exercises existing FRs under simulation. **Story 8.7** covers **deleting** test leagues; **Story 2.8** covers **FR61** (production admin delete). **Epic 9** is **launch hardening** (isolation, auth recovery, domain prep, carryovers, UI)—not new numbered FRs; production env/Resend/smoke remain **post-epic-9**.
+- **NFR spot-check:** **NFR5** and **NFR8** are explicitly in **Story 7.4** acceptance criteria; Story **9.4** closes open measurement exceptions. Other NFRs are cited per story inventory and ACs.
 - **Starter template:** Story 1.1 matches architecture requirement for `create-next-app` as first implementation slice.
 - **Incremental DB:** Models and tables are introduced in the first story that needs them (Users in 1.2; league/season in 2.1; schedule in 3.1; etc.).
-- **Epic independence:** Later epics depend on earlier ones only as stacked product value (auth before league; league before picks; picks before full scoring reveal orchestration; email after core data paths)—no forward epic required for a prior epic’s *internal* completeness. **Epic 8** intentionally depends on core epics being built first (rehearsal wraps the real system).
+- **Epic independence:** Later epics depend on earlier ones only as stacked product value (auth before league; league before picks; picks before full scoring reveal orchestration; email after core data paths)—no forward epic required for a prior epic’s *internal* completeness. **Epic 8** intentionally depends on core epics being built first (rehearsal wraps the real system). **Epic 9** depends on Epic 8 discoveries before production go-live.
 - **Story order:** Stories within each epic depend only on earlier numbered stories in the same epic or completed prior epics.
 
 ---

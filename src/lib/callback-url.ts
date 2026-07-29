@@ -76,6 +76,6 @@ export function getSafeCallbackPath(
 
 /** Builds `/login?callbackUrl=…` using a validated path (e.g. from `x-pathname`). */
 export function buildLoginRedirectWithCallback(requestPath: string): string {
-  const safe = getSafeCallbackPath(requestPath, { defaultPath: "/dashboard" });
+  const safe = getSafeCallbackPath(requestPath, { defaultPath: "/home" });
   return `/login?callbackUrl=${encodeURIComponent(safe)}`;
 }

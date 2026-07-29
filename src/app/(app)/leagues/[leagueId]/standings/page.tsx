@@ -10,6 +10,7 @@ import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeagueStandings } from "@/lib/scoring/get-league-standings";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
@@ -38,12 +39,10 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
       tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
-        ...skipTargetMainSx,
       }}
     >
       <Typography variant="h4" component="h1">

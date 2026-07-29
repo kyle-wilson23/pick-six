@@ -3,19 +3,23 @@ import Typography from "@mui/material/Typography";
 
 import { allowTestLeagues } from "@/lib/league/allow-test-leagues";
 
+import { appContentWidthSx } from "@/theme/app-content-width";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
+
 import { CreateLeagueForm } from "./create-league-form";
 
 export default function NewLeaguePage() {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 480,
-        mx: "auto",
       }}
     >
       <Typography variant="h4" component="h1">

@@ -92,14 +92,16 @@ function TeamCell({ entry }: { entry: PeerPickEntry }) {
         teamName={entry.teamName}
         size="sm"
       />
-      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0, flexWrap: "wrap" }}>
-        <Typography variant="body2" fontWeight={600} noWrap>
-          {entry.teamAbbreviation}
-        </Typography>
+      <Stack spacing={0.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {entry.teamAbbreviation}
+          </Typography>
+          {entry.antiJailedBonus ? <AntiJailedChip /> : null}
+        </Stack>
         <Typography variant="body2" color="text.secondary" noWrap>
           {entry.teamName}
         </Typography>
-        {entry.antiJailedBonus ? <AntiJailedChip /> : null}
       </Stack>
     </Stack>
   );

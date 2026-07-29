@@ -9,6 +9,7 @@ import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeaguePeerPickHistory } from "@/lib/scoring/get-league-peer-pick-history";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
@@ -42,11 +43,9 @@ export default async function LeagueResultsPage({ params }: PageProps) {
       spacing={3}
       sx={{
         ...skipTargetMainSx,
-        minHeight: "100vh",
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 720,
-        mx: "auto",
       }}
     >
       <Typography variant="h4" component="h1">

@@ -102,6 +102,8 @@ export const config = {
     "/api/signup/invite/accept",
     "/api/leagues",
     "/api/leagues/:path*",
+    "/home",
+    "/home/:path*",
     "/dashboard",
     "/dashboard/:path*",
     "/my-leagues",

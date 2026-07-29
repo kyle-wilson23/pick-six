@@ -7,10 +7,12 @@ import {
   toAdministeredLeagueRows,
 } from "./list-administered-leagues";
 import { getCurrentNflSeasonYear } from "./nfl-season";
+import { sortLeaguesByRecentVisit } from "./sort-leagues-by-recent-visit";
 
 export type JoinedLeagueWithCurrentSeasonRow = {
   league: { id: string; name: string; isTestLeague: boolean; createdAt: Date };
   role: LeagueMembershipRole;
+  lastVisitedAt: Date | null;
   season: null | {
     id: string;
     nflSeasonYear: number;
@@ -22,22 +24,28 @@ export type JoinedLeagueWithCurrentSeasonRow = {
 };
 
 export function mapMembershipsToJoinedRows(
-  memberships: Array<{ role: LeagueMembershipRole; league: LeagueWithCurrentSeasonChunk }>,
+  memberships: Array<{
+    role: LeagueMembershipRole;
+    lastVisitedAt: Date | null;
+    league: LeagueWithCurrentSeasonChunk;
+  }>,
 ): JoinedLeagueWithCurrentSeasonRow[] {
-  return memberships.map((m) => {
+  const rows = memberships.map((m) => {
     const [row] = toAdministeredLeagueRows([m.league]);
     return {
       league: row.league,
       role: m.role,
+      lastVisitedAt: m.lastVisitedAt,
       season: row.season,
     };
   });
+  return sortLeaguesByRecentVisit(rows);
 }
 
 /**
  * Leagues the user belongs to (**ADMIN** or **MEMBER**), with the current NFL season row when
- * present (Story 2.5). Sorted by league name ascending. Both roles are participant roles for
- * authorization (`isLeagueParticipantRole` in Story 2.6); do not filter to **MEMBER** only here.
+ * present (Story 2.5). Sorted by most recently visited, then name (Story 9.5). Both roles are
+ * participant roles for authorization (`isLeagueParticipantRole` in Story 2.6); do not filter to **MEMBER** only here.
  */
 export async function listJoinedLeaguesWithCurrentSeason(
   userId: string,
@@ -55,30 +63,9 @@ export async function listJoinedLeaguesWithCurrentSeason(
         },
       },
     },
-    orderBy: { league: { name: "asc" } },
   });
 
   return mapMembershipsToJoinedRows(memberships);
 }
 
-/** Participant-facing one-line season summary (Story 2.5 AC1, AC8). */
-export function describeSeasonForParticipant(args: {
-  nflSeasonYear: number;
-  season: JoinedLeagueWithCurrentSeasonRow["season"];
-}): string {
-  const { nflSeasonYear, season } = args;
-  if (!season) {
-    return `This league does not have season details for NFL ${nflSeasonYear} yet. If that continues, ask a league admin.`;
-  }
-  const weekNote =
-    season.firstCompetitionWeek > 1
-      ? `Competition starts NFL Week ${season.firstCompetitionWeek}. `
-      : "";
-  const init = season.preSeasonInitializedAt
-    ? "Pre-season initialized"
-    : "Pre-season not yet initialized";
-  const lockNote = season.firstCompetitionWeekLockedAt
-    ? " Competition start is locked (week cannot be changed)."
-    : "";
-  return `${weekNote}Current season: ${season.nflSeasonYear} · First competition week ${season.firstCompetitionWeek} · ${init}.${lockNote}`;
-}
+export { describeSeasonForParticipant } from "./describe-season-for-participant";

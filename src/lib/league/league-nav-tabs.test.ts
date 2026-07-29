@@ -4,7 +4,10 @@ import {
   buildLeagueTabHref,
   getActiveLeagueTab,
   getLeagueNavTabs,
+  getMobileBottomNavTabs,
+  getMobileMoreMenuTabs,
   LEAGUE_PARTICIPANT_TABS,
+  parseLeagueIdFromPathname,
 } from "./league-nav-tabs";
 
 const LEAGUE_ID = "abc";
@@ -16,7 +19,7 @@ describe("buildLeagueTabHref", () => {
 });
 
 describe("getLeagueNavTabs", () => {
-  it("includes admin tab only for admins", () => {
+  it("includes admin and settings tabs only for admins", () => {
     expect(getLeagueNavTabs(false).map((t) => t.key)).toEqual(
       LEAGUE_PARTICIPANT_TABS.map((t) => t.key),
     );
@@ -27,6 +30,35 @@ describe("getLeagueNavTabs", () => {
       "results",
       "rules",
       "admin",
+      "settings",
+    ]);
+  });
+});
+
+describe("getMobileBottomNavTabs", () => {
+  it("omits overflow tabs from primary mobile bar (they live in More menu)", () => {
+    expect(getMobileBottomNavTabs(false).map((t) => t.key)).toEqual([
+      "picks",
+      "standings",
+      "history",
+      "results",
+    ]);
+    expect(getMobileBottomNavTabs(true).map((t) => t.key)).toEqual([
+      "picks",
+      "standings",
+      "history",
+      "results",
+    ]);
+  });
+});
+
+describe("getMobileMoreMenuTabs", () => {
+  it("includes rules for all league members and admin/settings for admins", () => {
+    expect(getMobileMoreMenuTabs(false).map((t) => t.key)).toEqual(["rules"]);
+    expect(getMobileMoreMenuTabs(true).map((t) => t.key)).toEqual([
+      "rules",
+      "admin",
+      "settings",
     ]);
   });
 });
@@ -40,6 +72,7 @@ describe("getActiveLeagueTab", () => {
     ["/leagues/abc/results", "results"],
     ["/leagues/abc/rules", "rules"],
     ["/leagues/abc/admin", "admin"],
+    ["/leagues/abc/settings", "settings"],
   ] as const)("resolves %s → %s", (pathname, expected) => {
     expect(getActiveLeagueTab(pathname, LEAGUE_ID)).toBe(expected);
   });
@@ -47,10 +80,23 @@ describe("getActiveLeagueTab", () => {
   it.each([
     "/leagues/abc",
     "/leagues/abc/",
-    "/leagues/abc/settings",
     "/leagues/abc/invites",
     "/leagues/other/picks",
   ] as const)("returns null for %s", (pathname) => {
     expect(getActiveLeagueTab(pathname, LEAGUE_ID)).toBeNull();
+  });
+});
+
+describe("parseLeagueIdFromPathname", () => {
+  it.each([
+    ["/leagues/abc/standings", "abc"],
+    ["/leagues/abc", "abc"],
+    ["/leagues/abc?week=1", "abc"],
+    ["/leagues/new", null],
+    ["/leagues/new/picks", null],
+    ["/home", null],
+    ["/my-leagues", null],
+  ] as const)("parses %s → %s", (pathname, expected) => {
+    expect(parseLeagueIdFromPathname(pathname)).toBe(expected);
   });
 });

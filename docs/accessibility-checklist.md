@@ -10,7 +10,7 @@ Core flows: **login**, **picks**, **standings** (+ league shell chrome).
 
 ## Manual — keyboard-only
 
-- [x] `/login`: Tab reaches email → password → Login → “Back to home”; submit with empty fields focuses error alert; valid login proceeds
+- [x] `/login`: Tab reaches email → password → Login → “Forgot password?”; submit with empty fields focuses error alert; valid login proceeds
 - [x] After login, open a league: first Tab shows **Skip to main content**; Enter moves focus to `#main-content`
 - [x] Desktop: Tab through league nav tabs; active tab has `aria-current="page"`; Enter opens tab
 - [x] Mobile viewport: bottom nav actions are Tab/Enter operable

@@ -25,6 +25,7 @@ import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { logEvent } from "@/lib/logging/log-event";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
@@ -96,11 +97,9 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
       spacing={3}
       sx={{
         ...skipTargetMainSx,
-        minHeight: "100vh",
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: { xs: 640, md: 1024 },
-        mx: "auto",
       }}
     >
       <Stack

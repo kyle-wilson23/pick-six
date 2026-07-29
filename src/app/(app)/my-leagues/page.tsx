@@ -9,6 +9,8 @@ import { CreateLeagueLinkButton } from "@/components/leagues/create-league-link-
 import { auth } from "@/lib/auth";
 import { describeSeasonForParticipant, listJoinedLeaguesWithCurrentSeason } from "@/lib/league/list-joined-leagues";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
+import { appContentWidthSx } from "@/theme/app-content-width";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 export default async function MyLeaguesPage() {
   const session = await auth();
@@ -23,13 +25,14 @@ export default async function MyLeaguesPage() {
   return (
     <Stack
       component="main"
+      id="main-content"
+      tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
       }}
     >
       <Typography variant="h4" component="h1">

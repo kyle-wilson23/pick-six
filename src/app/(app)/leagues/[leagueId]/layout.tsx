@@ -1,10 +1,11 @@
 import { LeagueMembershipRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 
-import { LeagueNavShell } from "@/components/league/LeagueNavShell";
+import { SyncAppNavLeague } from "@/components/layout/AppNavLeagueContext";
 import { auth } from "@/lib/auth";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
+import { recordLeagueVisit } from "@/lib/league/record-league-visit";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -23,18 +24,20 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  const userDisplayName =
-    session.user.name ?? session.user.email ?? "User";
+  void recordLeagueVisit(session.user.id, leagueId).catch(() => {
+    /* best-effort — do not block render */
+  });
 
   return (
-    <LeagueNavShell
-      leagueId={leagueId}
-      leagueName={access.league.name}
-      isTestLeague={access.league.isTestLeague}
-      isAdmin={access.membership.role === LeagueMembershipRole.ADMIN}
-      userDisplayName={userDisplayName}
+    <SyncAppNavLeague
+      value={{
+        leagueId,
+        leagueName: access.league.name,
+        isTestLeague: access.league.isTestLeague,
+        isAdmin: access.membership.role === LeagueMembershipRole.ADMIN,
+      }}
     >
       {children}
-    </LeagueNavShell>
+    </SyncAppNavLeague>
   );
 }

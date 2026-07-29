@@ -149,6 +149,84 @@ export function MatchupCard(props: MatchupCardProps) {
     onTeamSelect?.(teamId, { kind: "select", antiJailedBonus: opts.antiJailedBonus });
   }
 
+  function renderAntiJailedBonusChip(
+    team: { id: string; abbreviation: string; name: string },
+    state: MatchupSideState,
+  ) {
+    return (
+      <Chip
+        size="small"
+        label="2 PTS"
+        onClick={
+          interactive
+            ? (e) => {
+                e.stopPropagation();
+                handleTeamActivate(team.id, state, { antiJailedBonus: true });
+              }
+            : undefined
+        }
+        onKeyDown={
+          interactive
+            ? (e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleTeamActivate(team.id, state, { antiJailedBonus: true });
+                }
+              }
+            : undefined
+        }
+        tabIndex={interactive ? 0 : -1}
+        aria-label={`Pick ${team.name} for 2-point anti-jailed bonus`}
+        sx={{
+          flexShrink: 0,
+          height: { xs: 28, sm: 32 },
+          minHeight: "unset",
+          minWidth: 44,
+          fontWeight: 700,
+          letterSpacing: 0.5,
+          bgcolor: (t) => t.palette.accent.gold,
+          color: (t) => t.palette.getContrastText(t.palette.accent.gold),
+          "& .MuiChip-label": {
+            px: { xs: 1, sm: 1.25 },
+            py: 0,
+          },
+          "&:hover": {
+            bgcolor: (t) => t.palette.accent.goldDark,
+          },
+          cursor: interactive ? "pointer" : "default",
+        }}
+      />
+    );
+  }
+
+  const antiJailedBonusSide = useMemo(() => {
+    if (isLocked || isSubmitting || antiJailedOpponentTeamId == null) {
+      return null;
+    }
+    if (homeTeam.id === antiJailedOpponentTeamId) {
+      if (homeState === "jailed" || homeState === "alreadyPicked" || homeState === "locked") {
+        return null;
+      }
+      return { team: homeTeam, state: homeState };
+    }
+    if (awayTeam.id === antiJailedOpponentTeamId) {
+      if (awayState === "jailed" || awayState === "alreadyPicked" || awayState === "locked") {
+        return null;
+      }
+      return { team: awayTeam, state: awayState };
+    }
+    return null;
+  }, [
+    antiJailedOpponentTeamId,
+    awayState,
+    awayTeam,
+    homeState,
+    homeTeam,
+    isLocked,
+    isSubmitting,
+  ]);
+
   function renderTeamSide(args: {
     team: { id: string; abbreviation: string; name: string };
     state: MatchupSideState;
@@ -160,9 +238,6 @@ export function MatchupCard(props: MatchupCardProps) {
     const isJailed = state === "jailed";
     const isAlreadyPicked = state === "alreadyPicked";
     const isDisabled = isJailed || isAlreadyPicked || isLocked || isSubmitting;
-    const isAntiJailedEligible =
-      !isLocked && !isJailed && !isAlreadyPicked && !isSubmitting &&
-      antiJailedOpponentTeamId != null && team.id === antiJailedOpponentTeamId;
 
     const otherWeek = isAlreadyPicked ? pickedWeekByTeamId?.[team.id] : undefined;
 
@@ -204,7 +279,7 @@ export function MatchupCard(props: MatchupCardProps) {
           flex: 1,
           minWidth: 0,
           minHeight: 44,
-          py: 0.5,
+          py: { xs: 0.25, sm: 0.5 },
           pl: 0.5,
           borderRadius: 1,
           cursor: interactive && !isDisabled ? "pointer" : "default",
@@ -235,38 +310,6 @@ export function MatchupCard(props: MatchupCardProps) {
           ML {formatAmericanMl(moneylineAmerican)}
           {spreadStr ? ` · ${spreadStr}` : ""}
         </Typography>
-        {isAntiJailedEligible ? (
-          <Chip
-            size="small"
-            label="2 PTS"
-            onClick={interactive ? (e) => {
-              e.stopPropagation();
-              handleTeamActivate(team.id, state, { antiJailedBonus: true });
-            } : undefined}
-            onKeyDown={interactive ? (e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleTeamActivate(team.id, state, { antiJailedBonus: true });
-              }
-            } : undefined}
-            tabIndex={interactive ? 0 : -1}
-            aria-label={`Pick ${team.name} for 2-point anti-jailed bonus`}
-            sx={{
-              ml: 5,
-              minWidth: 44,
-              minHeight: 44,
-              fontWeight: 700,
-              letterSpacing: 0.5,
-              bgcolor: (t) => t.palette.accent.gold,
-              color: (t) => t.palette.getContrastText(t.palette.accent.gold),
-              "&:hover": {
-                bgcolor: (t) => t.palette.accent.goldDark,
-              },
-              cursor: interactive ? "pointer" : "default",
-            }}
-          />
-        ) : null}
       </Stack>
     );
   }
@@ -279,7 +322,7 @@ export function MatchupCard(props: MatchupCardProps) {
         width: "100%",
         maxWidth: { xs: 560, md: "none" },
         px: { xs: 1.25, sm: 2 },
-        py: { xs: 1.25, sm: 1.5 },
+        py: { xs: 1, sm: 1.5 },
         bgcolor: cardHasSelected ? "background.elevated" : "background.paper",
         borderWidth: cardHasJailed ? 2 : cardHasSelected ? 2 : 1,
         borderStyle: "solid",
@@ -299,7 +342,7 @@ export function MatchupCard(props: MatchupCardProps) {
           : undefined,
       }}
     >
-      <Stack spacing={1.5}>
+      <Stack sx={{ gap: { xs: 1, sm: 1.5 } }}>
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -321,50 +364,48 @@ export function MatchupCard(props: MatchupCardProps) {
               </Stack>
             ) : null}
           </Stack>
-          {weather ? (
-            stadiumRoof === "retractable" ? (
-              <Tooltip title="Retractable roof — may be open or closed on game day">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={0.75}
+            alignItems={{ xs: "flex-end", sm: "center" }}
+            flexWrap="wrap"
+            useFlexGap
+            justifyContent="flex-end"
+            sx={{ maxWidth: "100%", flexShrink: 0 }}
+          >
+            {antiJailedBonusSide
+              ? renderAntiJailedBonusChip(antiJailedBonusSide.team, antiJailedBonusSide.state)
+              : null}
+            {weather ? (
+              stadiumRoof === "retractable" ? (
+                <Tooltip title="Retractable roof — may be open or closed on game day">
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                    label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
+                    sx={{ maxWidth: { xs: 220, sm: "100%" }, cursor: "default" }}
+                  />
+                </Tooltip>
+              ) : (
                 <Chip
                   size="small"
                   variant="outlined"
-                  color="info"
                   label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
-                  sx={{ maxWidth: "100%", cursor: "default" }}
+                  sx={{ maxWidth: { xs: 220, sm: "100%" } }}
                 />
-              </Tooltip>
-            ) : (
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`${weather.tempF}°F · ${weather.condition} · ${weather.windMph} mph wind`}
-                sx={{ maxWidth: "100%" }}
-              />
-            )
-          ) : stadiumRoof === "dome" ? (
-            <Chip
-              size="small"
-              variant="outlined"
-              label="Indoor"
-              sx={{ maxWidth: "100%" }}
-            />
-          ) : stadiumRoof === "retractable" ? (
-            <Tooltip title="Retractable roof — may be open or closed on game day">
-              <Chip
-                size="small"
-                variant="outlined"
-                color="info"
-                label="Retractable Roof"
-                sx={{ maxWidth: "100%", cursor: "default" }}
-              />
-            </Tooltip>
-          ) : null}
+              )
+            ) : stadiumRoof === "dome" ? (
+              <Chip size="small" variant="outlined" label="Indoor" sx={{ maxWidth: "100%" }} />
+            ) : null}
+          </Stack>
         </Stack>
 
         <Divider flexItem sx={{ mt: -0.5 }} />
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          sx={{ gap: { xs: 1, sm: 2 } }}
           alignItems={{ xs: "stretch", sm: "flex-start" }}
           justifyContent="space-between"
         >

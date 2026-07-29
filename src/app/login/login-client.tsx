@@ -8,7 +8,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -28,7 +28,6 @@ type FieldErrors = {
 };
 
 export function LoginClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const alertRef = useRef<HTMLDivElement>(null);
   const [resetBanner, setResetBanner] = useState(
@@ -111,11 +110,11 @@ export function LoginClient() {
       }
       const rawCallback = searchParams.get("callbackUrl");
       const nextPath = getSafeCallbackPath(rawCallback, {
-        defaultPath: "/dashboard",
+        defaultPath: "/home",
         sameOrigin: window.location.origin,
       });
-      router.push(nextPath);
-      router.refresh();
+      // Full navigation so /home lands like a refresh (shell layout + scroll at top).
+      window.location.assign(nextPath);
     } finally {
       setPending(false);
     }
@@ -228,10 +227,6 @@ export function LoginClient() {
             Forgot password?
           </Link>
         </Stack>
-
-        <Link component={NextLink} href="/" variant="body2" color="text.secondary">
-          Back to home
-        </Link>
       </Stack>
     </>
   );

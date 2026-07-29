@@ -1,7 +1,6 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { LeagueMembershipRole } from "@prisma/client";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -10,6 +9,7 @@ import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { isSimulationComplete } from "@/lib/league/simulation-week";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 import { DeleteLeagueDialog } from "./delete-league-dialog";
@@ -69,16 +69,11 @@ export default async function LeagueSettingsPage({ params }: PageProps) {
       spacing={3}
       sx={{
         ...skipTargetMainSx,
-        minHeight: "100vh",
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
       }}
     >
-      <Typography variant="body2">
-        <Link href="/leagues">← Back to leagues you administer</Link>
-      </Typography>
       <Typography variant="h4" component="h1">
         League settings
       </Typography>

@@ -97,7 +97,7 @@ function AcceptInviteForm({ token, invitedEmail, leagueName }: AcceptInviteFormP
       if (data.leagueId) {
         router.push(`/leagues/${data.leagueId}`);
       } else {
-        router.push("/dashboard");
+        router.push("/home");
       }
       router.refresh();
     } finally {

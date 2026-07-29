@@ -274,10 +274,10 @@ export function WeekMatchupList({
           aria-label={interactive ? `Pick a team for Week ${weekLabel}` : undefined}
           aria-busy={submitting || undefined}
           onKeyDown={interactive ? handleRadiogroupKeyDown : undefined}
-          sx={{
+            sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-            gap: 2,
+            gap: { xs: 1.5, md: 2 },
           }}
         >
           {matchups.map((m) => (

@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const rawCallback = sp.callbackUrl;
     const nextPath = getSafeCallbackPath(
       typeof rawCallback === "string" ? rawCallback : null,
-      { defaultPath: "/dashboard" },
+      { defaultPath: "/home" },
     );
     redirect(nextPath);
   }

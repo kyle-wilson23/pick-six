@@ -3,6 +3,7 @@
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
@@ -40,73 +41,87 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
 
   return (
     <>
-      <Table size="small" aria-label="League standings">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ width: 40, ...tabularNums }}>#</TableCell>
-            <TableCell sx={{ width: "100%" }}>Participant</TableCell>
-            <TableCell sx={tabularNums}>Record</TableCell>
-            <TableCell align="right" sx={tabularNums}>
-              Pts
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {standings.map((entry) => {
-            const isCurrentUser = entry.membershipId === currentMembershipId;
-            const record = hasTies
-              ? `${entry.wins}-${entry.losses}-${entry.ties}`
-              : `${entry.wins}-${entry.losses}`;
+      <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+        <Table
+          size="small"
+          aria-label="League standings"
+          sx={{ tableLayout: "fixed", width: "100%" }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 36, ...tabularNums }}>#</TableCell>
+              <TableCell>Participant</TableCell>
+              <TableCell sx={{ width: 72, whiteSpace: "nowrap", ...tabularNums }}>Record</TableCell>
+              <TableCell align="right" sx={{ width: 44, ...tabularNums }}>
+                Pts
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {standings.map((entry) => {
+              const isCurrentUser = entry.membershipId === currentMembershipId;
+              const record = hasTies
+                ? `${entry.wins}-${entry.losses}-${entry.ties}`
+                : `${entry.wins}-${entry.losses}`;
 
-            return (
-              <TableRow
-                key={entry.membershipId}
-                aria-current={isCurrentUser ? true : undefined}
-                sx={
-                  isCurrentUser
-                    ? { bgcolor: (t) => `${t.palette.primary.main}14` }
-                    : undefined
-                }
-              >
-                <TableCell sx={tabularNums}>{entry.rank}</TableCell>
-                <TableCell>
-                  {entry.displayName}
-                  {isCurrentUser ? (
-                    <Typography
-                      component="span"
-                      sx={{
-                        position: "absolute",
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        margin: -1,
-                        overflow: "hidden",
-                        clip: "rect(0, 0, 0, 0)",
-                        whiteSpace: "nowrap",
-                        border: 0,
-                      }}
-                    >
-                      {" "}
-                      (You)
-                    </Typography>
-                  ) : null}
-                </TableCell>
-                <TableCell sx={tabularNums}>{record}</TableCell>
-                <TableCell
-                  align="right"
-                  sx={{
-                    ...tabularNums,
-                    color: "primary.main",
-                    fontWeight: 700,
-                  }}
+              return (
+                <TableRow
+                  key={entry.membershipId}
+                  aria-current={isCurrentUser ? true : undefined}
+                  sx={
+                    isCurrentUser
+                      ? { bgcolor: (t) => `${t.palette.primary.main}14` }
+                      : undefined
+                  }
                 >
-                  {entry.totalPoints}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  <TableCell sx={tabularNums}>{entry.rank}</TableCell>
+                  <TableCell
+                    title={entry.displayName}
+                    sx={{
+                      maxWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {entry.displayName}
+                    {isCurrentUser ? (
+                      <Typography
+                        component="span"
+                        sx={{
+                          position: "absolute",
+                          width: 1,
+                          height: 1,
+                          padding: 0,
+                          margin: -1,
+                          overflow: "hidden",
+                          clip: "rect(0, 0, 0, 0)",
+                          whiteSpace: "nowrap",
+                          border: 0,
+                        }}
+                      >
+                        {" "}
+                        (You)
+                      </Typography>
+                    ) : null}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap", ...tabularNums }}>{record}</TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      ...tabularNums,
+                      color: "primary.main",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {entry.totalPoints}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
       {noResultsYet && (
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
           No results scored yet

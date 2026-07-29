@@ -62,7 +62,7 @@ export function CreateLeagueForm({ allowTestLeagues }: CreateLeagueFormProps) {
       if (data && typeof data === "object" && "id" in data && typeof (data as { id: unknown }).id === "string") {
         router.push(`/leagues/${(data as { id: string }).id}/invites`);
       } else {
-        router.push("/dashboard");
+        router.push("/home");
       }
       router.refresh();
     } finally {

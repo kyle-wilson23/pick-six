@@ -6,12 +6,12 @@ export const focusVisibleRingSx = {
 } as const;
 
 /**
- * Skip-link target (`#main-content`): suppress default outline until focused,
- * then show the same ring (programmatic focus often won't match `:focus-visible`).
+ * Skip-link target (`#main-content`): no default outline; show ring only for
+ * keyboard/skip-link focus (`:focus-visible`), not incidental focus after nav clicks.
  */
 export const skipTargetMainSx = {
   outline: "none",
-  "&:focus": focusVisibleRingSx,
+  "&:focus-visible": focusVisibleRingSx,
 } as const;
 
 /** CSS-in-JS fragment for MUI `styleOverrides` (theme callback). */

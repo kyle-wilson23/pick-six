@@ -15,7 +15,7 @@ export function SkipLink() {
         const target = document.getElementById("main-content");
         if (!target) return;
         event.preventDefault();
-        target.focus();
+        target.focus({ focusVisible: true });
         if (window.location.hash !== "#main-content") {
           window.history.replaceState(null, "", "#main-content");
         }

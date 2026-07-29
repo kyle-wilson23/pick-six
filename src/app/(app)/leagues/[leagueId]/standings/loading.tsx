@@ -1,6 +1,7 @@
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 function StandingsRowSkeleton() {
@@ -31,12 +32,10 @@ export default function StandingsLoading() {
       tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
-        ...skipTargetMainSx,
       }}
       aria-busy="true"
       aria-label="Loading standings"

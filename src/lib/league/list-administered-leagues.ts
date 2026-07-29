@@ -3,6 +3,7 @@ import { LeagueMembershipRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 import { getCurrentNflSeasonYear } from "./nfl-season";
+import { sortLeaguesByRecentVisit } from "./sort-leagues-by-recent-visit";
 
 export type AdministeredLeagueWithSeasonRow = {
   league: {
@@ -11,6 +12,7 @@ export type AdministeredLeagueWithSeasonRow = {
     isTestLeague: boolean;
     createdAt: Date;
   };
+  lastVisitedAt: Date | null;
   season: null | {
     id: string;
     nflSeasonYear: number;
@@ -53,7 +55,7 @@ export function toAdministeredLeagueRows(
 
 /**
  * Leagues the user administers, with the current NFL season row when present (Story 2.4).
- * Sorted by league name ascending.
+ * Sorted by most recently visited, then name (Story 9.5).
  */
 export async function listAdministeredLeaguesWithCurrentSeason(
   userId: string,
@@ -71,8 +73,15 @@ export async function listAdministeredLeaguesWithCurrentSeason(
         },
       },
     },
-    orderBy: { league: { name: "asc" } },
   });
 
-  return toAdministeredLeagueRows(memberships.map((m) => m.league));
+  const rows = memberships.map((m) => {
+    const [row] = toAdministeredLeagueRows([m.league]);
+    return {
+      ...row,
+      lastVisitedAt: m.lastVisitedAt,
+    };
+  });
+
+  return sortLeaguesByRecentVisit(rows);
 }

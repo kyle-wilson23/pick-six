@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-5-app-shell-home-nav-scroll-breakpoints-loading.md (2026-07-29)
+
+- **Pathname league-id fallback retained for SSR/hydration** — Dropping `parseLeagueIdFromPathname` fallback in `LeagueNavShell` would avoid league tabs on true 404 URLs, but causes missing tabs in SSR HTML vs client. Reserved-segment guard (`new`) shipped instead; revisit if 404 chrome becomes a real issue.
+
 ## Launch-risk triage (Story 9.4 — 2026-07-28)
 
 Classifies remaining **open** launch-relevant deferred items before first real season. Disposition is exactly one of **Promote** / **Accept** / **Park**. Evidence for measurement closeouts lives in [`docs/performance-budgets.md`](../../docs/performance-budgets.md); circuit-breaker drill in `src/lib/email/send-tuesday-digest.test.ts`.
@@ -291,7 +295,7 @@ No additional Promote items created in 9.4 — launch risks are either Accepted 
 - **scoredAt/outcome field inconsistency on partial DB writes** — `src/lib/scoring/get-personal-pick-history.ts`. PENDING is determined solely by `outcome == null`; if a future scoring bug sets `outcome` without `scored_at` (or vice versa), the display diverges from the intent. AC1 says "scoredAt IS NULL / outcome IS NULL" are equivalent indicators; add a CHECK constraint (see 5.2 deferred) or check both fields when data integrity is hardened.
 - **season.findFirst non-deterministic on duplicate records** — `src/lib/scoring/get-personal-pick-history.ts`. If two Season rows share `(leagueId, nflSeasonYear)`, `findFirst` silently picks one. Schema likely enforces uniqueness; switch to `findUnique` and get a compile-time guarantee in a future scoring refactor pass.
 - **notFound() on unauthenticated session should redirect to sign-in** — `src/app/(app)/leagues/[leagueId]/history/page.tsx`. A 404 provides no recovery path for logged-out users. Pre-existing pattern across all protected app pages; fix when a unified auth-redirect middleware is introduced.
-- **minHeight: "100vh" on page Stack inside nested layout** — `src/app/(app)/leagues/[leagueId]/history/page.tsx`. Mirrors the standings page exactly per spec; may cause double-full-height subtrees if the app shell already occupies a full-height container. Revisit in a layout/UX pass.
+- ~~**minHeight: "100vh" on page Stack inside nested layout**~~ — **Resolved by Story 9.5** — removed nested `minHeight: "100vh"` from league pages inside global app shell; shared `appContentWidthSx` applied.
 - ~~**Breadcrumb link accessibility polish**~~ — **N/A / stale for history** — history breadcrumb removed in Story 6.6; league home “Your leagues” breadcrumb polished in Story 7.3 (`<nav aria-label="Breadcrumb">` + decorative arrow `aria-hidden`).
 - **React key on nflWeekNumber** — `src/components/history/PickHistoryTable.tsx`. DB unique constraint on `(leagueMembershipId, seasonId, nflWeekNumber)` prevents duplicates in practice; exposing a stable DB row ID in `PickHistoryEntry` would be safer if the constraint is ever relaxed.
 - **Unhandled Prisma rejections propagate as 500** — `src/app/(app)/leagues/[leagueId]/history/page.tsx` and `src/lib/scoring/get-personal-pick-history.ts`. No try/catch; DB errors surface as unhandled Next.js 500. Pre-existing pattern across all server components; address when a global error-handling layer is introduced.
@@ -396,9 +400,9 @@ No additional Promote items created in 9.4 — launch risks are either Accepted 
 - **PickStatusBanner desktop inline with page title** — UX spec shows banner inline with the "This Week" header row on desktop. Requires a header-row refactor; current banner remains full-width below deadline/jailed row.
 - **Standings desktop sidebar** — UX spec includes a contextual sidebar on desktop standings. MVP table-only layout retained; enhancement deferred to Epic 7.
 - ~~**Global 48px button height enforcement**~~ — **Resolved by 7.4** — theme `MuiButton` medium/large + `MuiTab` `minHeight: 48`.
-- ~~**Skeleton loading states**~~ — **Resolved by 7.4** — `loading.tsx` skeletons on picks + standings.
+- ~~**Skeleton loading states**~~ — **Resolved by 7.4** — `loading.tsx` skeletons on picks + standings; **extended by 9.5** with app-level `(app)/loading.tsx` spinner.
 - **Snackbar admin feedback** — UX prefers Snackbar for transient admin actions; current inline Alert pattern in email composers is acceptable MVP; polish pass deferred.
-- **Landing page hero layout** — Marketing landing page alignment out of league-shell scope; defer.
+- ~~**Landing page hero layout**~~ — **Resolved by Story 9.5** — marketing landing removed; signed-in `/` → `/home`, signed-out → `/login`.
 - **`generateMetadata` on league pages** — Deferred from Stories 5.4–5.6; Epic 7.
 - ~~**Full WCAG Level A audit**~~ — **Resolved by Story 7.3** — login/picks/standings + league shell; see `docs/accessibility-checklist.md`.
 - **WeatherBadge component extraction** — Weather remains inline in `MatchupCard`; cosmetic extraction deferred.

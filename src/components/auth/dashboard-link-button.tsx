@@ -5,8 +5,8 @@ import Link from "next/link";
 
 export function DashboardLinkButton() {
   return (
-    <Button variant="outlined" size="large" component={Link} href="/dashboard">
-      Dashboard
+    <Button variant="outlined" size="large" component={Link} href="/home">
+      Home
     </Button>
   );
 }

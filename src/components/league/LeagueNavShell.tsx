@@ -3,125 +3,138 @@
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import HistoryIcon from "@mui/icons-material/History";
+import HomeIcon from "@mui/icons-material/Home";
 import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import SettingsIcon from "@mui/icons-material/Settings";
 import SportsFootballIcon from "@mui/icons-material/SportsFootball";
 import AppBar from "@mui/material/AppBar";
-import Avatar from "@mui/material/Avatar";
-import BottomNavigation from "@mui/material/BottomNavigation";
-import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Box from "@mui/material/Box";
+import Portal from "@mui/material/Portal";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactElement, ReactNode } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { useAppNavLeague } from "@/components/layout/AppNavLeagueContext";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { NavigationLoadingIndicator } from "@/components/layout/NavigationLoadingIndicator";
+import { ScrollToTopOnNavigate } from "@/components/layout/ScrollToTopOnNavigate";
+import { UserNavMenu } from "@/components/layout/UserNavMenu";
 import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import {
   buildLeagueTabHref,
   getActiveLeagueTab,
   getLeagueNavTabs,
+  isHomePath,
+  parseLeagueIdFromPathname,
   type LeagueNavTab,
 } from "@/lib/league/league-nav-tabs";
 
 type LeagueNavShellProps = {
-  leagueId: string;
-  leagueName: string;
-  isTestLeague?: boolean;
-  isAdmin: boolean;
   userDisplayName: string;
   children: ReactNode;
 };
 
 const TAB_ICONS: Record<string, ReactElement> = {
+  home: <HomeIcon />,
   picks: <SportsFootballIcon />,
   standings: <LeaderboardIcon />,
   history: <HistoryIcon />,
   results: <EmojiEventsIcon />,
   rules: <MenuBookIcon />,
   admin: <AdminPanelSettingsIcon />,
+  settings: <SettingsIcon />,
 };
 
-function userInitials(displayName: string): string {
-  const trimmed = displayName.trim();
-  if (!trimmed) return "?";
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
-  }
-  return trimmed.slice(0, 2).toUpperCase();
-}
-
 function renderDesktopTab(
-  tab: LeagueNavTab,
-  leagueId: string,
+  tab: LeagueNavTab | { key: string; label: string; href: string },
   activeTab: string | false,
 ) {
   const isActive = activeTab === tab.key;
+  const href = "href" in tab ? tab.href : tab.hrefSuffix;
   return (
     <Tab
       key={tab.key}
       label={tab.label}
       value={tab.key}
       component={Link}
-      href={buildLeagueTabHref(leagueId, tab.hrefSuffix)}
+      href={href}
       aria-current={isActive ? "page" : undefined}
     />
   );
 }
 
-export function LeagueNavShell({
-  leagueId,
-  leagueName,
-  isTestLeague = false,
-  isAdmin,
-  userDisplayName,
-  children,
-}: LeagueNavShellProps) {
+export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProps) {
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const pathname = usePathname();
-  const tabs = getLeagueNavTabs(isAdmin);
-  const activeTab = getActiveLeagueTab(pathname, leagueId) ?? false;
+  const league = useAppNavLeague();
+
+  const leagueId = league?.leagueId ?? parseLeagueIdFromPathname(pathname);
+  const leagueName = league?.leagueName ?? "";
+  const isTestLeague = league?.isTestLeague ?? false;
+  const isAdmin = league?.isAdmin ?? false;
+
+  const homeActive = isHomePath(pathname);
+  const leagueActiveTab =
+    leagueId != null ? (getActiveLeagueTab(pathname, leagueId) ?? false) : false;
+  const activeTab = homeActive ? "home" : leagueActiveTab;
+
+  const leagueTabs = leagueId != null ? getLeagueNavTabs(isAdmin) : [];
+
+  const homeTab = {
+    key: "home",
+    label: "Home",
+    href: "/home",
+  };
 
   return (
     <>
+      <ScrollToTopOnNavigate />
       <SkipLink />
-      <Stack sx={{ minHeight: "100vh" }}>
-        {isDesktop ? (
-          <AppBar
-            position="sticky"
-            color="default"
-            elevation={0}
-            sx={{
-              borderBottom: 1,
-              borderColor: "divider",
-              bgcolor: "background.paper",
-            }}
-          >
-            <Toolbar sx={{ gap: 2, minHeight: { md: 64 } }}>
-              <Typography
-                component={Link}
-                href={`/leagues/${leagueId}`}
-                variant="h6"
-                sx={{
-                  color: "primary.main",
-                  fontWeight: 800,
-                  letterSpacing: 1,
-                  textDecoration: "none",
-                  flexShrink: 0,
-                }}
-              >
-                PICK SIX
-              </Typography>
+      <Stack
+        sx={{
+          minHeight: "100vh",
+          overflowAnchor: "none",
+          overflowX: "hidden",
+          width: "100%",
+          maxWidth: "100vw",
+        }}
+      >
+        <AppBar
+          position="fixed"
+          color="default"
+          elevation={0}
+          sx={{
+            display: { xs: "none", md: "flex" },
+            borderBottom: 1,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
+          <Toolbar sx={{ gap: 2, minHeight: { md: 64 } }}>
+            <Typography
+              component={Link}
+              href="/home"
+              variant="h6"
+              sx={{
+                color: "primary.main",
+                fontWeight: 800,
+                letterSpacing: 1,
+                textDecoration: "none",
+                flexShrink: 0,
+              }}
+            >
+              PICK SIX
+            </Typography>
 
+            {leagueId != null ? (
               <Stack
                 direction="row"
                 spacing={0.75}
@@ -133,64 +146,61 @@ export function LeagueNavShell({
                 </Typography>
                 {isTestLeague ? <TestLeagueChip /> : null}
               </Stack>
+            ) : null}
 
-              <Box
-                component="nav"
-                aria-label="League"
-                sx={{ flex: 1, minWidth: 0, display: "flex" }}
+            <Box component="nav" aria-label="App" sx={{ flex: 1, minWidth: 0, display: "flex" }}>
+              <Tabs
+                value={activeTab}
+                onChange={() => {}}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  "& .MuiTab-root": {
+                    minHeight: 48,
+                    textTransform: "none",
+                    fontWeight: 600,
+                  },
+                  "& .Mui-selected": {
+                    color: "primary.main",
+                  },
+                  "& .MuiTabs-indicator": {
+                    height: 2,
+                    bgcolor: "primary.main",
+                  },
+                }}
               >
-                <Tabs
-                  value={activeTab}
-                  onChange={() => {}}
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  sx={{
-                    flex: 1,
-                    minWidth: 0,
-                    "& .MuiTab-root": {
-                      minHeight: 48,
-                      textTransform: "none",
-                      fontWeight: 600,
-                    },
-                    "& .Mui-selected": {
-                      color: "primary.main",
-                    },
-                    "& .MuiTabs-indicator": {
-                      height: 2,
-                      bgcolor: "primary.main",
-                    },
-                  }}
-                >
-                  {tabs.map((tab) => renderDesktopTab(tab, leagueId, activeTab))}
-                </Tabs>
-              </Box>
+                {renderDesktopTab(homeTab, activeTab)}
+                {leagueId != null
+                  ? leagueTabs.map((tab) =>
+                      renderDesktopTab(
+                        {
+                          ...tab,
+                          href: buildLeagueTabHref(leagueId, tab.hrefSuffix),
+                        },
+                        activeTab,
+                      ),
+                    )
+                  : null}
+              </Tabs>
+            </Box>
 
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Avatar
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    bgcolor: "primary.dark",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {userInitials(userDisplayName)}
-                </Avatar>
-                <Typography variant="body2" noWrap sx={{ maxWidth: 140 }}>
-                  {userDisplayName}
-                </Typography>
-              </Stack>
-            </Toolbar>
-          </AppBar>
-        ) : null}
+            <UserNavMenu userDisplayName={userDisplayName} />
+          </Toolbar>
+        </AppBar>
 
-        {!isDesktop && isTestLeague ? (
+        {/* Reserve top space for fixed desktop AppBar (CSS-gated; no useMediaQuery flash). */}
+        <Toolbar sx={{ display: { xs: "none", md: "flex" }, minHeight: { md: 64 } }} />
+
+        {leagueId != null && isTestLeague ? (
           <Stack
             direction="row"
             spacing={1}
             alignItems="center"
             justifyContent="center"
             sx={{
+              display: { xs: "flex", md: "none" },
               position: "sticky",
               top: 0,
               zIndex: theme.zIndex.appBar,
@@ -210,64 +220,26 @@ export function LeagueNavShell({
 
         <Box
           sx={{
+            position: "relative",
             flex: 1,
-            pb: isDesktop
-              ? 0
-              : "calc(56px + env(safe-area-inset-bottom, 0px))",
+            pb: {
+              xs: "calc(56px + env(safe-area-inset-bottom, 0px))",
+              md: 0,
+            },
           }}
         >
+          <NavigationLoadingIndicator />
           {children}
         </Box>
-
-        {!isDesktop ? (
-          <Box
-            component="nav"
-            aria-label="League"
-            sx={{
-              position: "fixed",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              zIndex: theme.zIndex.appBar,
-            }}
-          >
-            <BottomNavigation
-              value={activeTab}
-              onChange={() => {}}
-              showLabels
-              sx={{
-                height: 56,
-                pb: "env(safe-area-inset-bottom, 0px)",
-                borderTop: 1,
-                borderColor: "divider",
-                bgcolor: "background.paper",
-                "& .MuiBottomNavigationAction-root": {
-                  minWidth: 0,
-                  px: 0.5,
-                },
-                "& .Mui-selected": {
-                  color: "primary.main",
-                },
-              }}
-            >
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <BottomNavigationAction
-                    key={tab.key}
-                    label={tab.label}
-                    value={tab.key}
-                    icon={TAB_ICONS[tab.key]}
-                    component={Link}
-                    href={buildLeagueTabHref(leagueId, tab.hrefSuffix)}
-                    aria-current={isActive ? "page" : undefined}
-                  />
-                );
-              })}
-            </BottomNavigation>
-          </Box>
-        ) : null}
       </Stack>
+      <Portal>
+        <MobileBottomNav
+          homeActive={homeActive}
+          leagueId={leagueId}
+          leagueActiveTab={leagueActiveTab}
+          isAdmin={isAdmin}
+        />
+      </Portal>
     </>
   );
 }

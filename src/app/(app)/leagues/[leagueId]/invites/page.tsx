@@ -10,6 +10,7 @@ import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 
 import { InviteParticipantsForm } from "./invite-participants-form";
 import { MarkLeagueReadySection } from "./mark-league-ready-section";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
@@ -46,11 +47,9 @@ export default async function LeagueInvitesPage({ params }: PageProps) {
       spacing={3}
       sx={{
         ...skipTargetMainSx,
-        minHeight: "100vh",
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
       }}
     >
       <Typography variant="h4" component="h1">

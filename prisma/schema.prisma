@@ -93,6 +93,7 @@ model LeagueMembership {
   userId    String               @map("user_id")
   leagueId  String               @map("league_id")
   role      LeagueMembershipRole
+  lastVisitedAt DateTime?          @map("last_visited_at") @db.Timestamptz
   createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime             @updatedAt @map("updated_at") @db.Timestamptz
 

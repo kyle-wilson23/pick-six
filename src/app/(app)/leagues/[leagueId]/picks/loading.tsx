@@ -1,17 +1,18 @@
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 function MatchupCardSkeleton() {
   return (
     <Stack
-      spacing={1.5}
       sx={{
+        gap: { xs: 1, sm: 1.5 },
         width: "100%",
         maxWidth: { xs: 560, md: "none" },
         px: { xs: 1.25, sm: 2 },
-        py: { xs: 1.25, sm: 1.5 },
+        py: { xs: 1, sm: 1.5 },
         borderRadius: 2,
         border: "1px solid",
         borderColor: "divider",
@@ -25,7 +26,7 @@ function MatchupCardSkeleton() {
       <Skeleton variant="rectangular" height={1} sx={{ bgcolor: "divider" }} />
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        spacing={2}
+        sx={{ gap: { xs: 1, sm: 2 } }}
         alignItems={{ xs: "stretch", sm: "flex-start" }}
         justifyContent="space-between"
       >
@@ -58,13 +59,11 @@ export default function PicksLoading() {
       tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: { xs: 1.5, sm: 2 },
         py: { xs: 3, md: 4 },
-        maxWidth: { xs: 640, md: 960 },
-        mx: "auto",
         alignItems: "stretch",
-        ...skipTargetMainSx,
       }}
       aria-busy="true"
       aria-label="Loading weekly picks"
@@ -74,7 +73,7 @@ export default function PicksLoading() {
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: 2,
+          gap: { xs: 1.5, md: 2 },
         }}
       >
         <MatchupCardSkeleton />

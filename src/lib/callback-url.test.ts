@@ -57,6 +57,9 @@ describe("getSafeCallbackPath", () => {
   });
 
   it("buildLoginRedirectWithCallback encodes a safe path", () => {
+    expect(buildLoginRedirectWithCallback("/home/foo")).toBe(
+      "/login?callbackUrl=%2Fhome%2Ffoo",
+    );
     expect(buildLoginRedirectWithCallback("/dashboard/foo")).toBe(
       "/login?callbackUrl=%2Fdashboard%2Ffoo",
     );

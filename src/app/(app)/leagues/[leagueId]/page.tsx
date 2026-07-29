@@ -1,13 +1,11 @@
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { LeagueMembershipRole } from "@prisma/client";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
 import { TestLeagueChip } from "@/components/league/TestLeagueChip";
-import { AdminLeagueRowActions } from "@/components/leagues/admin-league-row-actions";
+import { LeagueHubQuickActions } from "@/components/league/LeagueHubQuickActions";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
@@ -16,6 +14,7 @@ import { listLeagueRoster } from "@/lib/league/list-league-roster";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 type PageProps = {
@@ -34,7 +33,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
     notFound();
   }
 
-  const { membership, league } = access;
+  const { league } = access;
 
   const nflSeasonYear = getCurrentNflSeasonYear();
   const seasonRow = await resolveCurrentSeasonForLeague(prisma.season, leagueId, nflSeasonYear);
@@ -59,23 +58,12 @@ export default async function LeagueHomePage({ params }: PageProps) {
       tabIndex={-1}
       spacing={3}
       sx={{
-        minHeight: "100vh",
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
         px: 2,
         py: 4,
-        maxWidth: 560,
-        mx: "auto",
-        ...skipTargetMainSx,
       }}
     >
-      <Stack component="nav" aria-label="Breadcrumb">
-        <Typography variant="body2" component="span">
-          <Link href="/my-leagues">
-            <span aria-hidden="true">← </span>
-            Your leagues
-          </Link>
-        </Typography>
-      </Stack>
-
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
         <Typography variant="h4" component="h1">
           {league.name}
@@ -94,25 +82,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
         </Typography>
       </Stack>
 
-      <Stack spacing={1}>
-        <Typography variant="subtitle2" color="text.secondary">
-          League hub
-        </Typography>
-        <Link href={`/leagues/${leagueId}/picks`}>Weekly picks</Link>
-        <Link href={`/leagues/${leagueId}/standings`}>Standings</Link>
-        <Link href={`/leagues/${leagueId}/history`}>History</Link>
-        <Link href={`/leagues/${leagueId}/results`}>Results</Link>
-        <Link href={`/leagues/${leagueId}/rules`}>League rules</Link>
-      </Stack>
-
-      {membership.role === LeagueMembershipRole.ADMIN ? (
-        <Stack spacing={1}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Admin
-          </Typography>
-          <AdminLeagueRowActions leagueId={leagueId} />
-        </Stack>
-      ) : null}
+      <LeagueHubQuickActions leagueId={leagueId} />
 
       <Stack spacing={1.5}>
         <Typography variant="h6" component="h2">

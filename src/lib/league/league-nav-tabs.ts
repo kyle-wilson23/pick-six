@@ -45,14 +45,57 @@ export const LEAGUE_ADMIN_TAB: LeagueNavTab = {
   matchPaths: ["/admin"],
 };
 
+export const LEAGUE_SETTINGS_TAB: LeagueNavTab = {
+  key: "settings",
+  label: "Settings",
+  hrefSuffix: "/settings",
+  matchPaths: ["/settings"],
+};
+
 export function buildLeagueTabHref(leagueId: string, hrefSuffix: string): string {
   return `/leagues/${leagueId}${hrefSuffix}`;
 }
 
 export function getLeagueNavTabs(isAdmin: boolean): LeagueNavTab[] {
-  return isAdmin
-    ? [...LEAGUE_PARTICIPANT_TABS, LEAGUE_ADMIN_TAB]
+  const tabs = isAdmin
+    ? [...LEAGUE_PARTICIPANT_TABS, LEAGUE_ADMIN_TAB, LEAGUE_SETTINGS_TAB]
     : [...LEAGUE_PARTICIPANT_TABS];
+  return tabs;
+}
+
+/** Tab keys shown in the mobile More overflow menu instead of the bottom bar. */
+export const MOBILE_MORE_MENU_TAB_KEYS = new Set(["rules", "admin", "settings"]);
+
+/** Primary mobile bottom nav tabs — overflow keys live in the More menu. */
+export function getMobileBottomNavTabs(isAdmin: boolean): LeagueNavTab[] {
+  return getLeagueNavTabs(isAdmin).filter((tab) => !MOBILE_MORE_MENU_TAB_KEYS.has(tab.key));
+}
+
+export function getMobileMoreMenuTabs(isAdmin: boolean): LeagueNavTab[] {
+  return getLeagueNavTabs(isAdmin).filter((tab) => MOBILE_MORE_MENU_TAB_KEYS.has(tab.key));
+}
+
+export function isMobileMoreMenuTab(tabKey: string): boolean {
+  return MOBILE_MORE_MENU_TAB_KEYS.has(tabKey);
+}
+
+export function isHomePath(pathname: string): boolean {
+  const path = pathname.split("?")[0] ?? pathname;
+  return path === "/home" || path === "/dashboard" || path === "/dashboard/";
+}
+
+/** Static `/leagues/...` segments that are not league ids (create form, etc.). */
+const RESERVED_LEAGUE_PATH_SEGMENTS = new Set(["new"]);
+
+/** Reads `/leagues/[leagueId]` from the URL when nav context is not synced yet. */
+export function parseLeagueIdFromPathname(pathname: string): string | null {
+  const path = pathname.split("?")[0] ?? pathname;
+  const match = /^\/leagues\/([^/]+)/.exec(path);
+  const segment = match?.[1];
+  if (!segment || RESERVED_LEAGUE_PATH_SEGMENTS.has(segment)) {
+    return null;
+  }
+  return segment;
 }
 
 /**

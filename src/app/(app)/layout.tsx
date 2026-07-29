@@ -7,10 +7,12 @@
  */
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
+import { AppNavLeagueRootProvider } from "@/components/layout/AppNavLeagueContext";
+import { LeagueNavShell } from "@/components/league/LeagueNavShell";
 import { auth } from "@/lib/auth";
 import { buildLoginRedirectWithCallback } from "@/lib/callback-url";
+import { redirect } from "next/navigation";
 
 export default async function AppShellLayout({
   children,
@@ -19,9 +21,15 @@ export default async function AppShellLayout({
 }>) {
   const session = await auth();
   if (!session?.user) {
-    const pathname = (await headers()).get("x-pathname") ?? "/dashboard";
+    const pathname = (await headers()).get("x-pathname") ?? "/home";
     redirect(buildLoginRedirectWithCallback(pathname));
   }
 
-  return <>{children}</>;
+  const userDisplayName = session.user.name ?? session.user.email ?? "User";
+
+  return (
+    <AppNavLeagueRootProvider>
+      <LeagueNavShell userDisplayName={userDisplayName}>{children}</LeagueNavShell>
+    </AppNavLeagueRootProvider>
+  );
 }

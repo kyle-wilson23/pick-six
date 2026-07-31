@@ -142,6 +142,8 @@ development_status:
   9-7-email-html-layout-polish: done # Full email layout pass; "make my picks" must be emphasized (not tiny)
   epic-9-retrospective: optional
 
+  # TODO: Create a 'create account' flow by surfacing a create account link on the login page.
+
   # Post-Epic 9 — production launch gate (must complete before first real NFL season; after Epic 9)
   # Detailed checklist: docs/deployment.md
   post-epic-9-vercel-production-env-and-cron: backlog # Production env vars (.env.example); deploy vercel.json crons; CRON_SECRET; redeploy after env changes

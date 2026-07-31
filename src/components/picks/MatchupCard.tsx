@@ -7,6 +7,7 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { alpha, type Theme } from "@mui/material/styles";
 import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { useMemo, type KeyboardEvent } from "react";
@@ -17,6 +18,7 @@ import {
   type MatchupSideState,
 } from "@/lib/picks/matchup-card-state";
 import { buildTeamPickAriaLabel } from "@/lib/picks/team-pick-aria-label";
+import { shouldShowRetractableWeatherChrome } from "@/lib/picks/retractable-weather-chrome";
 import { focusVisibleRingSx } from "@/theme/focus-visible-ring";
 
 import type { PicksWeekMatchupJson } from "@/lib/picks/picks-week-view-types";
@@ -37,6 +39,38 @@ function formatAmericanMl(value: number | null): string {
     return `+${value}`;
   }
   return `${value}`;
+}
+
+function pickSideGlowSx(isSelected: boolean, isSelectable: boolean) {
+  if (isSelected) {
+    return {
+      bgcolor: (t: Theme) => alpha(t.palette.primary.main, 0.16),
+      boxShadow: (t: Theme) => `0 0 12px ${alpha(t.palette.primary.main, 0.4)}`,
+      "&:focus-visible": {
+        ...focusVisibleRingSx,
+        bgcolor: (t: Theme) => alpha(t.palette.primary.main, 0.16),
+        boxShadow: (t: Theme) => `0 0 12px ${alpha(t.palette.primary.main, 0.4)}`,
+      },
+    };
+  }
+  if (!isSelectable) {
+    return {};
+  }
+  return {
+    transition: (t: Theme) =>
+      t.transitions.create(["background-color", "box-shadow"], {
+        duration: t.transitions.duration.shortest,
+      }),
+    "&:hover": {
+      bgcolor: (t: Theme) => alpha(t.palette.primary.main, 0.14),
+      boxShadow: (t: Theme) => `0 0 12px ${alpha(t.palette.primary.main, 0.35)}`,
+    },
+    "&:focus-visible": {
+      ...focusVisibleRingSx,
+      bgcolor: (t: Theme) => alpha(t.palette.primary.main, 0.14),
+      boxShadow: (t: Theme) => `0 0 12px ${alpha(t.palette.primary.main, 0.35)}`,
+    },
+  };
 }
 
 export type SelectionReason =
@@ -264,6 +298,8 @@ export function MatchupCard(props: MatchupCardProps) {
       }
     }
 
+    const isSelectable = interactive && !isDisabled;
+
     return (
       <Stack
         spacing={0.75}
@@ -285,7 +321,7 @@ export function MatchupCard(props: MatchupCardProps) {
           cursor: interactive && !isDisabled ? "pointer" : "default",
           color: isAlreadyPicked ? "text.disabled" : "inherit",
           outline: "none",
-          "&:focus-visible": focusVisibleRingSx,
+          ...pickSideGlowSx(isSelected, isSelectable),
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
@@ -337,9 +373,6 @@ export function MatchupCard(props: MatchupCardProps) {
           t.transitions.create(["background-color", "border-color", "opacity"], {
             duration: t.transitions.duration.shortest,
           }),
-        "&:hover": interactive && !isSubmitting
-          ? { bgcolor: "background.elevated" }
-          : undefined,
       }}
     >
       <Stack sx={{ gap: { xs: 1, sm: 1.5 } }}>
@@ -377,7 +410,7 @@ export function MatchupCard(props: MatchupCardProps) {
               ? renderAntiJailedBonusChip(antiJailedBonusSide.team, antiJailedBonusSide.state)
               : null}
             {weather ? (
-              stadiumRoof === "retractable" ? (
+              shouldShowRetractableWeatherChrome(weather, stadiumRoof) ? (
                 <Tooltip title="Retractable roof — may be open or closed on game day">
                   <Chip
                     size="small"

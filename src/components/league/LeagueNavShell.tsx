@@ -22,7 +22,10 @@ import { usePathname } from "next/navigation";
 import type { ReactElement, ReactNode } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
-import { useAppNavLeague } from "@/components/layout/AppNavLeagueContext";
+import {
+  useAppNavLeague,
+  useClearAppNavLeagueWhenOutsideLeagueRoute,
+} from "@/components/layout/AppNavLeagueContext";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { NavigationLoadingIndicator } from "@/components/layout/NavigationLoadingIndicator";
 import { ScrollToTopOnNavigate } from "@/components/layout/ScrollToTopOnNavigate";
@@ -33,7 +36,7 @@ import {
   getActiveLeagueTab,
   getLeagueNavTabs,
   isHomePath,
-  parseLeagueIdFromPathname,
+  resolveAppNavLeagueId,
   type LeagueNavTab,
 } from "@/lib/league/league-nav-tabs";
 
@@ -74,19 +77,29 @@ function renderDesktopTab(
 export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProps) {
   const theme = useTheme();
   const pathname = usePathname();
+  useClearAppNavLeagueWhenOutsideLeagueRoute();
   const league = useAppNavLeague();
 
-  const leagueId = league?.leagueId ?? parseLeagueIdFromPathname(pathname);
+  const leagueId = resolveAppNavLeagueId(pathname);
   const leagueName = league?.leagueName ?? "";
   const isTestLeague = league?.isTestLeague ?? false;
-  const isAdmin = league?.isAdmin ?? false;
+  // Pathname can resolve admin/settings before SyncAppNavLeague repopulates context.
+  // Only trust the path when context is still null — never override an explicit false.
+  const pathLeagueTab =
+    leagueId != null ? getActiveLeagueTab(pathname, leagueId) : null;
+  const isAdmin =
+    league?.isAdmin === true ||
+    (league == null &&
+      (pathLeagueTab === "admin" || pathLeagueTab === "settings"));
 
   const homeActive = isHomePath(pathname);
-  const leagueActiveTab =
-    leagueId != null ? (getActiveLeagueTab(pathname, leagueId) ?? false) : false;
+  const leagueActiveTab = pathLeagueTab ?? false;
   const activeTab = homeActive ? "home" : leagueActiveTab;
 
   const leagueTabs = leagueId != null ? getLeagueNavTabs(isAdmin) : [];
+  const renderedTabKeys = new Set(["home", ...leagueTabs.map((tab) => tab.key)]);
+  const tabsValue =
+    typeof activeTab === "string" && renderedTabKeys.has(activeTab) ? activeTab : false;
 
   const homeTab = {
     key: "home",
@@ -150,7 +163,7 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
 
             <Box component="nav" aria-label="App" sx={{ flex: 1, minWidth: 0, display: "flex" }}>
               <Tabs
-                value={activeTab}
+                value={tabsValue}
                 onChange={() => {}}
                 variant="scrollable"
                 scrollButtons="auto"
@@ -171,7 +184,7 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
                   },
                 }}
               >
-                {renderDesktopTab(homeTab, activeTab)}
+                {renderDesktopTab(homeTab, tabsValue)}
                 {leagueId != null
                   ? leagueTabs.map((tab) =>
                       renderDesktopTab(
@@ -179,7 +192,7 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
                           ...tab,
                           href: buildLeagueTabHref(leagueId, tab.hrefSuffix),
                         },
-                        activeTab,
+                        tabsValue,
                       ),
                     )
                   : null}

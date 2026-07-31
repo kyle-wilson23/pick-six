@@ -52,7 +52,7 @@ export function ResetPasswordClient({ token, isValid }: ResetPasswordClientProps
           <ResetPasswordForm token={token} />
         )}
 
-        <Link component={NextLink} href="/login" variant="body2" color="text.secondary">
+        <Link component={NextLink} href="/login" variant="body2">
           Back to login
         </Link>
       </Stack>

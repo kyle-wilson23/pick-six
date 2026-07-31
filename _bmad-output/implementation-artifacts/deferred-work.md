@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-6-league-hub-and-picks-interaction-polish.md (2026-07-31)
+
+- **Mobile top chrome scroll-padding only desktop** — `scrollMarginTop` / `scrollPaddingTop` apply at `md+` only for the fixed desktop AppBar; small viewports still rely on bottom nav / `xs: 0`. Not introduced as a new product requirement in 9.6.
+
 ## Deferred from: code review of 9-5-app-shell-home-nav-scroll-breakpoints-loading.md (2026-07-29)
 
 - **Pathname league-id fallback retained for SSR/hydration** — Dropping `parseLeagueIdFromPathname` fallback in `LeagueNavShell` would avoid league tabs on true 404 URLs, but causes missing tabs in SSR HTML vs client. Reserved-segment guard (`new`) shipped instead; revisit if 404 chrome becomes a real issue.
@@ -24,10 +28,17 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 | N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users; revisit if timeouts |
 | Weather cache failure TTL / eviction | **Park** | Fail-soft UX; not launch-blocking |
 | UI polish (hub, links, home, loading, email HTML) | **Promote (owned)** | Stories **9.5–9.7** already in sprint-status — do not re-create |
+| UI polish hub / links / pick glow / retractable hide | **Resolved (9.6)** | Story **9.6** — league hub pop + contained CTAs; theme link color+underline; per-pick green glow; hide retractable roof without weather |
+| UI polish email HTML / password-reset CTA | **Promote (owned)** | Story **9.7** — email layout pass; "make my picks" emphasis |
 | Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | **9.2** decision done; ops in `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel…` |
 | Password-reset CTA plaintext / token cleanup | **Park (owned)** | **9.7** email HTML polish / ops park |
 
-No additional Promote items created in 9.4 — launch risks are either Accepted with owner or already owned by 9.5–9.7 / post-epic-9.
+## Resolved by Story 9.6 (2026-07-29)
+
+- **League hub visual pop + contained CTAs** — `LeagueHubQuickActions` elevated Paper hub block; season summary folded into hub; Picks/Standings/Results as `contained` buttons.
+- **App-wide link color + underline** — `create-app-theme.ts` `MuiLink` defaults + `MuiCssBaseline` bare `<a>` styles; auth back-links no longer force `text.secondary`.
+- **Per-pick green glow hover** — `MatchupCard` individual team-side glow; whole-card hover removed; selected side visible without hover.
+- **Retractable roof hidden without weather** — `shouldShowRetractableWeatherChrome` helper + unit tests; dome Indoor chip unchanged.
 
 ---
 

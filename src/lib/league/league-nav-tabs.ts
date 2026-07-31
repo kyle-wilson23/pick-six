@@ -99,6 +99,17 @@ export function parseLeagueIdFromPathname(pathname: string): string | null {
 }
 
 /**
+ * League id for global nav chrome from the URL. Home always returns null so stale
+ * league context cannot keep league tabs mounted after navigating away.
+ */
+export function resolveAppNavLeagueId(pathname: string): string | null {
+  if (isHomePath(pathname)) {
+    return null;
+  }
+  return parseLeagueIdFromPathname(pathname);
+}
+
+/**
  * Returns the active tab key for league sub-routes, or `null` when no tab matches
  * (e.g. hub, settings, invites).
  */

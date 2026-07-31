@@ -1,6 +1,16 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { parseLeagueIdFromPathname } from "@/lib/league/league-nav-tabs";
 
 export type AppNavLeagueState = {
   leagueId: string;
@@ -33,6 +43,18 @@ function useAppNavLeagueContext(): AppNavLeagueContextValue {
 
 export function useAppNavLeague(): AppNavLeagueState | null {
   return useAppNavLeagueContext().league;
+}
+
+/** Clears stale league nav context as soon as the URL leaves `/leagues/[leagueId]`. */
+export function useClearAppNavLeagueWhenOutsideLeagueRoute() {
+  const pathname = usePathname();
+  const { setLeague } = useAppNavLeagueContext();
+
+  useLayoutEffect(() => {
+    if (parseLeagueIdFromPathname(pathname) === null) {
+      setLeague(null);
+    }
+  }, [pathname, setLeague]);
 }
 
 type SyncAppNavLeagueProps = {

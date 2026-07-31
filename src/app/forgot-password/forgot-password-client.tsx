@@ -179,7 +179,7 @@ export function ForgotPasswordClient() {
           </Button>
         </Stack>
 
-        <Link component={NextLink} href="/login" variant="body2" color="text.secondary">
+        <Link component={NextLink} href="/login" variant="body2">
           Back to login
         </Link>
       </Stack>

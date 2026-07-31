@@ -73,16 +73,10 @@ export default async function LeagueHomePage({ params }: PageProps) {
 
       {league.isTestLeague ? <TestLeagueBanner /> : null}
 
-      <Stack spacing={1}>
-        <Typography variant="subtitle2" color="text.secondary">
-          Season
-        </Typography>
-        <Typography variant="body1">
-          {describeSeasonForParticipant({ nflSeasonYear, season })}
-        </Typography>
-      </Stack>
-
-      <LeagueHubQuickActions leagueId={leagueId} />
+      <LeagueHubQuickActions
+        leagueId={leagueId}
+        seasonDescription={describeSeasonForParticipant({ nflSeasonYear, season })}
+      />
 
       <Stack spacing={1.5}>
         <Typography variant="h6" component="h2">

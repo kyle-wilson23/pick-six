@@ -8,6 +8,7 @@ import {
   getMobileMoreMenuTabs,
   LEAGUE_PARTICIPANT_TABS,
   parseLeagueIdFromPathname,
+  resolveAppNavLeagueId,
 } from "./league-nav-tabs";
 
 const LEAGUE_ID = "abc";
@@ -98,5 +99,16 @@ describe("parseLeagueIdFromPathname", () => {
     ["/my-leagues", null],
   ] as const)("parses %s → %s", (pathname, expected) => {
     expect(parseLeagueIdFromPathname(pathname)).toBe(expected);
+  });
+});
+
+describe("resolveAppNavLeagueId", () => {
+  it.each([
+    ["/home", null],
+    ["/dashboard", null],
+    ["/my-leagues", null],
+    ["/leagues/abc/picks", "abc"],
+  ] as const)("resolves %s → %s", (pathname, expected) => {
+    expect(resolveAppNavLeagueId(pathname)).toBe(expected);
   });
 });

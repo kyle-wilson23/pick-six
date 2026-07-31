@@ -5,10 +5,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 function resetScroll() {
   window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
+/** Clear incidental App Router focus on `#main-content`; keep skip-link / keyboard focus. */
+function blurMainIfIncidentalFocus() {
   const main = document.getElementById("main-content");
-  if (main instanceof HTMLElement && document.activeElement === main) {
-    main.blur();
-  }
+  if (!(main instanceof HTMLElement) || document.activeElement !== main) return;
+  if (main.matches(":focus-visible")) return;
+  main.blur();
 }
 
 function ScrollToTopOnNavigateInner() {
@@ -24,15 +28,31 @@ function ScrollToTopOnNavigateInner() {
 
   useLayoutEffect(() => {
     resetScroll();
-    const frame = requestAnimationFrame(resetScroll);
-    return () => cancelAnimationFrame(frame);
+    blurMainIfIncidentalFocus();
   }, [pathname, search]);
 
-  // After paint — beats App Router restoring scroll from the previous route (e.g. login).
+  // Next's ScrollAndFocusHandler focuses the segment after our layout effect.
   useEffect(() => {
     resetScroll();
-    const timeout = window.setTimeout(resetScroll, 0);
-    return () => window.clearTimeout(timeout);
+    blurMainIfIncidentalFocus();
+
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      // Only the landmark itself — not controls inside main (avoids yanking scroll on tab).
+      if (target.id !== "main-content") return;
+      resetScroll();
+      blurMainIfIncidentalFocus();
+    };
+    document.addEventListener("focusin", onFocusIn, true);
+    const done = window.setTimeout(() => {
+      document.removeEventListener("focusin", onFocusIn, true);
+    }, 250);
+
+    return () => {
+      document.removeEventListener("focusin", onFocusIn, true);
+      window.clearTimeout(done);
+    };
   }, [pathname, search]);
 
   return null;

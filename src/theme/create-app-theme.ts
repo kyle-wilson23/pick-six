@@ -1,6 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 
-import { focusVisibleRingCss } from "@/theme/focus-visible-ring";
+import {
+  DESKTOP_APP_BAR_OFFSET_PX,
+  focusVisibleRingCss,
+} from "@/theme/focus-visible-ring";
 
 /** UX: Visual Design Foundation — dark mode, emerald primary, gold accent (Pick Six). */
 export function createAppTheme(fontFamily: string) {
@@ -45,6 +48,7 @@ export function createAppTheme(fontFamily: string) {
         styleOverrides: {
           root: ({ theme }) => ({
             textTransform: "none",
+            textDecoration: "none",
             "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
               theme.palette.primary.main,
             ),
@@ -64,6 +68,7 @@ export function createAppTheme(fontFamily: string) {
         styleOverrides: {
           root: ({ theme }) => ({
             minHeight: 48,
+            textDecoration: "none",
             "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
               theme.palette.primary.main,
             ),
@@ -73,10 +78,18 @@ export function createAppTheme(fontFamily: string) {
       MuiBottomNavigationAction: {
         styleOverrides: {
           root: ({ theme }) => ({
+            textDecoration: "none",
             "&.Mui-focusVisible, &:focus-visible": focusVisibleRingCss(
               theme.palette.primary.main,
             ),
           }),
+        },
+      },
+      MuiMenuItem: {
+        styleOverrides: {
+          root: {
+            textDecoration: "none",
+          },
         },
       },
       MuiIconButton: {
@@ -100,11 +113,35 @@ export function createAppTheme(fontFamily: string) {
         },
       },
       MuiLink: {
+        defaultProps: {
+          color: "primary",
+          underline: "always",
+        },
         styleOverrides: {
           root: ({ theme }) => ({
+            "&:hover": {
+              color: theme.palette.primary.light,
+            },
             "&:focus-visible": focusVisibleRingCss(theme.palette.primary.main),
           }),
         },
+      },
+      MuiCssBaseline: {
+        styleOverrides: (theme) => ({
+          // Fixed desktop AppBar: keep focus / scrollIntoView / hash targets below the bar.
+          html: {
+            [theme.breakpoints.up("md")]: {
+              scrollPaddingTop: DESKTOP_APP_BAR_OFFSET_PX,
+            },
+          },
+          a: {
+            color: theme.palette.primary.main,
+            textDecoration: "underline",
+            "&:hover": {
+              color: theme.palette.primary.light,
+            },
+          },
+        }),
       },
       MuiOutlinedInput: {
         styleOverrides: {

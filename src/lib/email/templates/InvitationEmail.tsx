@@ -1,13 +1,9 @@
-import {
-  Body,
-  Button,
-  Container,
-  Heading,
-  Html,
-  Text,
-} from "@react-email/components";
+import { Heading, Text } from "@react-email/components";
 
 import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+
+import { EmailLayout, PrimaryCta } from "./EmailLayout";
+import { headingStyle, testNoticeStyle, textStyle } from "./email-styles";
 
 export type InvitationEmailProps = {
   leagueName: string;
@@ -21,15 +17,13 @@ export function InvitationEmail({
   isTestLeague = false,
 }: InvitationEmailProps) {
   return (
-    <Html>
-      <Body>
-        <Container>
-          {isTestLeague ? <Text>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
-          <Heading as="h1">{leagueName}</Heading>
-          <Text>You&apos;ve been invited to join {leagueName}</Text>
-          <Button href={signupUrl}>Accept invitation</Button>
-        </Container>
-      </Body>
-    </Html>
+    <EmailLayout preview={`You're invited to join ${leagueName}`}>
+      {isTestLeague ? <Text style={testNoticeStyle}>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
+      <Heading as="h1" style={headingStyle}>
+        {leagueName}
+      </Heading>
+      <Text style={textStyle}>You&apos;ve been invited to join {leagueName}</Text>
+      <PrimaryCta href={signupUrl} label="Accept invitation" />
+    </EmailLayout>
   );
 }

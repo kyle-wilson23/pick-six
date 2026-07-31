@@ -2,6 +2,14 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of 9-7-email-html-layout-polish.md (2026-07-31)
+
+- **EmailLayout missing `<Head>` charset/viewport** — React Email templates omit an explicit `<Head>`; common client meta is left to defaults. Not required by 9.7 ACs; revisit if Outlook/mobile encoding issues appear in real inbox smoke.
+- **Container `borderRadius` without MSO/VML Outlook fallback** — Rounded white card corners will not render in Outlook desktop. Acceptable for MVP polish; VML button/card chrome is heavy for this story.
+- **PrimaryCta empty/whitespace `href` guard** — Shared CTA does not guard blank hrefs; send helpers always pass constructed absolute URLs. Harden if a caller can pass empty strings.
+- **Jailed team empty-string (vs null) label edge** — Templates treat null as “not set” but empty strings can still render a blank/awkward jailed label. Pre-existing data-contract edge; not introduced by layout polish.
+- **Multipart `text/plain` MIME alongside HTML** — Send paths still HTML-only with inline “Or paste this link” fallback (AC3). True `text/plain` alternative parts remain out of scope for 9.7.
+
 ## Deferred from: code review of 9-6-league-hub-and-picks-interaction-polish.md (2026-07-31)
 
 - **Mobile top chrome scroll-padding only desktop** — `scrollMarginTop` / `scrollPaddingTop` apply at `md+` only for the fixed desktop AppBar; small viewports still rely on bottom nav / `xs: 0`. Not introduced as a new product requirement in 9.6.
@@ -27,11 +35,18 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 | NFR46 scoring/deadline structured logs | **Park** | Post-launch per observability-scope decision |
 | N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users; revisit if timeouts |
 | Weather cache failure TTL / eviction | **Park** | Fail-soft UX; not launch-blocking |
-| UI polish (hub, links, home, loading, email HTML) | **Promote (owned)** | Stories **9.5–9.7** already in sprint-status — do not re-create |
+| UI polish (hub, links, home, loading, email HTML) | **Resolved (9.5–9.7)** | App shell **9.5**, hub/links/glow **9.6**, email HTML **9.7** |
 | UI polish hub / links / pick glow / retractable hide | **Resolved (9.6)** | Story **9.6** — league hub pop + contained CTAs; theme link color+underline; per-pick green glow; hide retractable roof without weather |
-| UI polish email HTML / password-reset CTA | **Promote (owned)** | Story **9.7** — email layout pass; "make my picks" emphasis |
+| UI polish email HTML / password-reset CTA | **Resolved (9.7)** | Shared EmailLayout + emerald primary CTA; plaintext URL fallback on all templates |
 | Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | **9.2** decision done; ops in `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel…` |
-| Password-reset CTA plaintext / token cleanup | **Park (owned)** | **9.7** email HTML polish / ops park |
+| Password-reset CTA plaintext / token cleanup | **Resolved (9.7) / Park** | Plaintext CTA fallback done in **9.7**; token table retention/cleanup remains **ops park** |
+
+## Resolved by Story 9.7 (2026-07-31)
+
+- **Email HTML layout polish** — Shared `EmailLayout` + `email-styles` (light canvas, brand header); all four member-facing templates restyled.
+- **Primary CTA emphasis** — Emerald `#2ECC71` primary button with padding / 16px bold label on digest, reminder, invite, and password-reset.
+- **Plaintext URL fallback** — “Or paste this link: …” under every primary CTA (including password reset).
+- **Digest CTA hierarchy** — “Make your picks” moved above optional commissioner note.
 
 ## Resolved by Story 9.6 (2026-07-29)
 
@@ -48,7 +63,7 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 ## Deferred from: code review of 9-3-forgot-password-flow.md (2026-07-28)
 
-- **Password-reset email has Button CTA only (no plaintext URL fallback)** — `PasswordResetEmail.tsx` mirrors InvitationEmail-class structure with a single button; clients that strip buttons leave no link. Story 9.7 owns member-facing email HTML polish (including reset template).
+- **Password-reset email has Button CTA only (no plaintext URL fallback)** — **Resolved (9.7)** — plaintext “Or paste this link” fallback on reset + all primary CTAs.
 - **No expiry/consumed cleanup for `password_reset_tokens`** — table grows with superseded/expired rows; no cron or retention job in 9.3. Add ops cleanup if table size becomes an issue.
 
 ## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)

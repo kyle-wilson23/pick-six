@@ -143,13 +143,8 @@ export function createAppTheme(fontFamily: string) {
           },
         }),
       },
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: ({ theme }) => ({
-            "&.Mui-focused": focusVisibleRingCss(theme.palette.primary.main),
-          }),
-        },
-      },
+      // Outlined TextField already uses a notched fieldset border on focus.
+      // Do not add focusVisibleRingCss here — a second outline cuts through the floating label.
     },
   });
 }

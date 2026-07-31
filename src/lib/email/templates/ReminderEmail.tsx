@@ -1,15 +1,15 @@
-import {
-  Body,
-  Button,
-  Container,
-  Heading,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Heading, Section, Text } from "@react-email/components";
 
 import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+
+import { EmailLayout, PrimaryCta } from "./EmailLayout";
+import {
+  headingStyle,
+  sectionStyle,
+  subheadingStyle,
+  testNoticeStyle,
+  textStyle,
+} from "./email-styles";
 
 export type ReminderEmailProps = {
   leagueName: string;
@@ -47,35 +47,29 @@ export function ReminderEmail({
       ? `You haven't submitted your Week ${weekNumber} pick yet — don't forget!`
       : `Pick deadline in 1 hour — submit your Week ${weekNumber} pick now`;
 
+  const ctaLabel =
+    reminderType === "thursday" ? "Submit your pick now" : "Make your picks";
+
   return (
-    <Html>
-      <Preview>{previewText}</Preview>
-      <Body style={{ fontFamily: "sans-serif", color: "#111" }}>
-        <Container>
-          {isTestLeague ? <Text>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
-          <Heading as="h1">
-            {leagueName} — Week {weekNumber}
-          </Heading>
+    <EmailLayout preview={previewText}>
+      {isTestLeague ? <Text style={testNoticeStyle}>{TEST_LEAGUE_EMAIL_BODY_NOTICE}</Text> : null}
+      <Heading as="h1" style={headingStyle}>
+        {leagueName} — Week {weekNumber}
+      </Heading>
 
-          <Section>
-            <Text>Hi {recipientDisplayName},</Text>
-            <Text>{bodyCopy}</Text>
-          </Section>
+      <Section style={sectionStyle}>
+        <Text style={textStyle}>Hi {recipientDisplayName},</Text>
+        <Text style={textStyle}>{bodyCopy}</Text>
+      </Section>
 
-          <Section style={{ marginTop: "24px" }}>
-            <Heading as="h2" style={{ fontSize: "18px" }}>
-              Jailed team
-            </Heading>
-            <Text>{jailedLabel}</Text>
-          </Section>
+      <Section style={sectionStyle}>
+        <Heading as="h2" style={subheadingStyle}>
+          Jailed team
+        </Heading>
+        <Text style={textStyle}>{jailedLabel}</Text>
+      </Section>
 
-          <Section style={{ marginTop: "32px" }}>
-            <Button href={picksUrl}>
-              {reminderType === "thursday" ? "Submit your pick now" : "Make your picks"}
-            </Button>
-          </Section>
-        </Container>
-      </Body>
-    </Html>
+      <PrimaryCta href={picksUrl} label={ctaLabel} />
+    </EmailLayout>
   );
 }

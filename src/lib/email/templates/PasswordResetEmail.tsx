@@ -1,11 +1,7 @@
-import {
-  Body,
-  Button,
-  Container,
-  Heading,
-  Html,
-  Text,
-} from "@react-email/components";
+import { Heading, Text } from "@react-email/components";
+
+import { EmailLayout, PrimaryCta } from "./EmailLayout";
+import { headingStyle, mutedTextStyle, textStyle } from "./email-styles";
 
 export type PasswordResetEmailProps = {
   resetUrl: string;
@@ -13,20 +9,18 @@ export type PasswordResetEmailProps = {
 
 export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
   return (
-    <Html>
-      <Body>
-        <Container>
-          <Heading as="h1">Reset your password</Heading>
-          <Text>
-            We received a request to reset your Pick Six password. Click the button below to choose
-            a new password. This link expires in one hour and can only be used once.
-          </Text>
-          <Button href={resetUrl}>Reset password</Button>
-          <Text>
-            If you did not request a password reset, you can ignore this email.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailLayout preview="Reset your Pick Six password">
+      <Heading as="h1" style={headingStyle}>
+        Reset your password
+      </Heading>
+      <Text style={textStyle}>
+        We received a request to reset your Pick Six password. Click the button below to choose a
+        new password. This link expires in one hour and can only be used once.
+      </Text>
+      <PrimaryCta href={resetUrl} label="Reset password" />
+      <Text style={mutedTextStyle}>
+        If you did not request a password reset, you can ignore this email.
+      </Text>
+    </EmailLayout>
   );
 }

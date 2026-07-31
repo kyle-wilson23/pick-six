@@ -20,6 +20,11 @@ type ConfigResponse = {
   thursdayReminderSentAt: string | null;
 };
 
+type Feedback = {
+  severity: "success" | "info" | "warning";
+  message: string;
+};
+
 function formatSentAt(iso: string): string {
   return new Date(iso).toLocaleString();
 }
@@ -35,12 +40,7 @@ export function AdminReminderControls({
   const [loading, setLoading] = useState(true);
   const [sendingWednesday, setSendingWednesday] = useState(false);
   const [sendingThursday, setSendingThursday] = useState(false);
-  const [wednesdayMessage, setWednesdayMessage] = useState<string | null>(null);
-  const [thursdayMessage, setThursdayMessage] = useState<string | null>(null);
-  const [wednesdayInfo, setWednesdayInfo] = useState<string | null>(null);
-  const [thursdayInfo, setThursdayInfo] = useState<string | null>(null);
-  const [wednesdayError, setWednesdayError] = useState<string | null>(null);
-  const [thursdayError, setThursdayError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
 
   const configUrl = `/api/leagues/${leagueId}/email/tuesday-config`;
@@ -52,12 +52,7 @@ export function AdminReminderControls({
     // A fresh load means the active week may have changed (e.g. admin just
     // advanced the rehearsal clock) — any alert from the *previous* week's
     // send attempt (like "Already sent") is stale and must not linger.
-    setWednesdayMessage(null);
-    setThursdayMessage(null);
-    setWednesdayInfo(null);
-    setThursdayInfo(null);
-    setWednesdayError(null);
-    setThursdayError(null);
+    setFeedback(null);
     setConfigError(null);
     try {
       const res = await fetch(configUrl);
@@ -95,19 +90,12 @@ export function AdminReminderControls({
     const url = reminderType === "wednesday" ? wednesdayUrl : thursdayUrl;
     const setSending =
       reminderType === "wednesday" ? setSendingWednesday : setSendingThursday;
-    const setMessage =
-      reminderType === "wednesday" ? setWednesdayMessage : setThursdayMessage;
-    const setInfo =
-      reminderType === "wednesday" ? setWednesdayInfo : setThursdayInfo;
-    const setError =
-      reminderType === "wednesday" ? setWednesdayError : setThursdayError;
     const setSentAt =
       reminderType === "wednesday" ? setWednesdaySentAt : setThursdaySentAt;
 
     setSending(true);
-    setMessage(null);
-    setInfo(null);
-    setError(null);
+    // One banner at a time — clear any prior Wed/Thu feedback before this send.
+    setFeedback(null);
 
     try {
       const requestUrl = force ? `${url}?force=true` : url;
@@ -123,7 +111,10 @@ export function AdminReminderControls({
       };
 
       if (res.status === 409 && data.error?.code === "ALREADY_SENT") {
-        setError("Already sent — add ?force=true to resend");
+        setFeedback({
+          severity: "warning",
+          message: "Already sent — add ?force=true to resend",
+        });
         return;
       }
 
@@ -135,9 +126,10 @@ export function AdminReminderControls({
         if (data.sentAt) {
           setSentAt(data.sentAt);
         }
-        setInfo(
-          `Rehearsal sends are suppressed (TEST_LEAGUE_EMAIL_MODE=suppress) — would have reached ${data.wouldSendCount ?? 0} member(s). No email was sent.`,
-        );
+        setFeedback({
+          severity: "info",
+          message: `Rehearsal sends are suppressed (TEST_LEAGUE_EMAIL_MODE=suppress) — would have reached ${data.wouldSendCount ?? 0} member(s). No email was sent.`,
+        });
         return;
       }
 
@@ -145,20 +137,28 @@ export function AdminReminderControls({
       const failed = data.failed ?? 0;
 
       if (sent === 0) {
-        setError(
-          failed > 0
-            ? `Send failed — ${failed} member${failed > 1 ? "s" : ""} could not be reached.`
-            : "All members have already submitted picks.",
-        );
+        setFeedback({
+          severity: "warning",
+          message:
+            failed > 0
+              ? `Send failed — ${failed} member${failed > 1 ? "s" : ""} could not be reached.`
+              : "All members have already submitted picks.",
+        });
         return;
       }
 
       if (data.sentAt) {
         setSentAt(data.sentAt);
-        setMessage(`Sent at ${formatSentAt(data.sentAt)} — ${sent} member${sent > 1 ? "s" : ""} reached.`);
+        setFeedback({
+          severity: "success",
+          message: `Sent at ${formatSentAt(data.sentAt)} — ${sent} member${sent > 1 ? "s" : ""} reached.`,
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Send failed");
+      setFeedback({
+        severity: "warning",
+        message: err instanceof Error ? err.message : "Send failed",
+      });
     } finally {
       setSending(false);
     }
@@ -169,7 +169,7 @@ export function AdminReminderControls({
   const memberLabel = outstandingCount === 1 ? "member" : "members";
 
   return (
-    <Paper sx={{ p: 2, borderRadius: 2 }}>
+    <Paper sx={{ p: 2, borderRadius: 2, overflow: "hidden" }}>
       <Stack spacing={2}>
         {noActiveWeek ? (
           <Typography variant="body2" color="text.secondary">
@@ -187,14 +187,20 @@ export function AdminReminderControls({
           <Alert severity="warning">{configError}</Alert>
         ) : null}
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        {/*
+          Always stack — this card lives in the admin side column, so a
+          side-by-side row wraps button labels. Full-width column matches
+          Weekly Email / Email automation status below.
+        */}
+        <Stack spacing={1.5} sx={{ width: "100%" }}>
           <Stack spacing={0.5}>
             <Button
               variant="outlined"
               color="info"
+              fullWidth
               onClick={() => void handleSend("wednesday")}
               disabled={noActiveWeek || loading || sendingWednesday || allSubmitted}
-              sx={{ minHeight: 48 }}
+              sx={{ minHeight: 48, whiteSpace: "nowrap" }}
             >
               {sendingWednesday ? "Sending…" : "Send Wednesday Reminder"}
             </Button>
@@ -203,24 +209,16 @@ export function AdminReminderControls({
                 Last sent: {formatSentAt(wednesdaySentAt)}
               </Typography>
             ) : null}
-            {wednesdayMessage != null ? (
-              <Alert severity="success" sx={{ py: 0 }}>{wednesdayMessage}</Alert>
-            ) : null}
-            {wednesdayInfo != null ? (
-              <Alert severity="info" sx={{ py: 0 }}>{wednesdayInfo}</Alert>
-            ) : null}
-            {wednesdayError != null ? (
-              <Alert severity="warning" sx={{ py: 0 }}>{wednesdayError}</Alert>
-            ) : null}
           </Stack>
 
           <Stack spacing={0.5}>
             <Button
               variant="outlined"
               color="warning"
+              fullWidth
               onClick={() => void handleSend("thursday")}
               disabled={noActiveWeek || loading || sendingThursday || allSubmitted}
-              sx={{ minHeight: 48 }}
+              sx={{ minHeight: 48, whiteSpace: "nowrap" }}
             >
               {sendingThursday ? "Sending…" : "Send Thursday Reminder"}
             </Button>
@@ -229,17 +227,14 @@ export function AdminReminderControls({
                 Last sent: {formatSentAt(thursdaySentAt)}
               </Typography>
             ) : null}
-            {thursdayMessage != null ? (
-              <Alert severity="success" sx={{ py: 0 }}>{thursdayMessage}</Alert>
-            ) : null}
-            {thursdayInfo != null ? (
-              <Alert severity="info" sx={{ py: 0 }}>{thursdayInfo}</Alert>
-            ) : null}
-            {thursdayError != null ? (
-              <Alert severity="warning" sx={{ py: 0 }}>{thursdayError}</Alert>
-            ) : null}
           </Stack>
         </Stack>
+
+        {feedback != null ? (
+          <Alert severity={feedback.severity} sx={{ py: 0 }}>
+            {feedback.message}
+          </Alert>
+        ) : null}
       </Stack>
     </Paper>
   );

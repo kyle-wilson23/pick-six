@@ -4,6 +4,8 @@
  * - **Sign-in** (NFR12): 10 attempts / 15 minutes per namespace `sign-in`.
  * - **Password reset** (Story 9.3): 8 attempts / 15 minutes per namespace `password-reset` — dedicated
  *   bucket for forgot-password + reset-confirm POSTs (separate from sign-in).
+ * - **Register** (pre-launch create-account): 6 attempts / 15 minutes per namespace `register` —
+ *   dedicated bucket for `POST /api/auth/register` (within 5–8 band; separate from sign-in).
  * - **League delete** (FR61): 5 DELETEs / 15 minutes per namespace `league-delete` — stricter cap for
  *   irreversible destructive actions; enforced only on `DELETE /api/leagues/[leagueId]` (no subpath).
  *
@@ -17,6 +19,10 @@ const SIGN_IN_MAX_ATTEMPTS = 10;
 const PASSWORD_RESET_WINDOW_MS = 15 * 60 * 1000;
 /** Story 9.3 — 8 / 15 min per client (within the 5–10 band; dedicated bucket, not sign-in). */
 const PASSWORD_RESET_MAX_ATTEMPTS = 8;
+
+const REGISTER_WINDOW_MS = 15 * 60 * 1000;
+/** Pre-launch create-account — 6 / 15 min per client (dedicated bucket; within 5–8 band). */
+const REGISTER_MAX_ATTEMPTS = 6;
 
 const LEAGUE_DELETE_WINDOW_MS = 15 * 60 * 1000;
 const LEAGUE_DELETE_MAX_ATTEMPTS = 5;
@@ -57,6 +63,16 @@ export function checkPasswordResetRateLimit(clientKey: string): boolean {
     clientKey,
     PASSWORD_RESET_MAX_ATTEMPTS,
     PASSWORD_RESET_WINDOW_MS,
+  );
+}
+
+/** `POST /api/auth/register` (proxy matcher). */
+export function checkRegisterRateLimit(clientKey: string): boolean {
+  return checkSlidingWindow(
+    "register",
+    clientKey,
+    REGISTER_MAX_ATTEMPTS,
+    REGISTER_WINDOW_MS,
   );
 }
 

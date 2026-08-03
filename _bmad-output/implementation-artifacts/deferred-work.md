@@ -674,6 +674,13 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 - ~~**Redundant Prisma membership queries in league layout + child pages**~~ — **Resolved by 7.4** — `getLeagueAccess` (`React.cache`) shared by layout + child pages.
 
+## Deferred from: code review of pre-launch-create-account-flow.md (2026-08-03)
+
+- **`auth()` on create-account page has no try/catch** — `src/app/create-account/page.tsx:11`. Same pattern as `login/page.tsx`; story marked optional / not AC-gated. Corrupt session can hard-fail the page.
+- **bcrypt 72-byte password truncation** — `src/lib/register-user.ts:37` via shared `signupPasswordFieldSchema` (no max length). Distinct long passwords can collide under bcrypt truncation; affects invite/reset too.
+- **Exact-path rate-limit Set misses trailing slash** — `src/proxy.ts` `RATE_LIMITED_POST_PATHS.has(pathname)` for `/api/auth/register` (and sibling auth POSTs). League routes use optional-slash regex; Set paths do not.
+- **In-memory register rate-limit buckets are per-instance only** — Already documented in `src/lib/rate-limit.ts`; multi-instance bypass until shared store. Acceptable for Hobby / single-instance MVP.
+
 ## Deferred from: code review of story-7-4-performance-and-deployment-hardening (2026-07-19)
 
 - **Circuit-breaker member-skips merged into the same `failed` counter as real Resend errors** — `src/app/api/cron/tuesday-email/route.ts` (and wednesday/thursday reminders). No separate counter in the cron JSON body distinguishes genuine provider failures from breaker no-op skips; ops can't tell which happened after an outage from the summary alone. Not required by AC5's letter ("count remaining as failed/skipped consistently").

@@ -138,6 +138,8 @@ Domain verification, production `from` address replacement, and full production 
 
 **Forgot-password (Story 9.3 — implemented):** Password reset mail is sent via the same Resend + React Email stack as invites and digests (no second provider). Reset links use `AUTH_URL` / `getAppBaseUrl()`. Production domain verify and `RESEND_FROM` cutover remain **post–Epic 9** — local smoke may use `onboarding@resend.dev` per [`email-local-smoke-test-runbook.md`](./email-local-smoke-test-runbook.md).
 
+**Self-serve create-account (pre-launch):** Real test-users register at `/create-account` (linked from login). No admin user-creation is required for pre-season hands-on testing. The seed user (`dev@example.com` via `npm run db:seed`) remains **local bootstrap only** for empty databases. League membership still requires an admin invite (`/signup/[token]`).
+
 **Execution is still post–Epic 9** (do not mark these done from the investigation alone):
 
 - `post-epic-9-vercel-production-env-and-cron` — Vercel custom domain + Production `AUTH_URL` (+ env/cron)

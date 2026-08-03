@@ -1,6 +1,7 @@
 /**
  * Dev-only convenience: upsert a user with a bcrypt password hash.
  * Run after migrations: `npm run db:seed` (loads `.env` / `.env.local` like other db scripts).
+ * For non-seed users, use self-serve `/create-account` (pre-launch).
  */
 const { config } = require("dotenv");
 const fs = require("node:fs");

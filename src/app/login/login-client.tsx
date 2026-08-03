@@ -223,9 +223,14 @@ export function LoginClient() {
           <Button type="submit" variant="contained" size="large" disabled={pending} fullWidth>
             {pending ? "Logging in…" : "Login"}
           </Button>
-          <Link component={NextLink} href="/forgot-password" variant="body2">
-            Forgot password?
-          </Link>
+          <Stack direction="row" spacing={2} justifyContent="space-between" sx={{ width: "100%" }}>
+            <Link component={NextLink} href="/forgot-password" variant="body2">
+              Forgot password?
+            </Link>
+            <Link component={NextLink} href="/create-account" variant="body2">
+              Create account
+            </Link>
+          </Stack>
         </Stack>
       </Stack>
     </>

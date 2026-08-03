@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { checkLeagueDeleteRateLimit, checkPasswordResetRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
+import { checkLeagueDeleteRateLimit, checkPasswordResetRateLimit, checkRegisterRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
 
 function rateLimitClientKey(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -32,6 +32,7 @@ const RATE_LIMITED_POST_PATHS = new Set([
   "/api/auth/callback/credentials",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/register",
   "/api/signup/invite",
   "/api/signup/invite/accept",
   "/api/leagues",
@@ -57,6 +58,9 @@ function shouldRateLimitPost(pathname: string): boolean {
 function checkPostRateLimit(pathname: string, clientKey: string): boolean {
   if (pathname === "/api/auth/forgot-password" || pathname === "/api/auth/reset-password") {
     return checkPasswordResetRateLimit(clientKey);
+  }
+  if (pathname === "/api/auth/register") {
+    return checkRegisterRateLimit(clientKey);
   }
   return checkSignInRateLimit(clientKey);
 }
@@ -98,6 +102,7 @@ export const config = {
     "/api/auth/callback/credentials",
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
+    "/api/auth/register",
     "/api/signup/invite",
     "/api/signup/invite/accept",
     "/api/leagues",

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkLeagueDeleteRateLimit,
   checkPasswordResetRateLimit,
+  checkRegisterRateLimit,
   checkSignInRateLimit,
 } from "@/lib/rate-limit";
 
@@ -37,6 +38,24 @@ describe("checkPasswordResetRateLimit", () => {
     const key = `shared-reset-${Math.random()}`;
     for (let i = 0; i < 8; i++) {
       expect(checkPasswordResetRateLimit(key)).toBe(true);
+    }
+    expect(checkSignInRateLimit(key)).toBe(true);
+  });
+});
+
+describe("checkRegisterRateLimit", () => {
+  it("allows 6 requests per client key then blocks within the window", () => {
+    const key = `register-${Math.random()}`;
+    for (let i = 0; i < 6; i++) {
+      expect(checkRegisterRateLimit(key)).toBe(true);
+    }
+    expect(checkRegisterRateLimit(key)).toBe(false);
+  });
+
+  it("does not share bucket with sign-in namespace", () => {
+    const key = `shared-register-${Math.random()}`;
+    for (let i = 0; i < 6; i++) {
+      expect(checkRegisterRateLimit(key)).toBe(true);
     }
     expect(checkSignInRateLimit(key)).toBe(true);
   });

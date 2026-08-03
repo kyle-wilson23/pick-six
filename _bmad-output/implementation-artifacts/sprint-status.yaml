@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-08-03' # post-epic-9-resend-domain-and-from-address → done
+last_updated: '2026-08-03' # post-epic-9-production-smoke-test → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -152,4 +152,4 @@ development_status:
   # Post-Epic 9 — production launch gate (must complete before first real NFL season)
   post-epic-9-vercel-production-env-and-cron: done # (1) First *.vercel.app deploy dry run + env/migrate/cron smoke; (2) custom domain + AUTH_URL + apex/www cookies; CRON_SECRET; redeploy after env — canonical https://www.nflpickem.cc
   post-epic-9-resend-domain-and-from-address: done # After web DNS; verify sending domain (SPF/DKIM); RESEND_FROM; optional DMARC — send.nflpickem.cc Verified; webhook live
-  post-epic-9-production-smoke-test: backlog # After web + email live; real inbox: invite + Tuesday digest + reminders; Resend dashboard; optional prod cron curl
+  post-epic-9-production-smoke-test: done # After web + email live; real inbox: invite + Tuesday digest + reminders; Resend dashboard; rows 1–10 Pass on www.nflpickem.cc; row 11 cron curl skipped

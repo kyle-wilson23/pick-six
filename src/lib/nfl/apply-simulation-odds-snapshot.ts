@@ -55,7 +55,19 @@ export async function applySimulationOddsSnapshot(
   });
 
   if (games.length === 0) {
-    await ensureFixtureGamesForWeek(prisma, { nflSeasonYear, weekNumber, now });
+    const ensured = await ensureFixtureGamesForWeek(prisma, {
+      nflSeasonYear,
+      weekNumber,
+      now,
+    });
+    if (!ensured.ok) {
+      return {
+        ok: false,
+        code: ensured.code,
+        message: ensured.message,
+        httpStatus: 409,
+      };
+    }
     games = await prisma.nflGame.findMany({
       where: { nflSeasonYear, weekNumber },
       select: { id: true, homeTeamId: true, awayTeamId: true },
@@ -140,7 +152,10 @@ export async function applySimulationOddsSnapshot(
 async function ensureFixtureGamesForWeek(
   prisma: PrismaClient,
   args: { nflSeasonYear: number; weekNumber: number; now: Date },
-): Promise<void> {
+): Promise<
+  | { ok: true }
+  | { ok: false; code: "TEAMS_NOT_SEEDED"; message: string }
+> {
   const { nflSeasonYear, weekNumber, now } = args;
   const matchups = selectFixtureMatchups(weekNumber);
   const abbreviations = [...new Set(matchups.flatMap((m) => [m.home, m.away]))];
@@ -151,12 +166,15 @@ async function ensureFixtureGamesForWeek(
   });
   const byAbbr = new Map(teams.map((t) => [t.abbreviation, t.id]));
 
-  for (const abbr of abbreviations) {
-    if (!byAbbr.has(abbr)) {
-      throw new Error(
-        `ensureFixtureGamesForWeek: team abbreviation ${abbr} not found — seed nfl teams first`,
-      );
-    }
+  const missing = abbreviations.filter((abbr) => !byAbbr.has(abbr));
+  if (missing.length > 0) {
+    return {
+      ok: false as const,
+      code: "TEAMS_NOT_SEEDED",
+      message: `NFL teams missing in the database (${missing
+        .slice(0, 5)
+        .join(", ")}${missing.length > 5 ? ", …" : ""}). Run \`npm run db:seed:teams\` against this database.`,
+    };
   }
 
   const kickoffs = buildFixtureKickoffTimes(now, matchups.length);
@@ -187,4 +205,6 @@ async function ensureFixtureGamesForWeek(
       });
     }
   });
+
+  return { ok: true as const };
 }

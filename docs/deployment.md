@@ -58,6 +58,15 @@ Do **not** run bare `npx prisma migrate deploy` in production workflows (misses 
 
 Apply migrations **before or as part of** the first deploy that depends on new schema.
 
+**NFL teams after first migrate:** schema alone does not insert the 32 teams. For rehearsal / test-league fixture odds (`Apply odds snapshot`), Production needs:
+
+```bash
+# Point DATABASE_URL at Production (Vercel / Neon), then:
+npm run db:seed:teams
+```
+
+Do **not** run full `npm run db:seed` against Production — that upserts the local-only `dev@example.com` bootstrap user and example invites.
+
 ---
 
 ## Cron deploy smoke (NFR19–NFR21 adjacent)

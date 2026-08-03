@@ -127,7 +127,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | 7.1 No unit tests for `sanitizeDownloadFilenameSegment` | **Accept** | Kyle — simple helper; manual verify OK for MVP |
 | 7.1 No audit log for bulk PII CSV export | **Park** | Kyle — post-launch observability |
 | pre-epic-7 NFR46 scoring/deadline logs | **Park** | Aliased — post-launch observability decision |
-| pre-epic-7 Resend message IDs not captured in smoke | **Park (owned)** | → `post-epic-9-production-smoke-test` |
+| pre-epic-7 Resend message IDs not captured in smoke | **Resolved** | Kyle — `post-epic-9-production-smoke-test` row 10 dashboard delivery clear; optional per-send message IDs consciously skipped (2026-08-03) |
 | pre-epic-7 Thin `acceptLeagueInvitation` coverage | **Accept** | Kyle — membership paths manually smoked |
 | pre-epic-7 No unit test `already_registered` preview | **Accept** | Kyle — manual invite flow covered |
 | pre-epic-7 Concurrent duplicate accept race | **Accept** | Kyle — 7.4 AC8 OOS; revisit if invite abuse |
@@ -380,7 +380,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of pre-epic-7-manual-email-flow-smoke-test (2026-07-05)
 
-- **AC8 Resend message IDs not captured** — Smoke test results confirm delivery in inbox/dashboard but do not record per-send message IDs; optional hardening before production smoke test (`post-epic-9-production-smoke-test`).
+- ~~**AC8 Resend message IDs not captured**~~ — **Resolved** (2026-08-03): production smoke row 10 Resend dashboard delivery clear; optional per-send message IDs consciously skipped (`post-epic-9-production-smoke-test`).
 - **Thin unit coverage for `acceptLeagueInvitation`** — Only error-class tests exist; membership upsert and invite consumption paths verified manually during AC3 smoke test.
 - **No unit test for `already_registered` signup preview branch** — New preview status branch covered by manual invite flow only.
 - **Concurrent duplicate accept requests** — Parallel accept POSTs can race on invite consumption. **Out of scope for 7.4** (AC8); revisit if invite abuse appears.

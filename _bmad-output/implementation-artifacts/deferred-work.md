@@ -46,7 +46,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users. *Aliases: 5.1 sync N+1; Epic 5 retro score N+1; 4.2 `allSeasonPicks`.* |
 | Weather cache failure TTL / eviction | **Park** | Fail-soft UX. *Aliases: 7.4 weather failure TTL + no proactive eviction.* |
 | UI polish (hub, links, home, loading, email HTML) | **Resolved (9.5–9.7)** | App shell **9.5**, hub/links/glow **9.6**, email HTML **9.7** |
-| Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel-production-env-and-cron`. *Aliases: 9.2 DMARC/apex cookies; 6.1 placeholder `from` ×2.* |
+| Resend domain / `from` / DMARC / Auth cookie host | **Resolved** | Auth host: vercel story. Domain/`from`/DMARC: `post-epic-9-resend-domain-and-from-address` (2026-08-03) — `send.nflpickem.cc` verified; Production `RESEND_FROM`; `_dmarc` `p=none`. *Code `DEFAULT_FROM` placeholder left by design (env override).* |
 | Password-reset CTA plaintext URL fallback | **Resolved (9.7)** | Plaintext “Or paste this link” fallback shipped in **9.7** |
 | Password-reset `password_reset_tokens` retention cleanup | **Park** | Kyle — ops retention if table size becomes an issue (also §C 9.3) |
 
@@ -59,7 +59,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | NFR46 scoring/deadline logs | **Park** | 9.4 table; pre-epic-7 observability |
 | N+1 / over-fetch at MVP scale | **Park** | 9.4 table; 5.1 sync N+1; Epic 5 retro score N+1; 4.2 `allSeasonPicks` |
 | Weather cache TTL / eviction | **Park** | 9.4 table; 7.4 failure-TTL + no eviction |
-| Resend `from` / domain / DMARC / Auth host | **Park (owned)** | 9.4 table; 9.2 DMARC; 9.2 apex/www cookies; 6.1 placeholder `from`; 6.1 invitation `from` |
+| Resend `from` / domain / DMARC / Auth host | **Resolved** | vercel story (Auth) + resend-domain story (domain/`from`/DMARC) 2026-08-03 |
 | `sentAt` / suppress-branch upsert desync | **Accept** | 6.3 `sentAt` upsert failure; 8.5 suppress-branch upsert no retry |
 | `readJsonObject` duplication | **Park** | 5.1 ×2; 8.2; 8.3; 8.4 (fifth copy) — extract when next touched |
 | Route-layer integration tests absent | **Park** | 8.1 `TEST_LEAGUES_DISABLED`; 8.2 AC8 inspection-only; 3.4 picks route 201/200 |
@@ -82,7 +82,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | 9.5 Pathname league-id fallback for SSR/hydration | **Accept** | Kyle — reserved-segment guard shipped; revisit if 404 chrome issues |
 | 9.4 AC5 incomplete full deferred pass | **Resolved (this story)** | Exhaustive Promote/Accept/Park below |
 | 9.3 `password_reset_tokens` expiry/consumed cleanup | **Park** | Kyle — ops retention if table size becomes an issue |
-| 9.2 DMARC omitted from email DNS plan | **Park (owned)** | → `post-epic-9-resend-domain-and-from-address` |
+| 9.2 DMARC omitted from email DNS plan | **Resolved** | `post-epic-9-resend-domain-and-from-address` — `_dmarc` TXT `v=DMARC1; p=none;` |
 | 9.2 Auth.js cookie / apex vs www canonical session | **Resolved** | `post-epic-9-vercel-production-env-and-cron` — canonical `www.nflpickem.cc`; apex → www; Production `AUTH_URL` |
 | 9.1 Isolation mock reimplements filter in test | **Accept** | Kyle — AC where-clause already asserted; thinner mock later |
 
@@ -141,8 +141,8 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 | Item | Disposition | Owner / rationale |
 |------|-------------|-------------------|
-| 6.1 Placeholder Resend `from` domain | **Park (owned)** | → `post-epic-9-resend-domain-and-from-address` (High risk, already owned) |
-| 6.1 Invitation `from` placeholder | **Park (owned)** | Same Resend cutover key |
+| 6.1 Placeholder Resend `from` domain | **Resolved** | Production `RESEND_FROM` on verified `send.nflpickem.cc` (2026-08-03) |
+| 6.1 Invitation `from` placeholder | **Resolved** | Same — env override; code `DEFAULT_FROM` left as fallback |
 | 6.1 No `server-only` on email modules | **Accept** | Kyle — runtime startup guard exists |
 | 6.1 Empty `to` / `rawToken` guards | **Accept** | Kyle — API callers validate upstream |
 | 6.2 TOCTOU concurrent tuesday-send | **Accept** | Aliased — 9.4 Accept |
@@ -300,7 +300,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)
 
-- **DMARC omitted from email DNS plan** — `docs/domain-provider-decision.md` covers SPF/DKIM (/MX return-path) for Resend verify but not DMARC. Fine for Story 9.2 investigation scope; add DMARC guidance during `post-epic-9-resend-domain-and-from-address` if deliverability/spoofing hardening is desired before production inbox traffic.
+- ~~**DMARC omitted from email DNS plan**~~ — **Resolved** (`post-epic-9-resend-domain-and-from-address`, 2026-08-03): `_dmarc.nflpickem.cc` TXT `v=DMARC1; p=none;` published after SPF/DKIM verify.
 - ~~**Auth.js cookie / apex vs www canonical session guidance**~~ — **Resolved** (`post-epic-9-vercel-production-env-and-cron`, 2026-08-03): Production canonical host `https://www.nflpickem.cc`; apex redirects to www; `AUTH_URL` matches; login verified on www.
 
 ## Deferred from: code review of 9-1-league-scoped-scoring-scorenflweek-blast-radius.md (2026-07-28)
@@ -590,7 +590,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: Story 6.1 — transactional email integration (2026-07-04)
 
-- **Replace placeholder Resend `from` domain before production go-live** — `src/lib/email/resend-from.ts` (`getResendFrom()` / `DEFAULT_FROM`) still uses `Pick Six <noreply@yourdomain.com>` until a verified sending domain is configured. Real delivery to non-sandbox recipients requires a **verified sending domain** in Resend (SPF/DKIM DNS records; propagation can take up to 48 hours). Until configured: set Production `RESEND_FROM` to your verified identity and confirm sends in the Resend dashboard. Setup steps: [Resend domain docs](https://resend.com/docs/dashboard/domains/introduction); prerequisites also in `docs/email-provider-decision.md` and [`docs/domain-provider-decision.md`](../../docs/domain-provider-decision.md). For local/dev smoke tests only, Resend's sandbox `from` (`onboarding@resend.dev`) can be used temporarily — do not ship that to production. **Story 9.2:** registrar/DNS = Cloudflare (dual-use hostname plan); **cutover execution still post-epic-9** (`post-epic-9-resend-domain-and-from-address`) — do not strike as resolved until verify + `RESEND_FROM` ship.
+- ~~**Replace placeholder Resend `from` domain before production go-live**~~ — **Resolved** (`post-epic-9-resend-domain-and-from-address`, 2026-08-03): `send.nflpickem.cc` Verified; Production `RESEND_FROM=Pick Six <noreply@send.nflpickem.cc>` + redeploy. Code `DEFAULT_FROM` placeholder intentionally unchanged (env override is the design).
 - ~~**Invites page copy still references console logs**~~ — Resolved in Story 6.6: `invite-participants-form.tsx` and `invites/page.tsx` now reflect that invitation emails are sent to recipients.
 
 ## Deferred from: code review of 6-2-tuesday-6-00-pm-league-email-content-and-admin-preview (2026-07-04)
@@ -615,7 +615,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 6-1-transactional-email-integration (2026-07-04)
 
-- **`from` address placeholder** — `src/lib/email/send-invitation-email.ts:27` uses `'Pick Six <noreply@yourdomain.com>'` intentionally per spec; not actionable until Resend sending domain is verified.
+- ~~**`from` address placeholder**~~ — **Resolved** via Production `RESEND_FROM` env override (`post-epic-9-resend-domain-and-from-address`, 2026-08-03); code constant left as fallback.
 - **No `server-only` import on email server modules** — `resend-client.ts` and `send-invitation-email.ts` lack `import 'server-only'`; startup guard provides runtime protection but no build-time enforcement. Add `import 'server-only'` to both files in a future cleanup pass.
 - **No input validation for empty `to` / empty `rawToken`** — `sendInvitationEmail` does not guard against empty `to` or `rawToken`; empty values produce degenerate signup URLs (`/signup/`) and idempotency key collisions (`invitation:`). API route callers validate upstream. Add defensive guards in a hardening pass.
 

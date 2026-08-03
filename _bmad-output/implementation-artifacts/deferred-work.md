@@ -269,7 +269,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | Planned follow-on Story 3.10 design block | **Historical** — 3.10 shipped; open weather follow-ups are dome (Park) + SoFi classification (Accept) above |
 | Pre-production Vercel checklist section | **Park (owned)** → `docs/deployment.md` + `post-epic-9-*` keys (not open code bullets) |
 | Epic 8 retro “Tracking note” | Informational only (sprint-status ownership) — not an open defect |
-| `pre-launch-create-account-flow` / `pre-launch-guided-cutover-runbook` | Already sprint-status backlog (not deferred-work bullets); execution order per epic-9 retro |
+| `pre-launch-create-account-flow` / `pre-launch-guided-cutover-runbook` | Create-account done; guided cutover runbook story + private runbook exist — cutover **execution** remains `post-epic-9-*` (order per epic-9 retro) |
 
 **Inventory check:** Disposition tables in §§A–C (with §B alias groups) cover every still-open forensic bullet in this file; Resolved / struck / historical design notes are skipped per §D. **Promote = 0** — no new `sprint-status.yaml` keys added.
 

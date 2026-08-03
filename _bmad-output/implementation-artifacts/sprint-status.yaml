@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-08-03' # pre-launch-create-account-flow → done
+last_updated: '2026-08-03' # pre-launch-guided-cutover-runbook → done
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -147,7 +147,7 @@ development_status:
   # Detailed ops checklist: docs/deployment.md + docs/domain-provider-decision.md (cutover: web → email → smoke).
   pre-launch-deferred-work-full-triage: done # Promote/Accept/Park EVERY still-open deferred-work.md bullet (9.4 was launch-risk subset only); promote true blockers to sprint-status — do NOT require fixing all items
   pre-launch-create-account-flow: done # Open self-serve User create-account; league join still invite-only (FR8)
-  pre-launch-guided-cutover-runbook: backlog # Step-by-step for first-time deployer: domain purchase → Cloudflare DNS → Vercel → env/cron → Resend → smoke
+  pre-launch-guided-cutover-runbook: done # Step-by-step for first-time deployer: domain purchase → Cloudflare DNS → Vercel → env/cron → Resend → smoke
 
   # Post-Epic 9 — production launch gate (must complete before first real NFL season)
   post-epic-9-vercel-production-env-and-cron: backlog # (1) First *.vercel.app deploy dry run + env/migrate/cron smoke; (2) custom domain + AUTH_URL + apex/www cookies; CRON_SECRET; redeploy after env

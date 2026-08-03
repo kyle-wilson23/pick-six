@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Private pre-launch / cutover guidance + story plans (local only; not published).
+# Keep sprint-status.yaml tracked for team progress. Final public README/docs pass is after deploy.
+docs/guided-cutover-runbook.md
+_bmad-output/implementation-artifacts/pre-launch-*.md
+_bmad-output/implementation-artifacts/post-epic-9-*.md

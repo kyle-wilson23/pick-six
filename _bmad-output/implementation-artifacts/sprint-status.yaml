@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-07-31' # code-review 9-7 → done
+last_updated: '2026-08-03' # epic-9 retrospective → done; pre-launch + post-epic-9 keys refined
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -132,7 +132,7 @@ development_status:
   # Epic 9 — Pre-season polish & launch hardening (from epic-8 retro 2026-07-28)
   # Ordered blockers before production deploy. FULL ACs + Kyle verbatim source requirements: epics.md Epic 9.
   # create-story / dev-story MUST copy source requirements without softening (cards required, limit 3, green glow, etc.).
-  epic-9: in-progress
+  epic-9: done
   9-1-league-scoped-scoring-scorenflweek-blast-radius: done # Critical: scoreNflWeek must not score other leagues' picks from rehearsal finalize
   9-2-domain-provider-investigation: done # Cloudflare Registrar+DNS; dual-use app URL + Resend; unblocks post-epic-9 Resend domain
   9-3-forgot-password-flow: done # Kyle: missing forgot-password; evaluate Resend for reset mail
@@ -140,12 +140,16 @@ development_status:
   9-5-app-shell-home-nav-scroll-breakpoints-loading: done # No landing→home; carded lists max 3 + show more; recent visit sort both pages; nav+settings; scroll-top; full breakpoint pass; loading
   9-6-league-hub-and-picks-interaction-polish: done # Hub pops + button CTAs; app-wide link color+underline; pick hover = individual green glow; hide retractable roof w/o weather
   9-7-email-html-layout-polish: done # Full email layout pass; "make my picks" must be emphasized (not tiny)
-  epic-9-retrospective: optional
+  epic-9-retrospective: done
 
-  # TODO: Create a 'create account' flow by surfacing a create account link on the login page.
+  # Pre-launch — after Epic 9, before season go-live (from epic-9-retro-2026-08-03)
+  # Execute in order. Kyle owns checklist execution; team provides step-by-step guidance (first-time domain + deploy).
+  # Detailed ops checklist: docs/deployment.md + docs/domain-provider-decision.md (cutover: web → email → smoke).
+  pre-launch-deferred-work-full-triage: backlog # Promote/Accept/Park EVERY still-open deferred-work.md bullet (9.4 was launch-risk subset only); promote true blockers to sprint-status — do NOT require fixing all items
+  pre-launch-create-account-flow: backlog # Create account link on login; real test-users without admin user-creation (PRD FR8 is invite-only today)
+  pre-launch-guided-cutover-runbook: backlog # Step-by-step for first-time deployer: domain purchase → Cloudflare DNS → Vercel → env/cron → Resend → smoke
 
-  # Post-Epic 9 — production launch gate (must complete before first real NFL season; after Epic 9)
-  # Detailed checklist: docs/deployment.md
-  post-epic-9-vercel-production-env-and-cron: backlog # Production env vars (.env.example); deploy vercel.json crons; CRON_SECRET; redeploy after env changes
-  post-epic-9-resend-domain-and-from-address: backlog # Depends on 9.2; verify sending domain (SPF/DKIM); replace noreply@yourdomain.com
-  post-epic-9-production-smoke-test: backlog # Real inbox: invite + Tuesday digest + reminders; confirm Resend dashboard; optional prod cron curl
+  # Post-Epic 9 — production launch gate (must complete before first real NFL season)
+  post-epic-9-vercel-production-env-and-cron: backlog # (1) First *.vercel.app deploy dry run + env/migrate/cron smoke; (2) custom domain + AUTH_URL + apex/www cookies; CRON_SECRET; redeploy after env
+  post-epic-9-resend-domain-and-from-address: backlog # After web DNS; verify sending domain (SPF/DKIM); RESEND_FROM; optional DMARC
+  post-epic-9-production-smoke-test: backlog # After web + email live; real inbox: invite + Tuesday digest + reminders; Resend dashboard; optional prod cron curl

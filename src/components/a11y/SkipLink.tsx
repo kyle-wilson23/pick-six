@@ -15,7 +15,8 @@ export function SkipLink() {
         const target = document.getElementById("main-content");
         if (!target) return;
         event.preventDefault();
-        target.focus({ focusVisible: true });
+        // `focusVisible` is in the HTML FocusOptions living standard; TS lib.dom may lag.
+        target.focus({ focusVisible: true } as FocusOptions);
         if (window.location.hash !== "#main-content") {
           window.history.replaceState(null, "", "#main-content");
         }

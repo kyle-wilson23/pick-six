@@ -39,9 +39,10 @@ export type LeagueWithCurrentSeasonChunk = {
   }>;
 };
 
+/** Maps league + season slice only; callers attach `lastVisitedAt` from membership. */
 export function toAdministeredLeagueRows(
   leagues: LeagueWithCurrentSeasonChunk[],
-): AdministeredLeagueWithSeasonRow[] {
+): Omit<AdministeredLeagueWithSeasonRow, "lastVisitedAt">[] {
   return leagues.map((league) => ({
     league: {
       id: league.id,

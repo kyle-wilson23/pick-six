@@ -18,28 +18,260 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 - **Pathname league-id fallback retained for SSR/hydration** — Dropping `parseLeagueIdFromPathname` fallback in `LeagueNavShell` would avoid league tabs on true 404 URLs, but causes missing tabs in SSR HTML vs client. Reserved-segment guard (`new`) shipped instead; revisit if 404 chrome becomes a real issue.
 
-## Launch-risk triage (Story 9.4 — 2026-07-28)
+## Full pre-launch triage (Story pre-launch-deferred-work-full-triage — 2026-08-03)
 
-Classifies remaining **open** launch-relevant deferred items before first real season. Disposition is exactly one of **Promote** / **Accept** / **Park**. Evidence for measurement closeouts lives in [`docs/performance-budgets.md`](../../docs/performance-budgets.md); circuit-breaker drill in `src/lib/email/send-tuesday-digest.test.ts`.
+**Scope:** Every still-open (non-struck, non-Resolved) bullet in this file. Extends Story 9.4’s launch-risk **subset** to an exhaustive inventory. Disposition is exactly one of **Promote** / **Accept** / **Park** / **Park (owned)**. Owner = **Kyle** unless noted.
+
+**Promote count:** **0** new sprint-status keys. True go-live blockers are already owned by `post-epic-9-*` / `pre-launch-*` / `docs/deployment.md` — marked **Park (owned)**. This story is **triage ≠ fix-all**; Accept/Park items were not implemented here.
+
+**Supersedes:** Launch-risk triage (Story 9.4 — 2026-07-28). 9.4 Accept / Park / Park (owned) / Resolved rows carried forward unchanged (no overturning evidence). Measurement closeouts remain in [`docs/performance-budgets.md`](../../docs/performance-budgets.md); breaker drill in `src/lib/email/send-tuesday-digest.test.ts`.
+
+**Historical (not open):** “Planned follow-on: Story 3.10” design block below is **historical** (3.10 shipped). Struck / “Resolved by Story …” bullets skipped. Pre-production Vercel checklist is canonical in `docs/deployment.md` only.
+
+**Process closeout:** Story 9.4 review finding “AC5 triage did not disposition every still-open deferred bullet” → **Resolved by this story** (see struck bullet under 9.4 deferred section).
+
+### A. Carry-forward from Story 9.4 (unchanged)
 
 | Item | Disposition | Owner / rationale |
 |------|-------------|-------------------|
 | Authenticated Lighthouse picks/standings | **Resolved (9.4)** | Evidence in performance-budgets.md; mobile LCP Known Exception re-accepted (Kyle) |
 | Pick-submit NFR5 `durationMs` sample | **Resolved (9.4)** | Warm success samples 453ms / 425ms in budgets doc |
 | Email circuit-breaker e2e under outage | **Resolved (9.4)** | Vitest drill: Resend always-fail, ≥4 members, `EMAIL_CIRCUIT_OPEN`, shared breaker across leagues |
-| Hobby ±1 hr negative-drift silent-skip | **Accept** | Owner: Kyle — AdminWeeklyEmailStatus + manual send + ops runbook already mitigate |
-| Circuit-breaker `failed` conflates errors vs aborted skips | **Accept** | Owner: Kyle — AC allows consistent failed/skipped counting; ops use `EMAIL_CIRCUIT_OPEN` logs |
-| Circuit-open logs omit skipped-member count | **Accept** | Owner: Kyle — `remainingAborted: true` + aggregate `failed` sufficient for MVP |
-| Email TOCTOU / duplicate send (cron + admin) | **Accept** | Owner: Kyle — Resend 24h idempotency backstop; 7.4 AC8 out of scope |
-| External uptime monitor not configured in prod | **Park** | Tracked as `post-epic-9-vercel-production-env-and-cron` / deployment checklist |
-| NFR46 scoring/deadline structured logs | **Park** | Post-launch per observability-scope decision |
-| N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users; revisit if timeouts |
-| Weather cache failure TTL / eviction | **Park** | Fail-soft UX; not launch-blocking |
+| Hobby ±1 hr negative-drift silent-skip | **Accept** | Kyle — AdminWeeklyEmailStatus + manual send + ops runbook already mitigate. *Also listed under pre-epic-6.* |
+| Circuit-breaker `failed` conflates errors vs aborted skips | **Accept** | Kyle — AC allows consistent failed/skipped counting; ops use `EMAIL_CIRCUIT_OPEN` logs. *Source: 7.4 review.* |
+| Circuit-open logs omit skipped-member count | **Accept** | Kyle — `remainingAborted: true` + aggregate `failed` sufficient for MVP. *Source: 7.4 review.* |
+| Email TOCTOU / duplicate send (cron + admin) | **Accept** | Kyle — Resend 24h idempotency; 7.4 AC8 OOS. *Aliases: 6.2 tuesday-send TOCTOU; 6.5 cron TOCTOU.* |
+| External uptime monitor not configured in prod | **Park (owned)** | `post-epic-9-vercel-production-env-and-cron` / `docs/deployment.md` |
+| NFR46 scoring/deadline structured logs | **Park** | Post-launch per `docs/observability-scope-decision.md`. *Also listed under pre-epic-7 observability.* |
+| N+1 sync/score, `allSeasonPicks` over-fetch | **Park** | MVP ≤14 users. *Aliases: 5.1 sync N+1; Epic 5 retro score N+1; 4.2 `allSeasonPicks`.* |
+| Weather cache failure TTL / eviction | **Park** | Fail-soft UX. *Aliases: 7.4 weather failure TTL + no proactive eviction.* |
 | UI polish (hub, links, home, loading, email HTML) | **Resolved (9.5–9.7)** | App shell **9.5**, hub/links/glow **9.6**, email HTML **9.7** |
-| UI polish hub / links / pick glow / retractable hide | **Resolved (9.6)** | Story **9.6** — league hub pop + contained CTAs; theme link color+underline; per-pick green glow; hide retractable roof without weather |
-| UI polish email HTML / password-reset CTA | **Resolved (9.7)** | Shared EmailLayout + emerald primary CTA; plaintext URL fallback on all templates |
-| Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | **9.2** decision done; ops in `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel…` |
-| Password-reset CTA plaintext / token cleanup | **Resolved (9.7) / Park** | Plaintext CTA fallback done in **9.7**; token table retention/cleanup remains **ops park** |
+| Resend domain / `from` / DMARC / Auth cookie host | **Park (owned)** | `post-epic-9-resend-domain-and-from-address` + `post-epic-9-vercel-production-env-and-cron`. *Aliases: 9.2 DMARC/apex cookies; 6.1 placeholder `from` ×2.* |
+| Password-reset CTA plaintext URL fallback | **Resolved (9.7)** | Plaintext “Or paste this link” fallback shipped in **9.7** |
+| Password-reset `password_reset_tokens` retention cleanup | **Park** | Kyle — ops retention if table size becomes an issue (also §C 9.3) |
+
+### B. Alias groups (one disposition; all sources accounted)
+
+| Alias group | Disposition | Source bullets |
+|-------------|-------------|----------------|
+| Email TOCTOU / duplicate send | **Accept** | 9.4 table; 6.2 concurrent tuesday-send; 6.5 cron read-then-send-then-write |
+| Hobby ±1 hr negative-drift | **Accept** | 9.4 table; pre-epic-6 |
+| NFR46 scoring/deadline logs | **Park** | 9.4 table; pre-epic-7 observability |
+| N+1 / over-fetch at MVP scale | **Park** | 9.4 table; 5.1 sync N+1; Epic 5 retro score N+1; 4.2 `allSeasonPicks` |
+| Weather cache TTL / eviction | **Park** | 9.4 table; 7.4 failure-TTL + no eviction |
+| Resend `from` / domain / DMARC / Auth host | **Park (owned)** | 9.4 table; 9.2 DMARC; 9.2 apex/www cookies; 6.1 placeholder `from`; 6.1 invitation `from` |
+| `sentAt` / suppress-branch upsert desync | **Accept** | 6.3 `sentAt` upsert failure; 8.5 suppress-branch upsert no retry |
+| `readJsonObject` duplication | **Park** | 5.1 ×2; 8.2; 8.3; 8.4 (fifth copy) — extract when next touched |
+| Route-layer integration tests absent | **Park** | 8.1 `TEST_LEAGUES_DISABLED`; 8.2 AC8 inspection-only; 3.4 picks route 201/200 |
+| `generateMetadata` / tab titles | **Park** | 5.4 standings; 5.6 results; 6.6 league pages |
+| `notFound()` vs sign-in redirect | **Accept** | 5.5 history; 5.6 results — unified auth-redirect middleware later |
+| Stale admin outstanding count | **Accept** | 6.3 `outstandingCount`; 6.6 real-time refresh note |
+
+### C. Full disposition by source cluster
+
+#### Epic 9 reviews (still open)
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 9.7 EmailLayout missing `<Head>` charset/viewport | **Accept** | Kyle — not in 9.7 ACs; revisit if inbox smoke shows encoding issues |
+| 9.7 Container `borderRadius` without MSO/VML Outlook fallback | **Accept** | Kyle — Outlook desktop chrome OK for MVP |
+| 9.7 PrimaryCta empty/whitespace `href` guard | **Accept** | Kyle — callers always pass absolute URLs |
+| 9.7 Jailed team empty-string (vs null) label edge | **Accept** | Kyle — pre-existing data-contract edge |
+| 9.7 Multipart `text/plain` MIME alongside HTML | **Park** | Kyle — post-launch; AC3 HTML + paste-link fallback ships |
+| 9.6 Mobile scroll-padding only at `md+` | **Accept** | Kyle — not a launch blocker; small viewports use bottom nav |
+| 9.5 Pathname league-id fallback for SSR/hydration | **Accept** | Kyle — reserved-segment guard shipped; revisit if 404 chrome issues |
+| 9.4 AC5 incomplete full deferred pass | **Resolved (this story)** | Exhaustive Promote/Accept/Park below |
+| 9.3 `password_reset_tokens` expiry/consumed cleanup | **Park** | Kyle — ops retention if table size becomes an issue |
+| 9.2 DMARC omitted from email DNS plan | **Park (owned)** | → `post-epic-9-resend-domain-and-from-address` |
+| 9.2 Auth.js cookie / apex vs www canonical session | **Park (owned)** | → `post-epic-9-vercel-production-env-and-cron` |
+| 9.1 Isolation mock reimplements filter in test | **Accept** | Kyle — AC where-clause already asserted; thinner mock later |
+
+#### Epic 8 (rehearsal / simulation)
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 8.7 Per-week jailed cleanup N+1 in txn | **Accept** | Kyle — fine for short rehearsal week sets |
+| 8.7 Concurrent last-two test-league deletes skip cleanup | **Accept** | Kyle — single-admin MVP |
+| 8.7 Zero–odds-line NflGame rows survive cleanup | **Accept** | Kyle — provenance rule as written; manual ops if observed |
+| 8.6 Simulation/email error-recovery omitted from runbook | **Park** | Kyle — happy-path sufficient; expand if operators get stuck |
+| 8.5 Rehearsal Eastern-clock status labels cosmetic | **Accept** | Kyle — read-only card; manual send works |
+| 8.5 Suppress-branch upsert no error handling | **Accept** | Kyle — same class as 6.3 `sentAt` desync (aliased) |
+| 8.5 Config lookup before `providedBreaker.open` short-circuit | **Accept** | Kyle — AC3-mandated ordering; not independently fixable |
+| 8.5 AdminEmailComposer note TextField not disabled while saving | **Accept** | Kyle — pre-existing race; single-admin |
+| 8.4 Odds-line `some` + natural-key collision | **Accept** | Kyle — documented MVP risk; requires exact matchup coincidence |
+| 8.4 `readJsonObject` fifth copy | **Park** | Kyle — aliased extract later |
+| 8.4 No colocated tests for `AdminSimulationControls` | **Park** | Kyle — when UI-component test convention exists |
+| 8.4 No mid-loop `$transaction` failure test | **Accept** | Kyle — route 500 already handles; low value |
+| 8.4 “0 games finalized” alert ambiguity | **Accept** | Kyle — cosmetic; revisit if confusing in practice |
+| 8.3 Kickoff-slot duplication if fixture week >4 games | **Accept** | Kyle — unreached (fixture always 4) |
+| 8.3 Raw `Error` on missing team abbr → opaque 500 | **Accept** | Kyle — ops precondition; teams pre-seeded |
+| 8.3 Membership/season lookups outside try/catch | **Accept** | Kyle — matches advance-week pattern |
+| 8.3 No `homeTeamId === awayTeamId` guard | **Accept** | Kyle — unreachable via validated fixtures |
+| 8.3 TOCTOU concurrent apply-odds | **Accept** | Kyle — single-admin; upsert avoids dup rows |
+| 8.3 Uncaught jailed-compute throw leaves odds without jailed | **Accept** | Kyle — self-healing on next apply |
+| 8.3 Fixture + real schedule mix same `(year, week)` | **Accept** | Kyle — documented MVP risk; partially mitigated at delete (8.7) |
+| 8.3/8.2 `readJsonObject` duplication | **Park** | Kyle — aliased |
+| 8.2 AC8 production no-op verified by inspection only | **Park** | Kyle — route tests when infra exists |
+| 8.1 No route-handler test for `TEST_LEAGUES_DISABLED` | **Park** | Kyle — gate logic unit-covered |
+
+#### Epic 7 / pre-epic-7
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 7.2 `toLocaleString` ET round-trip fragile | **Accept** | Kyle — works on Vercel full-ICU; refactor when cron next touched |
+| 7.2 `redactSensitive` over-redacts `@` | **Accept** | Kyle — PII-safety tradeoff for MVP |
+| 7.1 CSV formula-injection not sanitized | **Accept** | Kyle — admin-trusted; PRD FR55–57 require export, not formula sanitization |
+| 7.1 Anchor download shows raw JSON on API errors | **Accept** | Kyle — spec chose `href` download; UX polish later |
+| 7.1 `auth()` outside try/catch on export route | **Accept** | Kyle — matches submission-status pattern |
+| 7.1 `REGULAR_SEASON_WEEKS` duplicated | **Accept** | Kyle — low-risk maintainability nit |
+| 7.1 No unit tests for `sanitizeDownloadFilenameSegment` | **Accept** | Kyle — simple helper; manual verify OK for MVP |
+| 7.1 No audit log for bulk PII CSV export | **Park** | Kyle — post-launch observability |
+| pre-epic-7 NFR46 scoring/deadline logs | **Park** | Aliased — post-launch observability decision |
+| pre-epic-7 Resend message IDs not captured in smoke | **Park (owned)** | → `post-epic-9-production-smoke-test` |
+| pre-epic-7 Thin `acceptLeagueInvitation` coverage | **Accept** | Kyle — membership paths manually smoked |
+| pre-epic-7 No unit test `already_registered` preview | **Accept** | Kyle — manual invite flow covered |
+| pre-epic-7 Concurrent duplicate accept race | **Accept** | Kyle — 7.4 AC8 OOS; revisit if invite abuse |
+| 7.4 Breaker `failed` / skip conflation | **Accept** | Aliased — 9.4 Accept |
+| 7.4 Circuit-open omit skip count | **Accept** | Aliased — 9.4 Accept |
+| 7.4 Weather cache no eviction / failure TTL | **Park** | Aliased — 9.4 Park |
+| 7.4 `mapWithConcurrency` concurrency unvalidated | **Accept** | Kyle — unreachable; only caller passes `4` |
+| 7.4 `mapWithConcurrency` uses `Promise.all` not `allSettled` | **Accept** | Kyle — current mappers self-catch |
+
+#### Epic 6 (email / UX)
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 6.1 Placeholder Resend `from` domain | **Park (owned)** | → `post-epic-9-resend-domain-and-from-address` (High risk, already owned) |
+| 6.1 Invitation `from` placeholder | **Park (owned)** | Same Resend cutover key |
+| 6.1 No `server-only` on email modules | **Accept** | Kyle — runtime startup guard exists |
+| 6.1 Empty `to` / `rawToken` guards | **Accept** | Kyle — API callers validate upstream |
+| 6.2 TOCTOU concurrent tuesday-send | **Accept** | Aliased — 9.4 Accept |
+| 6.2 `force=true` resend after 24h idempotency expiry | **Accept** | Kyle — admin tool; address if complaints |
+| 6.3 Stale `outstandingCount` SSR prop | **Accept** | Kyle — acceptable MVP; polish later |
+| 6.3 `sentAt` upsert → response/DB desync | **Accept** | Kyle — same class as 9.4 Accepts |
+| 6.3 No inactive/departed membership filter | **Park** | Kyle — needs membership lifecycle model |
+| 6.3 `getReminderData` before idempotency guard | **Accept** | Kyle — accepted 409-path cost |
+| 6.4 `auth()` without try/catch on login | **Accept** | Kyle — global error-handling later |
+| 6.4 `callbackUrl` as `string[]` falls through | **Accept** | Kyle — spec pattern; open-redirect audit later |
+| 6.4 No path-traversal/open-redirect negative tests for picks | **Accept** | Kyle — existing `getSafeCallbackPath` coverage; harden later |
+| 6.4 URL fragment in `callbackUrl` stripped | **Accept** | Kyle — hash nav not used in app |
+| 6.5 Timing side-channel length pre-check in `assertCronRequest` | **Accept** | Kyle — spec-authorized; MVP OK |
+| 6.5 Cron TOCTOU idempotency | **Accept** | Aliased — 9.4 Accept |
+| 6.5 `toLocaleString` ICU dependency | **Accept** | Kyle — safe on Vercel full-ICU |
+| 6.6 PickStatusBanner desktop inline with title | **Park** | Kyle — UX enhancement; banner existence = MVP Critical shipped (AC5) |
+| 6.6 Standings desktop sidebar | **Park** | Kyle — desktop enhancement; mobile table-only OK |
+| 6.6 Snackbar admin feedback | **Accept** | Kyle — inline Alert acceptable MVP |
+| 6.6 `generateMetadata` on league pages | **Park** | Kyle — private auth app; SEO out of MVP (aliased) |
+| 6.6 WeatherBadge component extraction | **Accept** | Kyle — cosmetic |
+| 6.6 Real-time admin outstanding refresh | **Accept** | Aliased — 6.3 |
+
+#### Epic 5 / pre-epic-5
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 5.1 N+1 in sync transaction | **Park** | Aliased — MVP scale |
+| 5.1 Duplicate `readJsonObject` | **Park** | Aliased |
+| 5.1 NaN/Infinity not guarded in `getGameWinner` | **Accept** | Kyle — upstream `parseScoreTotal` guards |
+| 5.1 `skipped` conflates team-match vs DB-not-found | **Accept** | Kyle — split counters when sync observability matters |
+| 5.2 No atomicity CHECK on scoring columns | **Park** | Kyle — schema hardening post-launch |
+| 5.2 No range CHECK on `points_earned` | **Park** | Kyle — when scoring rules solidify |
+| 5.2 Team in multiple FINAL games map collision | **Accept** | Kyle — data-corruption edge |
+| 5.2 FINAL null scores silently `skipped` | **Accept** | Kyle — ops distinguish later |
+| 5.2 Read-then-write race in `scoreNflWeek` | **Accept** | Kyle — low risk admin-triggered |
+| 5.3 Timing-safe bearer compare | **Accept** | Kyle — broader auth hardening later |
+| 5.3 Unconditional `auth()` for automation | **Accept** | Kyle — harmless latency |
+| 5.3 No try/catch in finalize-week route | **Accept** | Kyle — global error layer later |
+| 5.3 `z.coerce.number()` accepts boolean | **Accept** | Kyle — spec-specified coerce |
+| 5.3 Auth header trailing whitespace | **Accept** | Kyle — trim when next touched |
+| 5.3 No txn between game-status check and score | **Accept** | Kyle — same race class as 5.2 |
+| 5.3 `weekNumber` max 18 excludes playoffs | **Park** | Kyle — raise when playoff scoring in scope |
+| 5.3 Non-object JSON body coerced to `{}` | **Accept** | Kyle — cosmetic error message |
+| 5.4 Missing `generateMetadata` standings | **Park** | Aliased — title pass |
+| 5.4 Outcome string literals vs Prisma enum | **Accept** | Kyle — single enum-import pass later |
+| 5.4 Null `user.email` / displayName `localeCompare` | **Accept** | Kyle — email non-null in schema today |
+| 5.4 All memberships in standings regardless of role | **Accept** | Kyle — admin is full participant (2.6) |
+| 5.5 scoredAt/outcome partial-write display | **Accept** | Kyle — tied to CHECK constraint Park |
+| 5.5 `season.findFirst` non-deterministic on dupes | **Accept** | Kyle — schema uniqueness expected |
+| 5.5 `notFound()` vs sign-in on history | **Accept** | Aliased |
+| 5.5 React key on `nflWeekNumber` | **Accept** | Kyle — unique constraint prevents dupes |
+| 5.5 Unhandled Prisma rejections → 500 | **Accept** | Kyle — global error layer later |
+| 5.6 `notFound()` vs sign-in on results | **Accept** | Aliased |
+| 5.6 Email-as-display-name exposes PII | **Accept** | Kyle — spec-mandated private-league pattern (not GDPR theater) |
+| 5.6 No `generateMetadata` results | **Park** | Aliased |
+| 5.6 Test mocks do not validate Prisma WHERE | **Accept** | Kyle — integration tests later |
+| Epic 5 retro `AdminPickOverrideDialog` lint debt | **Accept** | Kyle — fix when next admin-panel story touches it |
+| Epic 5 retro score N+1 in `$transaction` | **Park** | Aliased — MVP ≤14 |
+| Epic 5 retro `$transaction` counter double-count footgun | **Accept** | Kyle — pattern note for future stories |
+| pre-epic-5 Thursday lock `0` seconds magic | **Accept** | Kyle — extract when file next touched |
+| pre-epic-5 No DST-boundary Thursday lock test | **Accept** | Kyle — expand coverage later |
+| pre-epic-5 Exported lock constants public API | **Accept** | Kyle — `@internal` if consumers proliferate |
+| pre-epic-5 Exact 8:10 kickoff boundary untested | **Accept** | Kyle — broaden `computePickDeadlineUtc` later |
+| pre-epic-5 Redundant third test / brittle copy / code name / dup-game determinism | **Accept** | Kyle — test/API hygiene; not launch blockers |
+| 4.2 `validateJailedLineupAndBonus` unconditional opponent lookup note | **Accept** | Kyle — main bug fixed in `pre-epic-5-fix-jailed-lineup-bonus-bug`; residual defensive note |
+
+#### Epic 4
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 4.1 Multiple picks same membershipId overwrite | **Accept** | Kyle — DB unique prevents in prod |
+| 4.1 Empty string email → blank displayName | **Accept** | Kyle — schema requires non-empty email |
+| 4.1 Sequential DB calls on admin page | **Accept** | Kyle — minor latency |
+| 4.1 null `weekNumber` passes kickoff filter | **Accept** | Kyle — impossible under current schema |
+| 4.2 Concurrent admin submissions last-write-wins | **Accept** | Kyle — single-admin MVP |
+| 4.2 `priorSeasonPickCount` before `existing` check | **Accept** | Kyle — negligible; deletes don’t exist |
+| 4.2 TOCTOU role check outside transaction | **Accept** | Kyle — pre-existing admin-route pattern |
+| 4.2 `allSeasonPicks` over-fetch | **Park** | Aliased — MVP scale |
+| 4.3 No pagination on `getAuditLog` | **Accept** | Kyle — add when trails grow |
+| 4.3 RESTRICT FK blocks future member-removal | **Park** | Kyle — revisit with member-removal story |
+| 4.3 Missing secondary index on `adminMembershipId` | **Park** | Kyle — when “overrides by admin” query built |
+| 4.3 Update test asserts same team before/after | **Accept** | Kyle — add distinct before/after case later |
+| 4.3 Email fallback in audit names exposes PII | **Accept** | Kyle — admin UI; profile story later |
+| 4.3 `adminMembershipId` arg not re-validated to session | **Accept** | Kyle — route always passes DB-fetched id |
+| 4.3 `createdAt` typed as `string` in view model | **Accept** | Kyle — serialize at boundary later |
+| 4.4 `jailed.randomSeed` vs `audit.randomSeed` not cross-validated | **Accept** | Kyle — FR52 harden later |
+| 4.4 Independent `resolvePicksWeekNumber` page vs section | **Accept** | Kyle — thread shared `now` if observable |
+| 4.4 No fallback to most recently computed jailed week | **Accept** | Kyle — product ask later |
+| 4.4 Legacy rows: no stage chips / no UI hint | **Accept** | Kyle — UX feedback if warranted |
+| 4.4 `jailedTeamId` DB vs audit never cross-checked | **Accept** | Kyle — data-consistency layer later |
+| 4.4 `.passthrough()` on AuditJsonV1Schema | **Accept** | Kyle — intentional forward-compat |
+| 4.4 Optional Zod vs required domain for stage slices | **Accept** | Kyle — monitor new computation paths |
+
+#### Epic 3 (incl. weather / schedule)
+
+| Item | Disposition | Owner / rationale |
+|------|-------------|-------------------|
+| 3.3 `force=true` + audit for jailed recompute after lock | **Park** | Kyle — optional admin force path |
+| 3.3 Transactional jailed compute + row lock | **Accept** | Kyle — low practical risk admin-only |
+| 3.3 Per-stage survivors in jailed `audit` | **Park** | Kyle — verifier enhancement |
+| 3.4 Concurrent `isCreate` 201/200 race | **Accept** | Kyle — semantic-only; pick data correct |
+| 3.4 No route-layer 201/200 / idempotency test | **Park** | Aliased — route tests later |
+| 3.6 Domed stadium weather display misleading | **Park** | Kyle — product decision required; not pick-flow blocker (AC5) |
+| 3.7 Prisma patch bump + seed session note | **Accept** | Kyle — repo hygiene when convenient |
+| 3.5 `GAMES_NOT_LOADED` message for null-`kickoffAt` | **Accept** | Kyle — spec reuses validation |
+| 3.5 `checkPickMutationDeadline` null on empty games | **Accept** | Kyle — documented precondition |
+| 3.5 `now` not injectable in jailed computation | **Accept** | Kyle — testability refactor later |
+| 3.5 Thursday cutoff magic literal note | **Accept** | Kyle — largely addressed by pre-epic-5 constants; residual hygiene |
+| 3.5 `gamesWithKickoff` manually reconstructed | **Accept** | Kyle — type-narrowing polish |
+| 3.8 `resolveNflLogoSrc` imports full `nfl-teams.json` | **Accept** | Kyle — ~32 teams; MVP OK |
+| 3.9 Serial upserts in schedule sync | **Park** | Kyle — admin-only low-frequency; MVP scale |
+| 3.9 Overly permissive Zod schemas | **Accept** | Kyle — matches odds-api pattern |
+| 3.9 Rename migration noise | **Accept** | Kyle — already applied; no functional change |
+| 3.9 Load all 32 teams every sync | **Park** | Kyle — negligible at current scale |
+| 3.10 `scripts/test-weather.ts` unhandled rejection | **Accept** | Kyle — dev utility only |
+| 3.10 SoFi “retractable” classification accuracy | **Accept** | Kyle — metadata accuracy; related to dome product Park |
+| 3.10 Non-deterministic `Date.now()` horizon tests | **Accept** | Kyle — theoretical flake; fake timers if CI noise |
+
+### D. Completeness / skipped
+
+| Category | Treatment |
+|----------|-----------|
+| Struck / Resolved-by-story bullets | Skipped (e.g. 9.1 blast radius, 8.7 fixture cleanup, 5.3 `isOddsAutomationRequest` extract, 7.4 maxDuration/breaker/Lighthouse/NFR5, 6.6 WCAG/skeletons/landing, NFR32 webhook **Resolved by 7.2**, weather caching **Resolved by 7.4**, password-reset plaintext CTA **Resolved by 9.7**, “Resolved by Story 9.6/9.7” summary sections, etc.) |
+| Planned follow-on Story 3.10 design block | **Historical** — 3.10 shipped; open weather follow-ups are dome (Park) + SoFi classification (Accept) above |
+| Pre-production Vercel checklist section | **Park (owned)** → `docs/deployment.md` + `post-epic-9-*` keys (not open code bullets) |
+| Epic 8 retro “Tracking note” | Informational only (sprint-status ownership) — not an open defect |
+| `pre-launch-create-account-flow` / `pre-launch-guided-cutover-runbook` | Already sprint-status backlog (not deferred-work bullets); execution order per epic-9 retro |
+
+**Inventory check:** Disposition tables in §§A–C (with §B alias groups) cover every still-open forensic bullet in this file; Resolved / struck / historical design notes are skipped per §D. **Promote = 0** — no new `sprint-status.yaml` keys added.
 
 ## Resolved by Story 9.7 (2026-07-31)
 
@@ -59,11 +291,11 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 ## Deferred from: code review of 9-4-epic-7-carryovers-lighthouse-nfr5-circuit-breaker-e2e.md (2026-07-28)
 
-- **AC5 triage did not disposition every still-open deferred bullet** (e.g. CSV formula-injection, bulk-export audit log, `sentAt` upsert desync) — launch-risk subset only in this story. Deferred: future planned `deferred-work.md` pass.
+- ~~**AC5 triage did not disposition every still-open deferred bullet**~~ — **Resolved by Story pre-launch-deferred-work-full-triage (2026-08-03)** — exhaustive Promote/Accept/Park of every still-open bullet in the Full pre-launch triage section above.
 
 ## Deferred from: code review of 9-3-forgot-password-flow.md (2026-07-28)
 
-- **Password-reset email has Button CTA only (no plaintext URL fallback)** — **Resolved (9.7)** — plaintext “Or paste this link” fallback on reset + all primary CTAs.
+- ~~**Password-reset email has Button CTA only (no plaintext URL fallback)**~~ — **Resolved (9.7)** — plaintext “Or paste this link” fallback on reset + all primary CTAs.
 - **No expiry/consumed cleanup for `password_reset_tokens`** — table grows with superseded/expired rows; no cron or retention job in 9.3. Add ops cleanup if table size becomes an issue.
 
 ## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)
@@ -115,7 +347,7 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 ## Deferred from: story 8-3-simulated-odds-and-jailed-team-for-rehearsal (2026-07-20)
 
-- **Global fixture rows not cleaned by Story 8.7 per-league cascade** — **Resolved by Story 8.7 (2026-07-28):** deleting the last test league runs `cleanupOrphanTestFixtureData` (`src/lib/nfl/cleanup-rehearsal-fixtures.ts`) to remove `test_fixture` snapshot runs, fixture-only games, and orphan jailed rows. While other test leagues remain, shared fixtures are retained.
+- ~~**Global fixture rows not cleaned by Story 8.7 per-league cascade**~~ — **Resolved by Story 8.7 (2026-07-28):** deleting the last test league runs `cleanupOrphanTestFixtureData` (`src/lib/nfl/cleanup-rehearsal-fixtures.ts`) to remove `test_fixture` snapshot runs, fixture-only games, and orphan jailed rows. While other test leagues remain, shared fixtures are retained.
 - **Accepted MVP risk: fixture + real schedule mix for the same `(year, week)`** — If fixture `NflGame` rows are created during rehearsal and Story 3.9 later syncs a different real matchup set for the same week, sync **adds** real games (different natural key) rather than replacing fixtures — the week can then mix fixture and real games. Documented in 8.3 Dev Notes; not solved in this story. **Partially mitigated at delete (Story 8.7):** cleanup keeps games with any non-`test_fixture` odds line; mixed weeks retain real games and jailed rows until manually resolved. **During-rehearsal** mixed-week behavior is unchanged.
 - **`readJsonObject` duplicated a fourth time** — `src/app/api/leagues/[leagueId]/simulation/apply-odds-snapshot/route.ts` copies the same helper again (see 8.2 / 5.1 deferred notes). Still not extracted; acceptable per existing convention. **Updated by Story 8.4:** now a fifth copy in `apply-results/route.ts`.
 
@@ -162,7 +394,8 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 ## Deferred from: code review of story 3-3-jailed-team-identification-and-tie-breakers (2026-04-25)
 
-- **Picks-lock guard on jailed POST (done in 3.5)** — `computeAndPersistNflWeekJailed` returns **409** `WEEK_PICK_WINDOW_CLOSED` when the pick window is past the story 3.5 deadline (schedule + kickoff data present). A future option: `force=true` + audit (Epic 4 / one-line follow-up) if recompute is ever required after lock.
+- ~~**Picks-lock guard on jailed POST (done in 3.5)**~~ — **Resolved by Story 3.5** — `computeAndPersistNflWeekJailed` returns **409** `WEEK_PICK_WINDOW_CLOSED` when the pick window is past deadline (schedule + kickoff data present).
+- **`force=true` + audit for jailed recompute after lock** — Optional admin force path if recompute is ever required after pick-window lock (Epic 4 / one-line follow-up). **Park** in Full pre-launch triage §C.
 - **Transactional read+resolve+upsert for jailed compute** — `src/lib/nfl/jailed-computation.ts`. Wrap `nflGame.findMany` + `getEffectiveOddsLinesForWeek` + `randomBytes` + `prisma.nflWeekJailedTeam.upsert` in a `prisma.$transaction` with row-level locking on `(nflSeasonYear, weekNumber)` so two concurrent admin POSTs cannot generate independent random seeds and silently overwrite each other. Low practical risk on an admin-only endpoint but real once an automation runner exists; needs a refactor of `getEffectiveOddsLinesForWeek` to accept the transaction client.
 - **Per-stage survivors in jailed `audit`** — `src/lib/domain/jailed.ts` `buildResult`. Persist `afterMoneyline` and `afterSpread` slices alongside the full `candidates` array so a verifier (Story 4.4 jailed verification view) can see exactly which candidates reached the SPREAD or RANDOM stage without re-running the algorithm in their head.
 
@@ -177,18 +410,20 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 ## Planned follow-on: Story 3.10 — kickoff-time weather forecast (deferred from 3.6, 2026-04-28)
 
+> **Historical (not open):** Story **3.10 shipped**. Design notes below are retained for forensic context only — they are **not** still-open deferred bullets. Remaining weather follow-ups are dispositioned in Full pre-launch triage §C (dome → Park; SoFi classification / script / flake timers → Accept).
+
 **Context:** Story 3.6 ships **current-conditions** weather (`/data/2.5/weather`) — conditions at the moment the picks page loads. This is a useful approximation but not a kickoff-time forecast.
 
 **Goal:** Replace or supplement the current-conditions call with a **point-in-time forecast** for each game's `kickoffAt` at the home team's stadium coordinates.
 
-**Key design decisions to resolve in 3.10:**
+**Key design decisions resolved in 3.10 (historical):**
 
-- **Provider choice** — must support lat/lon + target datetime. OpenWeatherMap options:
+- ~~**Provider choice**~~ — must support lat/lon + target datetime. OpenWeatherMap options:
   - `/data/2.5/forecast` (free): 3-hour-step forecasts, up to **5 days out**. Adequate for games within the week; useless for games > 5 days away.
   - One Call API 3.0 (`/data/3.0/onecall`): hourly up to **48 h**, daily up to **8 days**. Free tier requires credit card; 1,000 calls/day free. Better fit for full-week previews.
   - Any other provider returning hourly lat/lon forecast is a drop-in behind `fetchWeatherForTeam`.
-- **Fallback window:** When `kickoffAt` is outside the provider's forecast horizon (e.g. week loaded on Monday, game on Sunday +10 days), fail-soft to `null` (no chip) rather than returning stale current conditions — **do not silently show the wrong data**.
-- **Dependency on 3.9:** Reliable UTC `kickoffAt` per `NflGame` row is a hard prerequisite. Until 3.9 ships, seed-only Week 1 games have fixed kickoff times — workable for a limited pilot but not for the full 18-week season.
+- ~~**Fallback window:**~~ When `kickoffAt` is outside the provider's forecast horizon (e.g. week loaded on Monday, game on Sunday +10 days), fail-soft to `null` (no chip) rather than returning stale current conditions — **do not silently show the wrong data**.
+- ~~**Dependency on 3.9:**~~ Reliable UTC `kickoffAt` per `NflGame` row is a hard prerequisite. Until 3.9 ships, seed-only Week 1 games have fixed kickoff times — workable for a limited pilot but not for the full 18-week season.
 
 **Interface change is minimal — already isolated:** `fetchWeatherForTeam` in `src/lib/integrations/weather/client.ts` currently ignores the game's time. Signature change to `fetchWeatherForGame(abbreviation: string, kickoffAt: Date): Promise<WeatherData | null>` and updating the one call site in `src/lib/picks/build-league-picks-week-view.ts` is the full surface area.
 
@@ -296,7 +531,7 @@ Classifies remaining **open** launch-relevant deferred items before first real s
 
 - **No DB atomicity CHECK constraint on three scoring columns** — `outcome`, `points_earned`, and `scored_at` on the `picks` table have no `CHECK` constraint enforcing all-or-nothing writes. A future bug could leave a row with `outcome = 'WIN'` and `points_earned = NULL`. Adding `CHECK ((outcome IS NULL AND points_earned IS NULL AND scored_at IS NULL) OR (outcome IS NOT NULL AND points_earned IS NOT NULL AND scored_at IS NOT NULL))` via a new migration would close this.
 - **No range CHECK constraint on `points_earned`** — column is a plain `INTEGER`; domain only ever produces 0, 1, or 2. Add `CHECK (points_earned >= 0 AND points_earned <= 2)` via a future migration when scoring rules solidify.
-- **`isOddsAutomationRequest` duplicated across two route files** — identical function in `sync-results/route.ts` and `score-week/route.ts`. Extract to a shared `src/lib/nfl/authorize-odds-admin.ts` or `src/lib/request-utils.ts` when a third automation route is added.
+- ~~**`isOddsAutomationRequest` duplicated across two route files**~~ — **Resolved by Story 5.3 (AC4)** — extracted to `src/lib/nfl/authorize-odds-admin.ts`.
 - **Team in multiple FINAL games causes silent map collision in `scoreNflWeek`** — `winnerByTeamId` maps `teamId → GameWinnerResult` with no collision guard; if a team somehow appears in two FINAL games in the same week (data corruption), the second result silently overwrites the first and picks are scored against the wrong game. Add a guard or early return when this is detected.
 - **FINAL game with null scores silently counted as `skipped`** — `score-nfl-week.ts` skips games where `homeScore == null || awayScore == null` via `continue`, incrementing no counter; picks for those games fall through to the `skipped` increment as if the game were not FINAL. Operator cannot distinguish a data anomaly from a legitimately not-yet-final game from the response alone.
 - **Read-then-write race in `scoreNflWeek`** — picks are loaded via `findMany` before the `$transaction` opens; a pick submitted in the gap between the two DB calls is invisible to the run and appears in neither `scored` nor `skipped`. Low practical risk for an admin-triggered operation; resolve by moving the picks query inside the transaction when a batch/serializable approach is adopted.

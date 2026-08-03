@@ -83,7 +83,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 | 9.4 AC5 incomplete full deferred pass | **Resolved (this story)** | Exhaustive Promote/Accept/Park below |
 | 9.3 `password_reset_tokens` expiry/consumed cleanup | **Park** | Kyle — ops retention if table size becomes an issue |
 | 9.2 DMARC omitted from email DNS plan | **Park (owned)** | → `post-epic-9-resend-domain-and-from-address` |
-| 9.2 Auth.js cookie / apex vs www canonical session | **Park (owned)** | → `post-epic-9-vercel-production-env-and-cron` |
+| 9.2 Auth.js cookie / apex vs www canonical session | **Resolved** | `post-epic-9-vercel-production-env-and-cron` — canonical `www.nflpickem.cc`; apex → www; Production `AUTH_URL` |
 | 9.1 Isolation mock reimplements filter in test | **Accept** | Kyle — AC where-clause already asserted; thinner mock later |
 
 #### Epic 8 (rehearsal / simulation)
@@ -301,7 +301,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: code review of 9-2-domain-provider-investigation.md (2026-07-28)
 
 - **DMARC omitted from email DNS plan** — `docs/domain-provider-decision.md` covers SPF/DKIM (/MX return-path) for Resend verify but not DMARC. Fine for Story 9.2 investigation scope; add DMARC guidance during `post-epic-9-resend-domain-and-from-address` if deliverability/spoofing hardening is desired before production inbox traffic.
-- **Auth.js cookie / apex vs www canonical session guidance** — Hostname plan allows apex or `www` as primary without documenting session cookie `Domain=` / `__Host-` implications when both hosts are attached. Belongs with `post-epic-9-vercel-production-env-and-cron` when setting Production `AUTH_URL` to the canonical host and enforcing redirect.
+- ~~**Auth.js cookie / apex vs www canonical session guidance**~~ — **Resolved** (`post-epic-9-vercel-production-env-and-cron`, 2026-08-03): Production canonical host `https://www.nflpickem.cc`; apex redirects to www; `AUTH_URL` matches; login verified on www.
 
 ## Deferred from: code review of 9-1-league-scoped-scoring-scorenflweek-blast-radius.md (2026-07-28)
 

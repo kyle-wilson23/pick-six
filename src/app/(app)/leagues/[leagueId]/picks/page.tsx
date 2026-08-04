@@ -3,15 +3,23 @@ import Typography from "@mui/material/Typography";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
+import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
 import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
+import {
+  getLeagueWeekPeerPicks,
+  isLeagueWeekPeerPicksUnlocked,
+  type LeagueWeekPeerPickRow,
+} from "@/lib/picks/get-league-week-peer-picks";
 import { parseWeekNumberSearchParam } from "@/lib/picks/week-query-param";
 
 import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
 import { DeadlineCountdown } from "@/components/picks/DeadlineCountdown";
 import { JailedTeamCallout } from "@/components/picks/JailedTeamCallout";
+import { PicksPageTabs } from "@/components/picks/PicksPageTabs";
 import { PicksPreviewBanner } from "@/components/picks/PicksPreviewBanner";
 import { WeekMatchupList } from "@/components/picks/WeekMatchupList";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -40,13 +48,15 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
     notFound();
   }
 
+  const now = new Date();
+
   let picksView: BuildLeaguePicksWeekViewOutcome;
   try {
     picksView = await buildLeaguePicksWeekView({
       leagueId,
       sessionUserId: session.user.id,
       explicitWeekNumber: explicitWeekParsed ?? null,
-    });
+    }, now);
   } catch {
     notFound();
   }
@@ -81,24 +91,29 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
   const showJailed = showActiveWeekChrome && jailedTeam != null;
   const showDeadlineJailedRow = showDeadline || showJailed;
 
-  return (
-    <Stack
-      component="main"
-      id="main-content"
-      tabIndex={-1}
-      spacing={3}
-      sx={{
-        ...skipTargetMainSx,
-        ...appContentWidthSx,
-        px: { xs: 1.5, sm: 2 },
-        py: { xs: 3, md: 4 },
-        alignItems: "stretch",
-      }}
-    >
-      <Typography variant="h4" component="h1">
-        Weekly picks
-      </Typography>
+  let opponentsRows: LeagueWeekPeerPickRow[] | null = null;
+  if (
+    isLeagueWeekPeerPicksUnlocked({
+      isPreview: payload.isPreview,
+      pickDeadlineUtc: payload.pickDeadlineUtc,
+      now,
+    })
+  ) {
+    const season = await resolveCurrentSeasonForLeague(prisma.season, leagueId);
+    if (season) {
+      opponentsRows = await getLeagueWeekPeerPicks(prisma, {
+        leagueId,
+        seasonId: season.id,
+        weekNumber: payload.weekNumber,
+        isPreview: payload.isPreview,
+        pickDeadlineUtc: payload.pickDeadlineUtc,
+        now,
+      });
+    }
+  }
 
+  const myPickContent = (
+    <Stack spacing={3}>
       {access.league.isTestLeague ? <TestLeagueBanner /> : null}
 
       {payload.isPreview ? <PicksPreviewBanner /> : null}
@@ -133,6 +148,28 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
         currentPick={payload.currentPick}
         seasonPickedTeams={payload.seasonPickedTeams}
       />
+    </Stack>
+  );
+
+  return (
+    <Stack
+      component="main"
+      id="main-content"
+      tabIndex={-1}
+      spacing={3}
+      sx={{
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
+        px: { xs: 1.5, sm: 2 },
+        py: { xs: 3, md: 4 },
+        alignItems: "stretch",
+      }}
+    >
+      <Typography variant="h4" component="h1">
+        Weekly picks
+      </Typography>
+
+      <PicksPageTabs opponentsRows={opponentsRows} myPickContent={myPickContent} />
     </Stack>
   );
 }

@@ -30,3 +30,36 @@ export const theOddsApiEventSchema = z.object({
 export const theOddsApiOddsResponseSchema = z.array(theOddsApiEventSchema);
 
 export type TheOddsApiEvent = z.infer<typeof theOddsApiEventSchema>;
+
+/** `/events` — schedule without bookmakers (quota-free). */
+export const theOddsApiScheduleEventSchema = z.object({
+  id: z.string(),
+  sport_key: z.string(),
+  commence_time: z.string(),
+  home_team: z.string(),
+  away_team: z.string(),
+});
+
+export const theOddsApiScheduleEventsResponseSchema = z.array(theOddsApiScheduleEventSchema);
+
+export type TheOddsApiScheduleEvent = z.infer<typeof theOddsApiScheduleEventSchema>;
+
+export const theOddsApiScoreSideSchema = z.object({
+  name: z.string(),
+  score: z.union([z.string(), z.number()]).nullable().optional(),
+});
+
+/** `/scores` — live + recently completed games. */
+export const theOddsApiScoreEventSchema = z.object({
+  id: z.string(),
+  sport_key: z.string(),
+  commence_time: z.string(),
+  completed: z.boolean(),
+  home_team: z.string(),
+  away_team: z.string(),
+  scores: z.array(theOddsApiScoreSideSchema).nullable().optional(),
+});
+
+export const theOddsApiScoresResponseSchema = z.array(theOddsApiScoreEventSchema);
+
+export type TheOddsApiScoreEvent = z.infer<typeof theOddsApiScoreEventSchema>;

@@ -7,7 +7,7 @@ import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { assertAuthorizedForNflOddsOps } from "@/lib/nfl/authorize-odds-admin";
-import { syncNflScheduleFromApiSports } from "@/lib/nfl/sync-nfl-schedule";
+import { syncNflScheduleFromOdds } from "@/lib/nfl/sync-nfl-schedule-from-odds";
 
 function isOddsAutomationRequest(request: NextRequest): boolean {
   const secret = process.env.ODDS_SNAPSHOT_SECRET?.trim();
@@ -29,8 +29,8 @@ async function readJsonObject(request: NextRequest): Promise<{ ok: true; value: 
 }
 
 /**
- * POST `/api/admin/nfl/sync-schedule` — upsert `NflGame` rows for a season from API-Sports NFL (Story 3.9).
- * Auth: same as odds admin (**league admin** session or **`Authorization: Bearer ODDS_SNAPSHOT_SECRET`**).
+ * POST `/api/admin/nfl/sync-schedule` — upsert `NflGame` rows from The Odds API `/events`.
+ * Auth: league admin session or `Authorization: Bearer ODDS_SNAPSHOT_SECRET`.
  */
 export async function POST(request: NextRequest) {
   if (!isOddsAutomationRequest(request)) {
@@ -68,13 +68,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = process.env.API_SPORTS_KEY?.trim();
+  const apiKey = process.env.ODDS_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       {
         error: {
-          code: "API_SPORTS_NOT_CONFIGURED",
-          message: "API_SPORTS_KEY is not set on the server",
+          code: "ODDS_API_NOT_CONFIGURED",
+          message: "ODDS_API_KEY is not set on the server",
         },
       },
       { status: 503 },
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
   }
 
   const nflSeasonYear = parsed.data.nflSeasonYear ?? getCurrentNflSeasonYear();
-  const result = await syncNflScheduleFromApiSports(prisma, { apiKey, nflSeasonYear });
+  const result = await syncNflScheduleFromOdds(prisma, { apiKey, nflSeasonYear });
 
   if (!result.ok) {
     return NextResponse.json(
@@ -99,5 +99,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     nflSeasonYear,
     upserted: result.upserted,
+    deleted: result.deleted,
+    provider: "the-odds-api",
   });
 }

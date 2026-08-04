@@ -77,4 +77,4 @@ Product requirements: **`_bmad-output/planning-artifacts/prd.md`**. UX: **`_bmad
 
 When in doubt, align with the architecture doc and PRD — do not introduce a second pattern. For story-level scope and ordering, use **`epics.md`**.
 
-**NFL schedule + odds:** Provider and mapping choices are recorded in **`docs/nfl-odds-integration.md`** (The Odds API for moneyline/spread snapshots; `NflGame` schedule remains seed/JSON until a follow-up). See **`epics.md`** Story 3.2 for acceptance criteria.
+**NFL schedule + odds + results:** Provider choices are in **`docs/nfl-odds-integration.md`**. Ops use **The Odds API** for schedule (`/events`), results (`/scores`, 3-day lookback), and lines (`/odds`). See **`epics.md`** Story 3.2 / 5.1 for historical ACs.

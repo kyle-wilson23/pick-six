@@ -94,17 +94,19 @@ A **future** enhancement could **upsert** `NflGame` from The Odds API (or combin
 | Topic | Decision |
 |-------|----------|
 | **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `american`). Server-only via `ODDS_API_KEY`. |
-| **Schedule (`NflGame`)** | **API-Sports American Football** (`API_SPORTS_KEY`) — `POST /api/admin/nfl/sync-schedule` upserts **weeks 1–18** from `/games` (league NFL=`1`, season year). **Still pair with** The Odds API for lines. |
-| **Split vs single provider** | **Split:** **The Odds API** (lines) + **API-Sports** (schedule authority). |
+| **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — `POST /api/admin/nfl/sync-schedule` upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. |
+| **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; sync soon after the week completes. |
+| **Operational provider** | **Single vendor for ops:** The Odds API for schedule + results + lines. Legacy **API-Sports** modules remain in-repo but are **not** required for admin happy path (`API_SPORTS_KEY` unused by these routes). |
 | **Compliance** | Follow each vendor’s **terms of use**; no keys in client bundles (`docs/project-context.md`). |
-| **Fallback** | Failed odds snapshot → structured error + logs; **manual** odds PATCH / league admin UI. Failed **schedule sync** → structured error + logs; **manual** seed extension or vendor follow-up. Mapping changes live in `src/lib/integrations/the-odds-api/` and `src/lib/integrations/api-sports-nfl/`. |
+| **Fallback** | Failed odds snapshot → structured error + logs; **manual** odds PATCH / league admin UI. Failed schedule/results sync → structured error + logs. Mapping lives primarily in `src/lib/integrations/the-odds-api/`. |
 | **Team logos (bonus / 3.8)** | Not from this odds integration; evaluate static assets or image-capable providers later. |
 
 ## Mapping
 
 - **Odds (The Odds API) — teams:** Provider uses full team names (`home_team` / `away_team`). We match to `Team.name` from `prisma/data/nfl-teams.json` after optional alias normalization (`canonicalTeamDisplayName` in `src/lib/integrations/the-odds-api/team-names.ts`).
-- **Schedule (API-Sports) — teams:** Use `teams.home` / `away` — prefer `code` (abbr) mapped to `Team.abbreviation` (aliases e.g. `JAC` → `JAX`), then fall back to **`canonicalTeamDisplayName(name)`** against `Team.name`.
-- **Odds — games:** We match provider events to `NflGame` rows by **away @ home** team names for the requested `nfl_season_year` + `week_number` (orientation must match the API).
+- **Schedule — week numbers:** Odds `/events` has no week field. We infer week **1–18** from kickoffs (America/New_York Tue–Mon buckets from the earliest event’s week). See `map-schedule-from-events.ts`.
+- **Odds — games (lines):** We match provider odds events to `NflGame` rows by **away @ home** team names for the requested `nfl_season_year` + `week_number` (orientation must match the API).
+- **Results — games:** Completed `/scores` events match existing `NflGame` by home/away team ids (closest `kickoffAt` if duplicates).
 - **Spread:** Stored as **`home_spread_points`** (negative = home favored), taken from the home team’s `spreads` outcome `point` in the first bookmaker.
 
 ## Snapshot semantics (“mid-week”)
@@ -125,7 +127,7 @@ A snapshot **can succeed** (`200` + `COMPLETED` run) when the provider only matc
 
 ## Environment variables
 
-See `.env.example`: `ODDS_API_KEY`, optional `ODDS_SNAPSHOT_SECRET` for `Authorization: Bearer` automation (bypasses browser CSRF checks; still server-only). **`API_SPORTS_KEY`** (optional `API_SPORTS_HOST`) for **`POST /api/admin/nfl/sync-schedule`**. Optional **`ODDS_API_DEBUG_LOG_RESPONSE=true`** logs the **full** raw odds JSON body from The Odds API (verbose; use only when debugging).
+See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, and odds snapshots), optional `ODDS_SNAPSHOT_SECRET` for `Authorization: Bearer` automation (bypasses browser CSRF checks; still server-only). **`API_SPORTS_KEY`** is **legacy** (unused by current admin schedule/results routes; keep until explicitly retired). Optional **`ODDS_API_DEBUG_LOG_RESPONSE=true`** logs the **full** raw odds JSON body from The Odds API (verbose; use only when debugging).
 
 ---
 
@@ -173,7 +175,7 @@ See `.env.example`: `ODDS_API_KEY`, optional `ODDS_SNAPSHOT_SECRET` for `Authori
    ```
 
    - **`NFL_SEASON_YEAR`** (optional in `.env` / `.env.local`) pins the season label used by seed (mirrors `getCurrentNflSeasonYear()`). If unset, the seed uses the **current UTC calendar year**.
-   - Out of the box, **`prisma/seed.cjs` only creates `NflGame` rows for `weekNumber: 1`**. For **weeks 2–18**, run **`POST /api/admin/nfl/sync-schedule`** (requires **`API_SPORTS_KEY`**) or extend seed JSON.
+   - Out of the box, **`prisma/seed.cjs` only creates `NflGame` rows for `weekNumber: 1`**. Prefer **`POST /api/admin/nfl/sync-schedule`** (The Odds API `/events`; requires **`ODDS_API_KEY`**) for the full slate — Settings → **Sync schedule (Odds)**.
 
 ### 4. Access control (who can call the APIs)
 
@@ -184,9 +186,10 @@ See `.env.example`: `ODDS_API_KEY`, optional `ODDS_SNAPSHOT_SECRET` for `Authori
 
 | Piece | Location |
 |-------|----------|
-| Provider HTTP client + Zod | `src/lib/integrations/the-odds-api/` (odds); **`src/lib/integrations/api-sports-nfl/`** (schedule) |
+| Provider HTTP client + Zod | `src/lib/integrations/the-odds-api/` (events, scores, odds); legacy **`src/lib/integrations/api-sports-nfl/`** unused by admin sync routes |
 | Snapshot + manual line persistence | `src/lib/nfl/snapshot-nfl-week-odds.ts`, `src/lib/nfl/effective-odds.ts` |
-| **Schedule sync** | **`src/lib/nfl/sync-nfl-schedule.ts`**, **`POST /api/admin/nfl/sync-schedule`**; optional **`scripts/sync-nfl-schedule.mjs`** |
+| **Schedule sync** | **`src/lib/nfl/sync-nfl-schedule-from-odds.ts`**, **`POST /api/admin/nfl/sync-schedule`** (Odds `/events`) |
+| **Results sync** | **`src/lib/nfl/sync-nfl-results-from-odds.ts`**, **`POST /api/admin/nfl/sync-results`** (Odds `/scores?daysFrom=3`) |
 | **POST** snapshot | `POST /api/admin/nfl/snapshot-odds` — body `{ "nflSeasonYear": number, "weekNumber": 1–18 }` |
 | **GET** lines for a week | `GET /api/admin/nfl/week-odds?nflSeasonYear=&weekNumber=` |
 | **PATCH** manual line | `PATCH /api/admin/nfl/games/[gameId]/odds-line` — body `{ "homeMoneylineAmerican": number \| null, "awayMoneylineAmerican": number \| null, "homeSpreadPoints": number \| null }` |
@@ -221,7 +224,7 @@ Uses recorded JSON under `src/lib/integrations/the-odds-api/fixtures/` — **no*
 
 6. **If snapshot fails with “no matching odds”:** the API’s listed games may not match **`nfl-week1-games.json`** matchups for that period — use **Save manual line** on a row to verify persistence, or adjust seed/API season alignment.
 
-7. **Optional — full-season schedule sync:** set **`API_SPORTS_KEY`**, then:
+7. **Full-season schedule sync (Odds):** requires **`ODDS_API_KEY`** (and session or **`ODDS_SNAPSHOT_SECRET`**):
 
    ```bash
    curl -sS -X POST "http://localhost:3000/api/admin/nfl/sync-schedule" \
@@ -230,6 +233,15 @@ Uses recorded JSON under `src/lib/integrations/the-odds-api/fixtures/` — **no*
      -d '{"nflSeasonYear":2026}'
    ```
 
-   Use **`{}`** for the body to default **`nflSeasonYear`** to `getCurrentNflSeasonYear()`. Expect an **`upserted`** count (vendor-dependent); failures return **`{ error: { code, message } }`**.
+   Expect **`upserted`** / **`deleted`** (orphan delete only when the mapped slate looks complete, ≥200 games). Or use Settings → **Sync schedule (Odds)**.
 
-**Quota reminder:** each snapshot calls The Odds API with **`h2h` and `spreads`** (multiple markets consume **multiple credits** per request — see [their v4 usage docs](https://the-odds-api.com/liveapi/guides/v4/)). Avoid hammering **Run snapshot** in a loop during manual QA. Full-season **schedule sync** is **one** API-Sports **`/games`** request per run when quota allows.
+8. **Results sync (Odds):** after games complete (within **3 days**), Settings → **Sync results (Odds)** or:
+
+   ```bash
+   curl -sS -X POST "http://localhost:3000/api/admin/nfl/sync-results" \
+     -H "Authorization: Bearer YOUR_ODDS_SNAPSHOT_SECRET" \
+     -H "Content-Type: application/json" \
+     -d '{"nflSeasonYear":2026,"weekNumber":1}'
+   ```
+
+**Quota reminder:** each odds **snapshot** calls The Odds API with **`h2h` and `spreads`** (multiple markets consume **multiple credits** — see [v4 usage docs](https://the-odds-api.com/liveapi/guides/v4/)). **`/events` schedule sync is quota-free**; **`/scores` results sync** consumes quota per provider rules.

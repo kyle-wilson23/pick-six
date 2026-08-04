@@ -107,6 +107,79 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
     }
   }
 
+  async function syncScheduleFromOdds() {
+    setLoading(true);
+    setSnapshotMessage(null);
+    try {
+      const y = Number.parseInt(year, 10);
+      const res = await fetch("/api/admin/nfl/sync-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nflSeasonYear: y }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" && data !== null && "error" in data
+            ? (data as ApiErr).error?.message ?? "Schedule sync failed"
+            : "Schedule sync failed";
+        setSnapshotMessage(msg);
+        return;
+      }
+      const upserted =
+        typeof data === "object" && data !== null && "upserted" in data
+          ? Number((data as { upserted: unknown }).upserted)
+          : "?";
+      const deleted =
+        typeof data === "object" && data !== null && "deleted" in data
+          ? Number((data as { deleted: unknown }).deleted)
+          : "?";
+      setSnapshotMessage(`Schedule synced from The Odds API (upserted ${upserted}, deleted orphans ${deleted}).`);
+      await loadGames();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function syncResultsFromOdds() {
+    setLoading(true);
+    setSnapshotMessage(null);
+    try {
+      const y = Number.parseInt(year, 10);
+      const w = Number.parseInt(week, 10);
+      const res = await fetch("/api/admin/nfl/sync-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nflSeasonYear: y, weekNumber: w }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" && data !== null && "error" in data
+            ? (data as ApiErr).error?.message ?? "Results sync failed"
+            : "Results sync failed";
+        setSnapshotMessage(msg);
+        return;
+      }
+      const synced =
+        typeof data === "object" && data !== null && "synced" in data
+          ? Number((data as { synced: unknown }).synced)
+          : "?";
+      const skipped =
+        typeof data === "object" && data !== null && "skipped" in data
+          ? Number((data as { skipped: unknown }).skipped)
+          : "?";
+      setSnapshotMessage(
+        `Results synced from The Odds API (synced ${synced}, skipped ${skipped}). Scores lookback is max 3 days.`,
+      );
+      await loadGames();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function saveRow(g: GameRow, draft: { h: string; a: string; s: string }) {
     setRowError((prev) => ({ ...prev, [g.id]: null }));
     const res = await fetch(`/api/admin/nfl/games/${g.id}/odds-line`, {
@@ -134,8 +207,10 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        NFL odds are global (same for every league). Lines come from the latest successful snapshot or manual save
-        per game; nothing refreshes automatically between snapshots (Tuesday cadence is manual here until Epic 6).
+        NFL schedule, results, and odds lines are global (same for every league).{" "}
+        <strong>Sync schedule (Odds)</strong> loads the full regular season from The Odds API events feed.{" "}
+        <strong>Sync results (Odds)</strong> finalizes recently completed games (provider lookback max{" "}
+        <strong>3 days</strong> — run soon after the week ends). Odds lines come from snapshot or manual save.
         Your league&apos;s first competition week
         {firstCompetitionWeek !== null ? (
           <>
@@ -145,8 +220,7 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
         ) : (
           " is not loaded for this page"
         )}
-        ; snapshot triggers still use the NFL season year and week you enter (e.g. Week 1 in pre-season for smoke
-        tests).
+        .
       </Typography>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <TextField
@@ -163,6 +237,12 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
           onChange={(e) => setWeek(e.target.value)}
           sx={{ width: 120 }}
         />
+        <Button variant="outlined" onClick={() => void syncScheduleFromOdds()} disabled={loading}>
+          Sync schedule (Odds)
+        </Button>
+        <Button variant="outlined" onClick={() => void syncResultsFromOdds()} disabled={loading}>
+          Sync results (Odds)
+        </Button>
         <Button variant="outlined" onClick={() => void loadGames()} disabled={loading}>
           Load lines
         </Button>
@@ -181,7 +261,7 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
         </Typography>
       ) : games.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          No games in the database for that NFL week — seed or import the schedule first.
+          No games in the database for that NFL week — run Sync schedule (Odds) first.
         </Typography>
       ) : (
         <Stack spacing={2}>

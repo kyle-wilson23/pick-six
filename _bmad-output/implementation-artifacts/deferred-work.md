@@ -709,3 +709,10 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 - **`mapWithConcurrency`'s `concurrency` argument isn't validated** — `src/lib/email/map-with-concurrency.ts:15`. `NaN`/`0`/negative values would silently resolve with zero items processed (`Array.from({length: NaN})` yields no workers). Not reachable today — the only caller passes the hardcoded `EMAIL_SEND_CONCURRENCY = 4` constant.
 - **`mapWithConcurrency` uses `Promise.all` instead of `Promise.allSettled`** — `src/lib/email/map-with-concurrency.ts:33`. A future mapper that rejects instead of catching internally would reject the whole pool while other in-flight workers continue unawaited. Both current callers (`send-tuesday-digest.ts`, `send-reminder.ts`) self-catch inside the mapper, so not reachable with today's callers.
 
+
+## Deferred from: code review of spec-odds-api-schedule-sync (2026-08-03)
+
+- **Week inference DST / Tuesday-boundary precision** — `map-schedule-from-events.ts` uses ms/(7d) from week-1 Tuesday ET; rare DST edges could mis-bucket. Revisit if flex/DST complaints appear.
+- **Concurrent schedule sync races** — no advisory lock / serializable isolation on upsert+orphan-delete for the same season year.
+- **Retire API-Sports modules + env** — Ask First in spec; code/env still present for legacy. Remove only after explicit approval.
+- **Odds `/events` mid-season incompleteness** — orphan delete is gated (≥200 games + SCHEDULED-only); mid-season upsert-only may leave stale SCHEDULED fixture leftovers until a full-slate sync. Manual cleanup path if needed.

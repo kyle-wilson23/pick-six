@@ -2,6 +2,12 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: adversarial review of spec-league-rules-user-facing-copy.md (2026-08-03)
+
+- **Rules page omits “one pick per week”** — Pre-existing gap vs a complete participant rulebook; not introduced by the user-facing copy rewrite. Add if participants still ask after launch.
+- **Rules page omits whether the jailed team itself is pickable** — Prior copy vaguely mentioned “validation”; rewrite did not add a clear allowed/blocked rule. Confirm product wording and add when ready.
+- **Rules page omits ties / postponements / no-contests scoring** — Pre-existing edge-case gaps (0 points for NFL ties is domain policy elsewhere). Out of scope for this copy pass.
+
 ## Deferred from: code review of 9-7-email-html-layout-polish.md (2026-07-31)
 
 - **EmailLayout missing `<Head>` charset/viewport** — React Email templates omit an explicit `<Head>`; common client meta is left to defaults. Not required by 9.7 ACs; revisit if Outlook/mobile encoding issues appear in real inbox smoke.

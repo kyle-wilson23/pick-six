@@ -56,8 +56,8 @@ export default async function LeagueRulesPage({ params }: PageProps) {
         variant='body2'
         color='text.secondary'
       >
-        Reference for {league.name}. These mechanics are fixed for the MVP;
-        admins cannot customize scoring or deadlines in the app yet.
+        How scoring, deadlines, and picks work in {league.name}. The same
+        rules apply to everyone and can&apos;t be customized in the app.
       </Typography>
 
       <Stack
@@ -89,10 +89,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            A standard win is picking a team that wins on the scoreboard. That
-            earns <strong>1 point</strong>. Picking correctly{' '}
-            <strong>against the jailed team</strong> earns{' '}
-            <strong>2 points</strong> for that week.
+            Pick a team that wins on the scoreboard and you earn{' '}
+            <strong>1 point</strong>. If your pick is the opponent of the{' '}
+            <strong>jailed team</strong> and that opponent wins, you earn{' '}
+            <strong>2 points</strong> for that week (not 1).
           </Typography>
         </section>
 
@@ -108,11 +108,11 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            Each week, one NFL team is the <strong>jailed team</strong>: the
-            biggest favorite by <strong>American moneyline</strong> among
-            favorites in that week&apos;s games, using the same weekly effective
-            odds snapshot for every league. Picks are evaluated against that
-            designation for anti-jailed bonuses and validation.
+            Each week, one NFL team is the <strong>jailed team</strong>—the
+            biggest favorite by <strong>moneyline</strong> among that
+            week&apos;s favorites, based on a <strong>locked weekly odds</strong>{' '}
+            snapshot. Everyone in the league uses the same snapshot, so the
+            jailed team is the same for all participants.
           </Typography>
         </section>
 
@@ -122,17 +122,17 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             component='h2'
             gutterBottom
           >
-            Tie-breakers
+            When more than one team could be jailed
           </Typography>
           <Typography
             variant='body1'
             component='p'
           >
-            Order is: <strong>moneyline</strong> first (the biggest favorite
-            among all game favorites at the snapshot), then{' '}
-            <strong>point spread</strong> in the favorite&apos;s favor, then a{' '}
-            <strong>seeded random</strong> pick with a stored seed and an{' '}
-            <strong>audit trail</strong> so results can be verified later.
+            Break ties in this order: <strong>moneyline</strong> first (biggest
+            favorite), then <strong>point spread</strong> in the
+            favorite&apos;s favor, then a <strong>seeded random</strong> choice
+            from the remaining teams. The seed and result are recorded so the
+            outcome can be verified later if needed.
           </Typography>
         </section>
 
@@ -149,8 +149,7 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             component='p'
           >
             You may not pick the <strong>same NFL team twice</strong> in one
-            season; each participant&apos;s picks must stay unique across the
-            season.
+            season. Each of your picks must be a different team.
           </Typography>
         </section>
 
@@ -169,8 +168,8 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             Picks lock <strong>5 minutes before the first kickoff</strong> of
             the NFL week—typically Thursday around{' '}
             <strong>8:10 PM Eastern</strong> when the week opens on Thursday
-            night, or earlier if the first game is sooner. The server enforces
-            the real kickoff schedule.
+            night, or earlier if the first game is sooner. Lock times are based
+            on the real kickoff schedule.
           </Typography>
         </section>
 
@@ -186,9 +185,9 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            <strong>Tuesday standings and peer picks:</strong> league standings
-            update after Monday Night Football is processed. Until that Tuesday
-            reveal, other participants&apos; picks stay hidden.
+            Standings update on <strong>Tuesday</strong> after Monday Night
+            Football is processed. Until that Tuesday update, other
+            participants&apos; picks stay hidden.
           </Typography>
         </section>
       </Stack>

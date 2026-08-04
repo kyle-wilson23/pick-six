@@ -5,6 +5,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import HistoryIcon from "@mui/icons-material/History";
 import HomeIcon from "@mui/icons-material/Home";
 import LeaderboardIcon from "@mui/icons-material/Leaderboard";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SportsFootballIcon from "@mui/icons-material/SportsFootball";
@@ -54,6 +55,7 @@ const TAB_ICONS: Record<string, ReactElement> = {
   results: <EmojiEventsIcon />,
   rules: <MenuBookIcon />,
   admin: <AdminPanelSettingsIcon />,
+  invites: <MailOutlineIcon />,
   settings: <SettingsIcon />,
 };
 
@@ -84,17 +86,26 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
   const leagueId = resolveAppNavLeagueId(pathname);
   const leagueName = league?.leagueName ?? "";
   const isTestLeague = league?.isTestLeague ?? false;
-  // Pathname can resolve admin/settings before SyncAppNavLeague repopulates context.
+  // Pathname can resolve admin/invites/settings before SyncAppNavLeague repopulates context.
   // Only trust the path when context is still null — never override an explicit false.
   const pathLeagueTab =
     leagueId != null ? getActiveLeagueTab(pathname, leagueId) : null;
   const isAdmin =
     league?.isAdmin === true ||
     (league == null &&
-      (pathLeagueTab === "admin" || pathLeagueTab === "settings"));
+      (pathLeagueTab === "admin" ||
+        pathLeagueTab === "invites" ||
+        pathLeagueTab === "settings"));
 
   const homeActive = isHomePath(pathname);
-  const leagueActiveTab = pathLeagueTab ?? false;
+  // Invites (like admin/settings) is admin-only in nav; the page itself can still be
+  // membership-visible — don't mark those tabs active for non-admins.
+  const isAdminOnlyNavTab =
+    pathLeagueTab === "admin" ||
+    pathLeagueTab === "invites" ||
+    pathLeagueTab === "settings";
+  const leagueActiveTab =
+    pathLeagueTab != null && (isAdmin || !isAdminOnlyNavTab) ? pathLeagueTab : false;
   const activeTab = homeActive ? "home" : leagueActiveTab;
 
   const leagueTabs = leagueId != null ? getLeagueNavTabs(isAdmin) : [];

@@ -45,6 +45,13 @@ export const LEAGUE_ADMIN_TAB: LeagueNavTab = {
   matchPaths: ["/admin"],
 };
 
+export const LEAGUE_INVITES_TAB: LeagueNavTab = {
+  key: "invites",
+  label: "Invites",
+  hrefSuffix: "/invites",
+  matchPaths: ["/invites"],
+};
+
 export const LEAGUE_SETTINGS_TAB: LeagueNavTab = {
   key: "settings",
   label: "Settings",
@@ -58,13 +65,23 @@ export function buildLeagueTabHref(leagueId: string, hrefSuffix: string): string
 
 export function getLeagueNavTabs(isAdmin: boolean): LeagueNavTab[] {
   const tabs = isAdmin
-    ? [...LEAGUE_PARTICIPANT_TABS, LEAGUE_ADMIN_TAB, LEAGUE_SETTINGS_TAB]
+    ? [
+        ...LEAGUE_PARTICIPANT_TABS,
+        LEAGUE_ADMIN_TAB,
+        LEAGUE_INVITES_TAB,
+        LEAGUE_SETTINGS_TAB,
+      ]
     : [...LEAGUE_PARTICIPANT_TABS];
   return tabs;
 }
 
 /** Tab keys shown in the mobile More overflow menu instead of the bottom bar. */
-export const MOBILE_MORE_MENU_TAB_KEYS = new Set(["rules", "admin", "settings"]);
+export const MOBILE_MORE_MENU_TAB_KEYS = new Set([
+  "rules",
+  "admin",
+  "invites",
+  "settings",
+]);
 
 /** Primary mobile bottom nav tabs — overflow keys live in the More menu. */
 export function getMobileBottomNavTabs(isAdmin: boolean): LeagueNavTab[] {
@@ -111,7 +128,7 @@ export function resolveAppNavLeagueId(pathname: string): string | null {
 
 /**
  * Returns the active tab key for league sub-routes, or `null` when no tab matches
- * (e.g. hub, settings, invites).
+ * (e.g. league hub).
  */
 export function getActiveLeagueTab(pathname: string, leagueId: string): string | null {
   const basePrefix = `/leagues/${leagueId}`;

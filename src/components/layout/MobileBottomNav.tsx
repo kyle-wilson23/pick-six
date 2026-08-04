@@ -6,6 +6,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import HomeIcon from "@mui/icons-material/Home";
 import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
@@ -28,7 +29,6 @@ import {
   buildLeagueTabHref,
   getMobileBottomNavTabs,
   getMobileMoreMenuTabs,
-  isMobileMoreMenuTab,
   type LeagueNavTab,
 } from "@/lib/league/league-nav-tabs";
 
@@ -40,6 +40,7 @@ const TAB_ICONS: Record<string, ReactElement> = {
   results: <EmojiEventsIcon />,
   rules: <MenuBookIcon />,
   admin: <AdminPanelSettingsIcon />,
+  invites: <MailOutlineIcon />,
   settings: <SettingsIcon />,
 };
 
@@ -67,7 +68,8 @@ export function MobileBottomNav({
   const moreMenuTabs = leagueId != null ? getMobileMoreMenuTabs(isAdmin) : [];
   const moreMenuActive =
     profileActive ||
-    (typeof leagueActiveTab === "string" && isMobileMoreMenuTab(leagueActiveTab));
+    (typeof leagueActiveTab === "string" &&
+      moreMenuTabs.some((tab) => tab.key === leagueActiveTab));
   const navValue = homeActive ? "home" : moreMenuActive ? "more" : leagueActiveTab;
 
   const handleCloseMenu = () => {

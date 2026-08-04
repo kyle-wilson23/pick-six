@@ -31,6 +31,7 @@ describe("getLeagueNavTabs", () => {
       "results",
       "rules",
       "admin",
+      "invites",
       "settings",
     ]);
   });
@@ -59,6 +60,7 @@ describe("getMobileMoreMenuTabs", () => {
     expect(getMobileMoreMenuTabs(true).map((t) => t.key)).toEqual([
       "rules",
       "admin",
+      "invites",
       "settings",
     ]);
   });
@@ -73,6 +75,7 @@ describe("getActiveLeagueTab", () => {
     ["/leagues/abc/results", "results"],
     ["/leagues/abc/rules", "rules"],
     ["/leagues/abc/admin", "admin"],
+    ["/leagues/abc/invites", "invites"],
     ["/leagues/abc/settings", "settings"],
   ] as const)("resolves %s → %s", (pathname, expected) => {
     expect(getActiveLeagueTab(pathname, LEAGUE_ID)).toBe(expected);
@@ -81,7 +84,6 @@ describe("getActiveLeagueTab", () => {
   it.each([
     "/leagues/abc",
     "/leagues/abc/",
-    "/leagues/abc/invites",
     "/leagues/other/picks",
   ] as const)("returns null for %s", (pathname) => {
     expect(getActiveLeagueTab(pathname, LEAGUE_ID)).toBeNull();

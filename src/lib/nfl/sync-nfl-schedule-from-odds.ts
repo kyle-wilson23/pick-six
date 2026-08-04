@@ -57,54 +57,65 @@ export async function syncNflScheduleFromOdds(
     const allowOrphanDelete = mapped.rows.length >= FULL_SEASON_MIN_GAMES;
 
     let deleted = 0;
-    await prisma.$transaction(async (tx) => {
-      for (const r of mapped.rows) {
-        await tx.nflGame.upsert({
-          where: {
-            nflSeasonYear_weekNumber_homeTeamId_awayTeamId: {
-              nflSeasonYear: r.nflSeasonYear,
-              weekNumber: r.weekNumber,
-              homeTeamId: r.homeTeamId,
-              awayTeamId: r.awayTeamId,
-            },
-          },
-          create: {
-            nflSeasonYear: r.nflSeasonYear,
-            weekNumber: r.weekNumber,
-            homeTeamId: r.homeTeamId,
-            awayTeamId: r.awayTeamId,
-            kickoffAt: r.kickoffAt,
-          },
-          update: {
-            kickoffAt: r.kickoffAt,
+    // ~272 sequential upserts exceed Prisma's default 5s interactive transaction timeout on Neon.
+    const UPSERT_CHUNK = 25;
+    await prisma.$transaction(
+      async (tx) => {
+        for (let i = 0; i < mapped.rows.length; i += UPSERT_CHUNK) {
+          const chunk = mapped.rows.slice(i, i + UPSERT_CHUNK);
+          await Promise.all(
+            chunk.map((r) =>
+              tx.nflGame.upsert({
+                where: {
+                  nflSeasonYear_weekNumber_homeTeamId_awayTeamId: {
+                    nflSeasonYear: r.nflSeasonYear,
+                    weekNumber: r.weekNumber,
+                    homeTeamId: r.homeTeamId,
+                    awayTeamId: r.awayTeamId,
+                  },
+                },
+                create: {
+                  nflSeasonYear: r.nflSeasonYear,
+                  weekNumber: r.weekNumber,
+                  homeTeamId: r.homeTeamId,
+                  awayTeamId: r.awayTeamId,
+                  kickoffAt: r.kickoffAt,
+                },
+                update: {
+                  kickoffAt: r.kickoffAt,
+                },
+              }),
+            ),
+          );
+        }
+
+        if (!allowOrphanDelete) {
+          return;
+        }
+
+        const existing = await tx.nflGame.findMany({
+          where: { nflSeasonYear: opts.nflSeasonYear },
+          select: {
+            id: true,
+            weekNumber: true,
+            homeTeamId: true,
+            awayTeamId: true,
+            status: true,
           },
         });
-      }
-
-      if (!allowOrphanDelete) {
-        return;
-      }
-
-      const existing = await tx.nflGame.findMany({
-        where: { nflSeasonYear: opts.nflSeasonYear },
-        select: {
-          id: true,
-          weekNumber: true,
-          homeTeamId: true,
-          awayTeamId: true,
-          status: true,
-        },
-      });
-      const orphanIds = existing
-        .filter((g) => !keepKeys.has(`${g.weekNumber}|${g.homeTeamId}|${g.awayTeamId}`))
-        // Never delete finalized / in-progress games even if absent from a partial feed.
-        .filter((g) => g.status === "SCHEDULED")
-        .map((g) => g.id);
-      if (orphanIds.length > 0) {
-        const del = await tx.nflGame.deleteMany({ where: { id: { in: orphanIds } } });
-        deleted = del.count;
-      }
-    });
+        // Full-slate sync is schedule authority: remove any DB game (including FINAL seed /
+        // rehearsal leftovers) whose natural key is absent from the provider map. Mid-season
+        // safety is the ≥200 gate above — partial /events feeds skip this delete entirely.
+        const orphanIds = existing
+          .filter((g) => !keepKeys.has(`${g.weekNumber}|${g.homeTeamId}|${g.awayTeamId}`))
+          .map((g) => g.id);
+        if (orphanIds.length > 0) {
+          const del = await tx.nflGame.deleteMany({ where: { id: { in: orphanIds } } });
+          deleted = del.count;
+        }
+      },
+      { maxWait: 15_000, timeout: 60_000 },
+    );
 
     return { ok: true, upserted: mapped.rows.length, deleted };
   } catch (e) {

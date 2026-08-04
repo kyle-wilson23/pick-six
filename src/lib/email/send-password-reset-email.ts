@@ -28,7 +28,7 @@ export async function sendPasswordResetEmail(
         {
           from: getResendFrom(),
           to: [input.to],
-          subject: "Reset your Pick Six password",
+          subject: "Reset your Pigskin Pick'Em password",
           react: createElement(PasswordResetEmail, { resetUrl }),
         },
         { idempotencyKey: `password-reset:${input.rawToken}` },

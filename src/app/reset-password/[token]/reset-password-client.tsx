@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 import { ResetPasswordForm } from "./reset-password-form";
@@ -34,6 +35,7 @@ export function ResetPasswordClient({ token, isValid }: ResetPasswordClientProps
           ...skipTargetMainSx,
         }}
       >
+        <AppBrandLogo size="auth" />
         <Typography variant="h4" component="h1">
           Reset password
         </Typography>

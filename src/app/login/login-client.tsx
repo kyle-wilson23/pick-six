@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { getSafeCallbackPath } from "@/lib/callback-url";
 import { normalizeEmail } from "@/lib/normalize-email";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
@@ -148,6 +149,7 @@ export function LoginClient() {
           ...skipTargetMainSx,
         }}
       >
+        <AppBrandLogo size="auth" />
         <Typography variant="h4" component="h1">
           Login
         </Typography>

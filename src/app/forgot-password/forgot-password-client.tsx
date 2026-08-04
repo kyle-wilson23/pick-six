@@ -10,6 +10,7 @@ import NextLink from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { forgotPasswordBodySchema } from "@/lib/password-reset";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
@@ -111,6 +112,7 @@ export function ForgotPasswordClient() {
           ...skipTargetMainSx,
         }}
       >
+        <AppBrandLogo size="auth" />
         <Typography variant="h4" component="h1">
           Forgot password
         </Typography>

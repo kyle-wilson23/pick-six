@@ -31,7 +31,7 @@ export async function sendInvitationEmail(
           from: getResendFrom(),
           to: [input.to],
           subject: formatEmailSubject(
-            `You're invited to join ${input.leagueName} on Pick Six`,
+            `You're invited to join ${input.leagueName} on Pigskin Pick'Em`,
             isTestLeague,
           ),
           react: createElement(InvitationEmail, {

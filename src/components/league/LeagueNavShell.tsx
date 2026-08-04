@@ -22,6 +22,7 @@ import { usePathname } from "next/navigation";
 import type { ReactElement, ReactNode } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import {
   useAppNavLeague,
   useClearAppNavLeagueWhenOutsideLeagueRoute,
@@ -132,20 +133,7 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
           }}
         >
           <Toolbar sx={{ gap: 2, minHeight: { md: 64 } }}>
-            <Typography
-              component={Link}
-              href="/home"
-              variant="h6"
-              sx={{
-                color: "primary.main",
-                fontWeight: 800,
-                letterSpacing: 1,
-                textDecoration: "none",
-                flexShrink: 0,
-              }}
-            >
-              PICK SIX
-            </Typography>
+            <AppBrandLogo size="nav" href="/home" />
 
             {leagueId != null ? (
               <Stack

@@ -15,21 +15,21 @@ describe("getResendFrom", () => {
 
   it("returns the default placeholder when RESEND_FROM is unset", () => {
     delete process.env.RESEND_FROM;
-    expect(getResendFrom()).toBe("Pick Six <noreply@yourdomain.com>");
+    expect(getResendFrom()).toBe(`"Pigskin Pick'Em" <noreply@yourdomain.com>`);
   });
 
   it("returns RESEND_FROM when set", () => {
-    process.env.RESEND_FROM = "Pick Six <onboarding@resend.dev>";
-    expect(getResendFrom()).toBe("Pick Six <onboarding@resend.dev>");
+    process.env.RESEND_FROM = `"Pigskin Pick'Em" <onboarding@resend.dev>`;
+    expect(getResendFrom()).toBe(`"Pigskin Pick'Em" <onboarding@resend.dev>`);
   });
 
   it("trims whitespace from RESEND_FROM", () => {
-    process.env.RESEND_FROM = "  Pick Six <onboarding@resend.dev>  ";
-    expect(getResendFrom()).toBe("Pick Six <onboarding@resend.dev>");
+    process.env.RESEND_FROM = `  "Pigskin Pick'Em" <onboarding@resend.dev>  `;
+    expect(getResendFrom()).toBe(`"Pigskin Pick'Em" <onboarding@resend.dev>`);
   });
 
   it("falls back to default when RESEND_FROM is empty or whitespace only", () => {
     process.env.RESEND_FROM = "   ";
-    expect(getResendFrom()).toBe("Pick Six <noreply@yourdomain.com>");
+    expect(getResendFrom()).toBe(`"Pigskin Pick'Em" <noreply@yourdomain.com>`);
   });
 });

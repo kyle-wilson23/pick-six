@@ -4,8 +4,8 @@ import { formatEmailSubject } from "./test-league-labeling";
 
 describe("formatEmailSubject", () => {
   it("returns subject unchanged when not a test league", () => {
-    expect(formatEmailSubject("You're invited to join X on Pick Six", false)).toBe(
-      "You're invited to join X on Pick Six",
+    expect(formatEmailSubject("You're invited to join X on Pigskin Pick'Em", false)).toBe(
+      "You're invited to join X on Pigskin Pick'Em",
     );
     expect(formatEmailSubject("[X] Week 1 — Tuesday Update", false)).toBe(
       "[X] Week 1 — Tuesday Update",
@@ -13,8 +13,8 @@ describe("formatEmailSubject", () => {
   });
 
   it("prefixes invite subjects with [TEST] and a space", () => {
-    expect(formatEmailSubject("You're invited to join X on Pick Six", true)).toBe(
-      "[TEST] You're invited to join X on Pick Six",
+    expect(formatEmailSubject("You're invited to join X on Pigskin Pick'Em", true)).toBe(
+      "[TEST] You're invited to join X on Pigskin Pick'Em",
     );
   });
 

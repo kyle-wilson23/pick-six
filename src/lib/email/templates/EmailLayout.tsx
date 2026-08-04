@@ -30,7 +30,7 @@ export type EmailLayoutProps = {
 export function EmailLayout({
   children,
   preview,
-  brandLabel = "Pick Six",
+  brandLabel = "Pigskin Pick'Em",
 }: EmailLayoutProps) {
   return (
     <Html>

@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { createAccountBodySchema } from "@/lib/create-account";
 import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
@@ -189,12 +190,14 @@ export function CreateAccountClient() {
           ...skipTargetMainSx,
         }}
       >
+        <AppBrandLogo size="auth" />
         <Typography variant="h4" component="h1">
           Create account
         </Typography>
 
         <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400 }}>
-          Register to use Pick Six. Join a league later via an invite from your league admin.
+          Register to use Pigskin Pick&apos;Em. Join a league later via an invite from your league
+          admin.
         </Typography>
 
         <Stack

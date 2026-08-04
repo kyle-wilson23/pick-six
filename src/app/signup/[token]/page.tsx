@@ -3,6 +3,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { auth } from "@/lib/auth";
 import { buildInviteLoginHref } from "@/lib/invite-login-href";
 import { normalizeEmail } from "@/lib/normalize-email";
@@ -57,6 +58,7 @@ export default async function SignupInvitePage({ params }: PageProps) {
           ...skipTargetMainSx,
         }}
       >
+        <AppBrandLogo size="auth" />
         <Typography variant="h4" component="h1">
           {preview.status === "already_registered" ? "Accept invitation" : "Create your account"}
         </Typography>

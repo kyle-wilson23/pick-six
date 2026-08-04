@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Pick Six",
+  title: "Pigskin Pick'Em",
   description: "NFL pick'em league manager",
 };
 

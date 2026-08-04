@@ -5,7 +5,7 @@ import {
   focusVisibleRingCss,
 } from "@/theme/focus-visible-ring";
 
-/** UX: Visual Design Foundation — dark mode, emerald primary, gold accent (Pick Six). */
+/** UX: Visual Design Foundation — dark mode, emerald primary, gold accent (Pigskin Pick'Em). */
 export function createAppTheme(fontFamily: string) {
   return createTheme({
     palette: {

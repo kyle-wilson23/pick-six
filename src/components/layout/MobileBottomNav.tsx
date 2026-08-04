@@ -8,6 +8,7 @@ import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SportsFootballIcon from "@mui/icons-material/SportsFootball";
 import Box from "@mui/material/Box";
@@ -19,6 +20,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { useTheme } from "@mui/material/styles";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useId, useState, type ReactElement } from "react";
 
@@ -55,14 +57,17 @@ export function MobileBottomNav({
   isAdmin,
 }: MobileBottomNavProps) {
   const theme = useTheme();
+  const pathname = usePathname();
   const menuId = useId();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const menuOpen = menuAnchor != null;
 
+  const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
   const leagueTabs = leagueId != null ? getMobileBottomNavTabs(isAdmin) : [];
   const moreMenuTabs = leagueId != null ? getMobileMoreMenuTabs(isAdmin) : [];
   const moreMenuActive =
-    typeof leagueActiveTab === "string" && isMobileMoreMenuTab(leagueActiveTab);
+    profileActive ||
+    (typeof leagueActiveTab === "string" && isMobileMoreMenuTab(leagueActiveTab));
   const navValue = homeActive ? "home" : moreMenuActive ? "more" : leagueActiveTab;
 
   const handleCloseMenu = () => {
@@ -182,6 +187,17 @@ export function MobileBottomNav({
               </MenuItem>
             ))
           : null}
+        <MenuItem
+          component={Link}
+          href="/profile"
+          onClick={handleCloseMenu}
+          selected={profileActive}
+        >
+          <ListItemIcon>
+            <PersonOutlineIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

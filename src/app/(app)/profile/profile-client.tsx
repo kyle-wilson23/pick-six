@@ -135,7 +135,7 @@ export function ProfileClient({ email, firstName, lastName }: ProfileClientProps
   }
 
   return (
-    <Stack spacing={3} sx={{ width: "100%", maxWidth: 480 }}>
+    <Stack spacing={3} sx={{ width: "100%" }}>
       <Typography variant="h4" component="h1">
         Profile
       </Typography>

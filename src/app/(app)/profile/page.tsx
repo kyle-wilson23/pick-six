@@ -5,6 +5,8 @@ import { ProfileClient } from "@/app/(app)/profile/profile-client";
 import { auth } from "@/lib/auth";
 import { buildLoginRedirectWithCallback } from "@/lib/callback-url";
 import { prisma } from "@/lib/db";
+import { appContentWidthSx } from "@/theme/app-content-width";
+import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -22,7 +24,18 @@ export default async function ProfilePage() {
   }
 
   return (
-    <Stack sx={{ py: 2, px: { xs: 2, sm: 3 }, width: "100%", alignItems: "flex-start" }}>
+    <Stack
+      component="main"
+      id="main-content"
+      tabIndex={-1}
+      spacing={3}
+      sx={{
+        ...skipTargetMainSx,
+        ...appContentWidthSx,
+        px: 2,
+        py: 4,
+      }}
+    >
       <ProfileClient
         email={user.email}
         firstName={user.firstName ?? ""}

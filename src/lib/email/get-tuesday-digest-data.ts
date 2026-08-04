@@ -7,6 +7,7 @@ import {
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
 import { getLeagueStandings, type StandingsEntry } from "@/lib/scoring/get-league-standings";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type TuesdayDigestData = {
   leagueName: string;
@@ -143,7 +144,7 @@ export async function getTuesdayDigestData(
     members: memberships.map((m) => ({
       membershipId: m.id,
       email: m.user.email,
-      displayName: m.user.name ?? m.user.email,
+      displayName: userDisplayName(m.user),
     })),
   };
 }

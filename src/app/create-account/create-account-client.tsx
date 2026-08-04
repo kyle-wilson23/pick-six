@@ -18,6 +18,7 @@ import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
 } from "@/lib/invitations";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { USER_NAME_PART_MAX_LENGTH } from "@/lib/user-display-name";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 const formSchema = createAccountBodySchema
@@ -33,6 +34,8 @@ export function CreateAccountClient() {
   const alertRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const [firstNameError, setFirstNameError] = useState<string | null>(null);
+  const [lastNameError, setLastNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export function CreateAccountClient() {
     }
 
     setError(null);
+    setFirstNameError(null);
+    setLastNameError(null);
     setEmailError(null);
     setPasswordError(null);
     setConfirmError(null);
@@ -64,21 +69,29 @@ export function CreateAccountClient() {
 
     const form = new FormData(event.currentTarget);
     const raw = {
+      firstName: String(form.get("firstName") ?? ""),
+      lastName: String(form.get("lastName") ?? ""),
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
       confirmPassword: String(form.get("confirmPassword") ?? ""),
     };
     const parsed = formSchema.safeParse(raw);
     if (!parsed.success) {
+      let nextFirst: string | null = null;
+      let nextLast: string | null = null;
       let nextEmail: string | null = null;
       let nextPassword: string | null = null;
       let nextConfirm: string | null = null;
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
+        if (key === "firstName" && !nextFirst) nextFirst = issue.message;
+        if (key === "lastName" && !nextLast) nextLast = issue.message;
         if (key === "email" && !nextEmail) nextEmail = issue.message;
         if (key === "password" && !nextPassword) nextPassword = issue.message;
         if (key === "confirmPassword" && !nextConfirm) nextConfirm = issue.message;
       }
+      setFirstNameError(nextFirst);
+      setLastNameError(nextLast);
       setEmailError(nextEmail);
       setPasswordError(nextPassword);
       setConfirmError(nextConfirm);
@@ -98,6 +111,8 @@ export function CreateAccountClient() {
         body: JSON.stringify({
           email: parsed.data.email,
           password: parsed.data.password,
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
         }),
       });
 
@@ -154,6 +169,18 @@ export function CreateAccountClient() {
 
   const showBanner = Boolean(error) || signInRecovery;
   const passwordHelper = passwordError ?? SIGNUP_PASSWORD_POLICY_MESSAGE;
+  const firstNameDescribedBy = [
+    firstNameError ? "create-account-first-name-helper" : null,
+    showBanner ? "create-account-form-error" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const lastNameDescribedBy = [
+    lastNameError ? "create-account-last-name-helper" : null,
+    showBanner ? "create-account-form-error" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const emailDescribedBy = [
     emailError ? "create-account-email-helper" : null,
     showBanner ? "create-account-form-error" : null,
@@ -233,6 +260,46 @@ export function CreateAccountClient() {
             </Alert>
           ) : null}
 
+          <TextField
+            name="firstName"
+            type="text"
+            label="First name"
+            autoComplete="given-name"
+            required
+            fullWidth
+            error={Boolean(firstNameError)}
+            helperText={firstNameError}
+            FormHelperTextProps={
+              firstNameError ? { id: "create-account-first-name-helper" } : undefined
+            }
+            slotProps={{
+              htmlInput: {
+                maxLength: USER_NAME_PART_MAX_LENGTH,
+                "aria-invalid": Boolean(firstNameError) || undefined,
+                "aria-describedby": firstNameDescribedBy || undefined,
+              },
+            }}
+          />
+          <TextField
+            name="lastName"
+            type="text"
+            label="Last name"
+            autoComplete="family-name"
+            required
+            fullWidth
+            error={Boolean(lastNameError)}
+            helperText={lastNameError}
+            FormHelperTextProps={
+              lastNameError ? { id: "create-account-last-name-helper" } : undefined
+            }
+            slotProps={{
+              htmlInput: {
+                maxLength: USER_NAME_PART_MAX_LENGTH,
+                "aria-invalid": Boolean(lastNameError) || undefined,
+                "aria-describedby": lastNameDescribedBy || undefined,
+              },
+            }}
+          />
           <TextField
             name="email"
             type="email"

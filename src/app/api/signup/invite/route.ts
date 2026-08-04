@@ -10,6 +10,7 @@ import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
 } from "@/lib/invitations";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { fullNameFromParts } from "@/lib/user-display-name";
 
 const GENERIC_ERROR = {
   error: {
@@ -42,9 +43,10 @@ export async function POST(request: Request) {
     return NextResponse.json(GENERIC_ERROR, { status: 400 });
   }
 
-  const { token, password } = parsed.data;
+  const { token, password, firstName, lastName } = parsed.data;
   const tokenHash = hashInviteToken(token);
   const now = new Date();
+  const name = fullNameFromParts(firstName, lastName);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -69,6 +71,9 @@ export async function POST(request: Request) {
         data: {
           email,
           passwordHash,
+          firstName,
+          lastName,
+          name,
         },
       });
 

@@ -89,15 +89,35 @@ const nextAuth = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+      }
+      // Profile (and other) client `update()` calls must not trust client-supplied
+      // identity claims — re-read from DB so forged session.update cannot change email/name.
+      if (trigger === "update" && typeof token.id === "string") {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { name: true, email: true },
+        });
+        if (dbUser) {
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        if (typeof token.name === "string" || token.name === null) {
+          session.user.name = token.name;
+        }
+        if (typeof token.email === "string") {
+          session.user.email = token.email;
+        }
       }
       return session;
     },

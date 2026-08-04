@@ -1,6 +1,7 @@
 import type { LeagueMembershipRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type LeagueRosterEntry = {
   membershipId: string;
@@ -39,6 +40,6 @@ export async function listLeagueRoster(leagueId: string): Promise<LeagueRosterEn
       membershipId: m.id,
       role: m.role,
       user: { name: m.user.name, email: m.user.email },
-      displayName: m.user.name ?? m.user.email,
+      displayName: userDisplayName(m.user),
     }));
 }

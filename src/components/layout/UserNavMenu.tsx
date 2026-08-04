@@ -2,6 +2,7 @@
 
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import Avatar from "@mui/material/Avatar";
 import IconButton from "@mui/material/IconButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -10,6 +11,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useId, useState } from "react";
 
@@ -113,6 +115,12 @@ export function UserNavMenu({ userDisplayName }: UserNavMenuProps) {
           },
         }}
       >
+        <MenuItem component={Link} href="/profile" onClick={handleClose}>
+          <ListItemIcon>
+            <PersonOutlineIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

@@ -21,6 +21,8 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
   image         String?
   emailVerified DateTime? @map("email_verified") @db.Timestamptz
   passwordHash  String?   @map("password_hash")

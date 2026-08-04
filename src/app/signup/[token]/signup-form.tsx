@@ -17,8 +17,15 @@ import {
   signupPasswordFieldSchema,
 } from "@/lib/invitations";
 import { normalizeEmail } from "@/lib/normalize-email";
+import {
+  firstNameFieldSchema,
+  lastNameFieldSchema,
+  USER_NAME_PART_MAX_LENGTH,
+} from "@/lib/user-display-name";
 
 const formSchema = z.object({
+  firstName: firstNameFieldSchema,
+  lastName: lastNameFieldSchema,
   password: signupPasswordFieldSchema,
 });
 
@@ -32,6 +39,8 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
   const router = useRouter();
   const alertRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [firstNameError, setFirstNameError] = useState<string | null>(null);
+  const [lastNameError, setLastNameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [signInRecovery, setSignInRecovery] = useState(false);
   const [focusNonce, setFocusNonce] = useState(0);
@@ -50,16 +59,31 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setFirstNameError(null);
+    setLastNameError(null);
     setPasswordError(null);
     setSignInRecovery(false);
     const form = new FormData(event.currentTarget);
     const raw = {
+      firstName: String(form.get("firstName") ?? ""),
+      lastName: String(form.get("lastName") ?? ""),
       password: String(form.get("password") ?? ""),
     };
     const parsed = formSchema.safeParse(raw);
     if (!parsed.success) {
+      let nextFirst: string | null = null;
+      let nextLast: string | null = null;
+      let nextPassword: string | null = null;
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0];
+        if (key === "firstName" && !nextFirst) nextFirst = issue.message;
+        if (key === "lastName" && !nextLast) nextLast = issue.message;
+        if (key === "password" && !nextPassword) nextPassword = issue.message;
+      }
+      setFirstNameError(nextFirst);
+      setLastNameError(nextLast);
+      setPasswordError(nextPassword);
       const message = parsed.error.issues[0]?.message ?? "Invalid input.";
-      setPasswordError(message);
       setError(message);
       announceAlert();
       return;
@@ -73,6 +97,8 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
         body: JSON.stringify({
           token,
           password: parsed.data.password,
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
         }),
       });
 
@@ -151,6 +177,28 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
         value={invitedEmail}
         disabled
         fullWidth
+      />
+      <TextField
+        name="firstName"
+        type="text"
+        label="First name"
+        autoComplete="given-name"
+        required
+        fullWidth
+        error={Boolean(firstNameError)}
+        helperText={firstNameError}
+        slotProps={{ htmlInput: { maxLength: USER_NAME_PART_MAX_LENGTH } }}
+      />
+      <TextField
+        name="lastName"
+        type="text"
+        label="Last name"
+        autoComplete="family-name"
+        required
+        fullWidth
+        error={Boolean(lastNameError)}
+        helperText={lastNameError}
+        slotProps={{ htmlInput: { maxLength: USER_NAME_PART_MAX_LENGTH } }}
       />
       <TextField
         name="password"

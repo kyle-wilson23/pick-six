@@ -3,7 +3,7 @@
  * Public marketing, login, signup, and `/api/**` stay outside this group.
  *
  * `x-pathname` is set in `src/proxy.ts` only for routes matched there — extend the proxy
- * `matcher` when adding new app URLs (e.g. `/leagues`) so `callbackUrl` after login targets the requested path.
+ * `matcher` when adding new app URLs (e.g. `/leagues`, `/profile`) so `callbackUrl` after login targets the requested path.
  */
 
 import { headers } from "next/headers";
@@ -12,6 +12,7 @@ import { AppNavLeagueRootProvider } from "@/components/layout/AppNavLeagueContex
 import { LeagueNavShell } from "@/components/league/LeagueNavShell";
 import { auth } from "@/lib/auth";
 import { buildLoginRedirectWithCallback } from "@/lib/callback-url";
+import { userDisplayName } from "@/lib/user-display-name";
 import { redirect } from "next/navigation";
 
 export default async function AppShellLayout({
@@ -25,11 +26,13 @@ export default async function AppShellLayout({
     redirect(buildLoginRedirectWithCallback(pathname));
   }
 
-  const userDisplayName = session.user.name ?? session.user.email ?? "User";
+  const displayName = session.user.email
+    ? userDisplayName({ name: session.user.name, email: session.user.email })
+    : (session.user.name?.trim() || "User");
 
   return (
     <AppNavLeagueRootProvider>
-      <LeagueNavShell userDisplayName={userDisplayName}>{children}</LeagueNavShell>
+      <LeagueNavShell userDisplayName={displayName}>{children}</LeagueNavShell>
     </AppNavLeagueRootProvider>
   );
 }

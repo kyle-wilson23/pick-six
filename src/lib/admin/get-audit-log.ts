@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { prisma as prismaSingleton } from "@/lib/db";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type AuditLogEntryView = {
   id: string;
@@ -33,8 +34,8 @@ export async function getAuditLog(
 
   return entries.map((e) => ({
     id: e.id,
-    adminName: e.adminMembership.user.name ?? e.adminMembership.user.email,
-    targetName: e.targetMembership.user.name ?? e.targetMembership.user.email,
+    adminName: userDisplayName(e.adminMembership.user),
+    targetName: userDisplayName(e.targetMembership.user),
     nflWeekNumber: e.nflWeekNumber,
     beforeTeamName: e.beforeTeam?.name ?? null,
     afterTeamName: e.afterTeam.name,

@@ -2,6 +2,13 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-user-first-last-name-profile.md (2026-08-03)
+
+- **Deleted-user `/profile` bounce** — Valid JWT with missing User row redirects to login with `callbackUrl=/profile`; rare data-integrity edge. Sign-out-on-missing-user if it appears in prod.
+- **Invite signup a11y helper wiring** — Create-account name fields use richer `aria-describedby` than invite signup; invite still shows field errors. Align when polishing invite UX.
+- **Authenticated `EMAIL_IN_USE` enumeration** — Profile returns distinct 409 for taken emails to signed-in users. Acceptable for MVP; soften message if privacy becomes a concern.
+- **Other devices keep stale JWT email after Profile email change** — Inherent to JWT sessions until expiry/re-login; out of scope for immediate-save Profile.
+
 ## Deferred from: adversarial review of spec-league-rules-user-facing-copy.md (2026-08-03)
 
 - **Rules page omits “one pick per week”** — Pre-existing gap vs a complete participant rulebook; not introduced by the user-facing copy rewrite. Add if participants still ask after launch.

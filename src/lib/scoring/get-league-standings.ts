@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
+import { userDisplayName } from "@/lib/user-display-name";
+
 export type StandingsEntry = {
   membershipId: string;
   displayName: string;
@@ -40,7 +42,7 @@ export async function getLeagueStandings(
     const ties = picks.filter((p) => p.outcome === "TIE").length;
     return {
       membershipId: m.id,
-      displayName: m.user.name ?? m.user.email,
+      displayName: userDisplayName(m.user),
       totalPoints,
       wins,
       losses,

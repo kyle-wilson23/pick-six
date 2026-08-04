@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
+import { firstNameFieldSchema, lastNameFieldSchema } from "@/lib/user-display-name";
+
 /**
  * Opaque invitation tokens are stored as **SHA-256 hex** of the raw URL token (never store raw).
  * Lookup: `hashInviteToken(presentedToken)` → `Invitation.tokenHash`.
@@ -35,6 +37,8 @@ export const signupPasswordFieldSchema = z
 export const inviteSignupBodySchema = z.object({
   token: z.string().min(1).max(INVITE_TOKEN_MAX_LENGTH),
   password: signupPasswordFieldSchema,
+  firstName: firstNameFieldSchema,
+  lastName: lastNameFieldSchema,
 });
 
 /** Pure predicate: DB row is present, not consumed, and not past `expiresAt`. */

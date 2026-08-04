@@ -2,6 +2,7 @@ import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
 import { isWeekFullyFinalized } from "@/lib/scoring/finalize-nfl-week";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type PeerPickEntry = {
   membershipId: string;
@@ -90,7 +91,7 @@ export async function getLeaguePeerPickHistory(
     const entries = weekMap.get(wk) ?? [];
     entries.push({
       membershipId: p.leagueMembership.id,
-      displayName: p.leagueMembership.user.name ?? p.leagueMembership.user.email,
+      displayName: userDisplayName(p.leagueMembership.user),
       teamAbbreviation: p.team.abbreviation,
       teamName: p.team.name,
       antiJailedBonus: p.antiJailedBonus,

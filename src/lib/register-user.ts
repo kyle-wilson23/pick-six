@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/db";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { fullNameFromParts } from "@/lib/user-display-name";
 
 export type RegisterUserResult =
   | { ok: true; userId: string; email: string }
@@ -23,13 +24,18 @@ export function isUniqueEmailViolation(error: unknown): boolean {
 export async function registerUser(input: {
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
 }): Promise<RegisterUserResult> {
   const email = normalizeEmail(input.email);
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const name = fullNameFromParts(firstName, lastName);
   const passwordHash = await bcrypt.hash(input.password, 12);
 
   try {
     const user = await prisma.user.create({
-      data: { email, passwordHash },
+      data: { email, passwordHash, firstName, lastName, name },
     });
     return { ok: true, userId: user.id, email };
   } catch (e) {

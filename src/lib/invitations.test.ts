@@ -55,7 +55,32 @@ describe("isInvitationUsable", () => {
 describe("inviteSignupBodySchema", () => {
   it("rejects tokens longer than INVITE_TOKEN_MAX_LENGTH", () => {
     const token = "a".repeat(INVITE_TOKEN_MAX_LENGTH + 1);
-    const r = inviteSignupBodySchema.safeParse({ token, password: "abcd1234!" });
+    const r = inviteSignupBodySchema.safeParse({
+      token,
+      password: "abcd1234!",
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
     expect(r.success).toBe(false);
+  });
+
+  it("requires first and last name", () => {
+    const r = inviteSignupBodySchema.safeParse({
+      token: "valid-token",
+      password: "abcd1234!",
+      firstName: "",
+      lastName: "Lovelace",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts token, password, and names", () => {
+    const r = inviteSignupBodySchema.safeParse({
+      token: "valid-token",
+      password: "abcd1234!",
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
+    expect(r.success).toBe(true);
   });
 });

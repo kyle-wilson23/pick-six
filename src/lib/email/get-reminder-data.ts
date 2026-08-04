@@ -10,6 +10,7 @@ import {
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type ReminderData = {
   leagueName: string;
@@ -133,7 +134,7 @@ export async function getReminderData(
     .map((m) => ({
       membershipId: m.id,
       email: m.user.email,
-      displayName: m.user.name ?? m.user.email,
+      displayName: userDisplayName(m.user),
     }));
 
   const picksUrl = `${getAppBaseUrl()}/leagues/${leagueId}/picks`;

@@ -5,6 +5,7 @@ import {
   type MinimalNflGameForPicksWeek,
   type MinimalSeasonForPicksWeek,
 } from "@/lib/nfl/resolve-picks-week";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type AdminSubmissionStatusParticipant = {
   membershipId: string;
@@ -49,7 +50,7 @@ export function mergeSubmissionStatusParticipants(
     const pick = picksByMembershipId.get(membership.id) ?? null;
     return {
       membershipId: membership.id,
-      displayName: membership.user.name ?? membership.user.email,
+      displayName: userDisplayName(membership.user),
       userId: membership.user.id,
       submittedPick: pick
         ? {

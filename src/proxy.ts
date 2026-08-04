@@ -115,5 +115,7 @@ export const config = {
     "/my-leagues/:path*",
     "/leagues",
     "/leagues/:path*",
+    "/profile",
+    "/profile/:path*",
   ],
 };

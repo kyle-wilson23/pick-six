@@ -5,11 +5,11 @@
 Built with **Next.js**, **MUI**, and **Prisma** / PostgreSQL. This is also a personal project for experimenting with [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) ([docs](https://docs.bmad-method.org/)).
 
 <p align="center">
-  <img src="docs/screenshots/picks.png" alt="Weekly picks with live odds and jailed team" width="800" />
+  <img src="docs/screenshots/home.png" alt="Home — your leagues" width="800" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Home — your leagues" width="800" />
+  <img src="docs/screenshots/picks.png" alt="Weekly picks with live odds and jailed team" width="800" />
 </p>
 
 ## Features

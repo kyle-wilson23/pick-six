@@ -109,8 +109,8 @@ A **future** enhancement could **upsert** `NflGame` from The Odds API (or combin
 
 ## Snapshot semantics (“mid-week”)
 
-- **In-season:** Odds for a given `NflGame` are read from the **latest completed** `NflGameOddsLine` for that game (across snapshot runs). The app **does not** call the provider on routine page loads.
-- **New provider data** appears only after an explicit **snapshot** (`POST /api/admin/nfl/snapshot-odds`) or a **manual** line save. Epic 6 will cron the snapshot on the Tuesday cadence.
+- **Tuesday / admin snapshot (jailed authority):** Odds for a given `NflGame` are persisted as `NflGameOddsLine` rows under a completed `OddsSnapshotRun`. **Jailed team** computation and any mid-week jailed recompute read **`getEffectiveOddsLinesForWeek`** (latest completed snapshot lines) — **not** live display overlay. New snapshot rows appear only after an explicit **snapshot** (`POST /api/admin/nfl/snapshot-odds`) or a **manual** line save (Tuesday cadence / admin).
+- **Picks display overlay (current week only):** The league picks page may call The Odds API on load for the league’s **current** active week, behind a **30-minute in-memory TTL** (+ in-flight coalesce) in `src/lib/nfl/live-display-odds.ts`. That path is **display-only** — it does **not** write snapshot rows and does **not** change `NflWeekJailedTeam`. Past weeks (`?weekNumber=`), **test leagues**, missing `ODDS_API_KEY`, or provider failure fall back to effective snapshot lines. Quota: ~**2 credits** per cache miss (`h2h` + `spreads` × `us`).
 
 ### Partial week coverage (AC4)
 

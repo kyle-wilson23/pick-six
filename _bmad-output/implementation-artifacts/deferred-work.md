@@ -2,6 +2,12 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-live-display-odds-picks.md (2026-08-03)
+
+- **Multi-instance in-memory TTL** — `src/lib/nfl/live-display-odds.ts` cache is per process (same pattern as weather). Each Vercel instance / cold start can spend ~2 Odds API credits on cache miss. Acceptable for Hobby MVP; shared cache later if quota pressure appears.
+- **No HTTP timeout on live odds fetch** — Provider call can delay picks SSR until platform timeout. Same gap as Tuesday snapshot / weather clients; add `AbortSignal` timeout if TTFB regressions show up in prod.
+- **Post-season “current week” still overlays** — After the last kickoff, `resolveActiveWeekNumber` stays on the final week so live display may keep calling the provider. Low urgency; gate on season state if credits become an issue.
+
 ## Deferred from: review of spec-user-first-last-name-profile.md (2026-08-03)
 
 - **Deleted-user `/profile` bounce** — Valid JWT with missing User row redirects to login with `callbackUrl=/profile`; rare data-integrity edge. Sign-out-on-missing-user if it appears in prod.

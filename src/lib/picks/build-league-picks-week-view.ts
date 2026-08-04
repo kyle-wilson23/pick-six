@@ -12,6 +12,11 @@ import {
 } from "@/lib/domain/pick-deadline";
 import { getEffectiveOddsLinesForWeek } from "@/lib/nfl/effective-odds";
 import {
+  getLiveDisplayOddsLinesForWeek,
+  mergeLiveDisplayOddsOverEffective,
+  shouldUseLiveDisplayOdds,
+} from "@/lib/nfl/live-display-odds";
+import {
   computePicksUiIsPreview,
   resolveActiveWeekNumber,
 } from "@/lib/nfl/resolve-picks-week";
@@ -128,7 +133,39 @@ export async function buildLeaguePicksWeekView(
     isTestLeague,
   });
 
-  const oddsLines = await getEffectiveOddsLinesForWeek(db, nflSeasonYear, targetWeek);
+  const effectiveOdds = await getEffectiveOddsLinesForWeek(db, nflSeasonYear, targetWeek);
+  const baselineDisplayOdds = new Map(
+    [...effectiveOdds.entries()].map(([gameId, line]) => [
+      gameId,
+      {
+        homeMoneylineAmerican: line.homeMoneylineAmerican,
+        awayMoneylineAmerican: line.awayMoneylineAmerican,
+        homeSpreadPoints: spreadToNullableNumber(line.homeSpreadPoints),
+      },
+    ]),
+  );
+
+  // Current week only (not past `?weekNumber=`), non-test leagues: overlay live
+  // provider lines for display. Never persists; never touches jailed.
+  let oddsLines = baselineDisplayOdds;
+  if (
+    shouldUseLiveDisplayOdds({
+      isTestLeague,
+      targetWeek,
+      resolvedWeek,
+    })
+  ) {
+    const live = await getLiveDisplayOddsLinesForWeek({
+      nflSeasonYear,
+      weekNumber: targetWeek,
+      games: gamesForWeek.map((g) => ({
+        id: g.id,
+        homeTeamName: g.homeTeam.name,
+        awayTeamName: g.awayTeam.name,
+      })),
+    });
+    oddsLines = mergeLiveDisplayOddsOverEffective(baselineDisplayOdds, live);
+  }
 
   const weatherResults = await Promise.all(
     gamesForWeek
@@ -203,7 +240,7 @@ export async function buildLeaguePicksWeekView(
       },
       homeMoneylineAmerican: line?.homeMoneylineAmerican ?? null,
       awayMoneylineAmerican: line?.awayMoneylineAmerican ?? null,
-      homeSpreadPoints: spreadToNullableNumber(line?.homeSpreadPoints ?? null),
+      homeSpreadPoints: line?.homeSpreadPoints ?? null,
       weather: weatherByHomeAbbrev.get(homeAbbrev) ?? null,
       stadiumRoof,
     };

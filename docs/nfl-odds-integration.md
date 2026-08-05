@@ -93,14 +93,14 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 | Topic | Decision |
 |-------|----------|
 | **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `american`). Server-only via `ODDS_API_KEY`. |
-| **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — `POST /api/admin/nfl/sync-schedule` upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. **Canonical-only** — never writes test-league sim tables. |
-| **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; sync soon after the week completes. |
+| **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — weekly cron `GET/POST /api/cron/sync-nfl-schedule` (Mon UTC / Mon ET window) plus admin override `POST /api/admin/nfl/sync-schedule`. Upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. **Canonical-only** — never writes test-league sim tables. |
+| **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — weekly cron `GET/POST /api/cron/sync-nfl-results` (Wed UTC / Wed ET window) plus admin override `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; missed Wed cron → run admin sync before games age out of the window. |
 | **Test / rehearsal leagues** | **Hybrid Option B** — schedules, fixture odds, and jailed live in league-scoped `LeagueSimGame` / sim odds / `LeagueWeekJailedTeam`. League reads use `resolveGamesForLeague`. See [`docs/adr/001-hybrid-canonical-live-league-sim-schedule.md`](./adr/001-hybrid-canonical-live-league-sim-schedule.md). |
 | **Operational provider** | **Single vendor for ops:** The Odds API for schedule + results + lines (`ODDS_API_KEY` only). |
 | **Compliance** | Follow each vendor’s **terms of use**; no keys in client bundles (`docs/project-context.md`). |
 | **Fallback** | Failed odds snapshot → structured error + logs; **manual** odds PATCH / league admin UI. Failed schedule/results sync → structured error + logs. Mapping lives primarily in `src/lib/integrations/the-odds-api/`. |
 | **Team logos (bonus / 3.8)** | Not from this odds integration; evaluate static assets or image-capable providers later. |
-| **Deferred** | Cron auto-sync for Odds schedule/results; expanding fixture JSON to full NFL week volume — tracked in `_bmad-output/implementation-artifacts/deferred-work.md`. |
+| **Deferred** | Expanding fixture JSON to full NFL week volume — tracked in `_bmad-output/implementation-artifacts/deferred-work.md`. (Odds schedule/results cron auto-sync shipped.) |
 
 ## Mapping
 
@@ -182,7 +182,7 @@ See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, an
 ### 4. Access control (who can call the APIs)
 
 - **League admin:** any user with **`LeagueMembershipRole.ADMIN`** on **at least one** league may use the UI and session-based `fetch` to admin odds routes.
-- **Automation:** requests with `Authorization: Bearer <ODDS_SNAPSHOT_SECRET>` (when the env var is set) are authorized without a session and **skip** the same-origin CSRF check (for scripts/cron). **Same secret** gates **`POST /api/admin/nfl/sync-schedule`** and **`scripts/sync-nfl-schedule.mjs`**.
+- **Automation:** requests with `Authorization: Bearer <ODDS_SNAPSHOT_SECRET>` (when the env var is set) are authorized without a session and **skip** the same-origin CSRF check (for scripts / admin automation). **Same secret** gates **`POST /api/admin/nfl/sync-schedule`**, **`POST /api/admin/nfl/sync-results`**, and **`scripts/sync-nfl-schedule.mjs`**. Vercel Cron schedule/results routes use **`CRON_SECRET`** instead (`/api/cron/sync-nfl-schedule`, `/api/cron/sync-nfl-results`) — see `docs/deployment.md`.
 
 ### 5. Where it lives in the app (Story 3.2)
 
@@ -190,8 +190,8 @@ See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, an
 |-------|----------|
 | Provider HTTP client + Zod | `src/lib/integrations/the-odds-api/` (events, scores, odds); shared team lookup in `src/lib/nfl/team-lookup.ts` |
 | Snapshot + manual line persistence | `src/lib/nfl/snapshot-nfl-week-odds.ts`, `src/lib/nfl/effective-odds.ts` |
-| **Schedule sync** | **`src/lib/nfl/sync-nfl-schedule-from-odds.ts`**, **`POST /api/admin/nfl/sync-schedule`** (Odds `/events`) |
-| **Results sync** | **`src/lib/nfl/sync-nfl-results-from-odds.ts`**, **`POST /api/admin/nfl/sync-results`** (Odds `/scores?daysFrom=3`) |
+| **Schedule sync** | **`src/lib/nfl/sync-nfl-schedule-from-odds.ts`**, cron **`/api/cron/sync-nfl-schedule`**, admin override **`POST /api/admin/nfl/sync-schedule`** (Odds `/events`) |
+| **Results sync** | **`src/lib/nfl/sync-nfl-results-from-odds.ts`**, cron **`/api/cron/sync-nfl-results`**, admin override **`POST /api/admin/nfl/sync-results`** (Odds `/scores?daysFrom=3`) |
 | **POST** snapshot | `POST /api/admin/nfl/snapshot-odds` — body `{ "nflSeasonYear": number, "weekNumber": 1–18 }` |
 | **GET** lines for a week | `GET /api/admin/nfl/week-odds?nflSeasonYear=&weekNumber=` |
 | **PATCH** manual line | `PATCH /api/admin/nfl/games/[gameId]/odds-line` — body `{ "homeMoneylineAmerican": number \| null, "awayMoneylineAmerican": number \| null, "homeSpreadPoints": number \| null }` |

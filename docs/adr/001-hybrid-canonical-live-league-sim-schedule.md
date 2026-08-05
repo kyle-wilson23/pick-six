@@ -26,7 +26,7 @@ Sim data cascades with `League` delete (`onDelete: Cascade`). Odds schedule sync
 - Real leagues after test leagues see the live slate (or empty until synced) — never fixture-only matchups.
 - Two test leagues have independent sim rows.
 - Test jailed cannot overwrite global `NflWeekJailedTeam`.
-- Fixture JSON volume (~4 games/week) and Odds cron auto-sync are **deferred** — see `_bmad-output/implementation-artifacts/deferred-work.md`.
+- Fixture JSON volume (~4 games/week) remains **deferred** — see `_bmad-output/implementation-artifacts/deferred-work.md`. Odds schedule/results cron auto-sync is shipped (`spec-cron-odds-schedule-results-auto-sync.md`).
 
 ## Alternatives considered
 

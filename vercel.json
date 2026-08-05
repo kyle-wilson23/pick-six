@@ -1,8 +1,16 @@
 {
   "crons": [
     {
+      "path": "/api/cron/sync-nfl-schedule",
+      "schedule": "0 15 * * 1"
+    },
+    {
       "path": "/api/cron/tuesday-email",
       "schedule": "0 23 * * 2"
+    },
+    {
+      "path": "/api/cron/sync-nfl-results",
+      "schedule": "0 16 * * 3"
     },
     {
       "path": "/api/cron/wednesday-reminder",

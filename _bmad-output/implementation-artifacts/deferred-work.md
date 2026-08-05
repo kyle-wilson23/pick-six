@@ -11,8 +11,14 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 Split from implementing research `technical-league-scoped-vs-canonical-nfl-schedule-research-2026-08-04.md` Option B. Current scope is hybrid isolation only (`spec-hybrid-canonical-live-league-sim-schedule.md`).
 
-- **Cron auto-sync Odds schedule/results** — Automate Odds `/events` + `/scores` → canonical live `NflGame` only (no admin required for real leagues). Keep admin sync as override. Research goal (1).
+- ~~**Cron auto-sync Odds schedule/results**~~ — **Resolved** (`spec-cron-odds-schedule-results-auto-sync.md`): `/api/cron/sync-nfl-schedule` + `/api/cron/sync-nfl-results` → canonical `NflGame` only; admin sync remains override.
 - **Full-volume simulation fixtures** — Expand test-league weeks from ~4 games to ~13–16 games/week (typical NFL week volume). Research goal (2). Depends on league-scoped sim store shipping first.
+
+## Deferred from: review of spec-cron-odds-schedule-results-auto-sync.md (2026-08-04)
+
+- **TNF / early-week scores vs Wed-only results cron** — Odds `/scores` `daysFrom=3` + single Wednesday cron can miss Thursday Night Football (and similar) before lookback slides; ops uses admin `sync-results` today. Consider a Sat UTC backup results cron on a free Hobby day if auto-coverage is required.
+- **`getCurrentNflSeasonYear` UTC calendar default** — Pre-existing; cron + admin share MVP UTC year (or `NFL_SEASON_YEAR` env). January playoff weeks can target the wrong label year until Eastern league-year logic lands.
+- **Concurrent admin + cron schedule sync** — No locking between cron and admin override; both call the same sync libs. Acceptable for Hobby; add an in-flight guard if overlapping runs appear in prod.
 
 ## Deferred from: review of spec-live-display-odds-picks.md (2026-08-03)
 

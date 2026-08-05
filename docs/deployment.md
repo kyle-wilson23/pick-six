@@ -74,9 +74,19 @@ Do **not** run full `npm run db:seed` against Production — that upserts the lo
 
 Confirm `vercel.json` crons are on the **production** deployment (Vercel → Settings → Cron Jobs). Crons do **not** run on preview branches.
 
-Routes: `/api/cron/tuesday-email`, `/api/cron/wednesday-reminder`, `/api/cron/thursday-reminder`.
+Routes (Hobby: **one cron fire per UTC calendar day**):
 
-Each handler exports `maxDuration = 300` (Hobby ceiling). Vercel Cron invokes via **GET**; handlers also accept **POST**. Same `Authorization: Bearer $CRON_SECRET` for both.
+| Path | UTC schedule | Eastern window (handler gate) | Purpose |
+|------|--------------|-------------------------------|---------|
+| `/api/cron/sync-nfl-schedule` | `0 15 * * 1` (Mon) | Mon 10–16 ET | Odds `/events` → canonical `NflGame` |
+| `/api/cron/tuesday-email` | `0 23 * * 2` (Tue) | Tue 17–21 ET | Tuesday digest |
+| `/api/cron/sync-nfl-results` | `0 16 * * 3` (Wed) | Wed 11–17 ET | Odds `/scores` → finalize scores |
+| `/api/cron/wednesday-reminder` | `0 1 * * 4` (Thu UTC) | Wed 19–24 ET | Wednesday reminder |
+| `/api/cron/thursday-reminder` | `0 0 * * 5` (Fri UTC) | Thu 17–21 ET | Thursday reminder |
+
+Each handler exports `maxDuration = 300` (Hobby ceiling). Vercel Cron invokes via **GET**; handlers also accept **POST**. Same `Authorization: Bearer $CRON_SECRET` for both. Odds sync crons also need Production `ODDS_API_KEY`.
+
+**Odds `/scores` 3-day lookback:** The results cron uses The Odds API `daysFrom=3`. A missed Wednesday run can leave completed games unfinalized once they fall outside that window — use admin **`POST /api/admin/nfl/sync-results`** (or league admin UI) as override before the lookback slides past. Schedule sync override: **`POST /api/admin/nfl/sync-schedule`**.
 
 ```bash
 # Expect 401
@@ -88,9 +98,17 @@ curl -s -o /tmp/cron.json -w "%{http_code}\n" \
   https://your-app.vercel.app/api/cron/tuesday-email \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 cat /tmp/cron.json | jq
+
+# Odds schedule / results (same auth; outside_window unless Mon/Wed ET windows)
+curl -s -o /tmp/cron-schedule.json -w "%{http_code}\n" \
+  https://your-app.vercel.app/api/cron/sync-nfl-schedule \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+curl -s -o /tmp/cron-results.json -w "%{http_code}\n" \
+  https://your-app.vercel.app/api/cron/sync-nfl-results \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-Repeat for Wednesday and Thursday reminder paths.
+Repeat email smoke for Wednesday and Thursday reminder paths.
 
 ### External uptime monitor (ops setup)
 
@@ -110,7 +128,9 @@ Schedule the check inside or near the Eastern send window if you want failure al
 
 | Window (America/New_York) | Why |
 |---------------------------|-----|
+| **Mon 10 AM–4 PM ET** | Odds schedule sync cron window |
 | **Tue 5–7 PM ET** | Tuesday digest / standings reveal window |
+| **Wed 11 AM–5 PM ET** | Odds results sync cron window (`daysFrom=3`) |
 | **Thu 7–9 PM ET** | Thursday reminder / late-week pick pressure |
 
 **Do not** schedule maintenance or deploys in those windows. Prefer off-season or between games. Mid-season hotfixes are OK **outside** those windows.

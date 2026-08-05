@@ -35,11 +35,11 @@
 - **Add enterprise/sales cost** without MVP necessity (SportsDataIO full stack, Sportradar/OpticOdds), or  
 - **Add product breadth** (SportsGameOdds) we do not need until we want props/multi-book **sharp** workflows.
 
-**Schedule (`NflGame`)** is **authoritative from API-Sports** after **Story 3.9** (`POST /api/admin/nfl/sync-schedule` — see **Schedule providers compared** below). **`prisma/seed.cjs`** still seeds minimal games for dev; run **sync** for a full **1–18** season tied to the active **`nfl_season_year`**.
+**Schedule (`NflGame`)** is **authoritative from The Odds API** (`/events` → `POST /api/admin/nfl/sync-schedule`). **`prisma/seed.cjs`** still seeds minimal games for dev; run **sync** for a full **1–18** season tied to the active **`nfl_season_year`**.
 
-## Schedule providers compared (Story 3.9)
+## Schedule providers compared (Story 3.9 — historical)
 
-Epic 3 requires a **schedule-first** feed so `NflGame` **kickoffs** and **week numbers** are not seed-only forever. **Pricing changes** — re-check each vendor before relying on a tier in production.
+Epic 3 required a **schedule-first** feed so `NflGame` **kickoffs** and **week numbers** are not seed-only forever. The comparison below is **historical research** from Story 3.9; **ops now use The Odds API** for schedule + results (API-Sports integration retired). **Pricing changes** — re-check each vendor before relying on a tier in production.
 
 | Criterion | **API-Sports** (American Football / NFL) | **SportsDataIO** (NFL core product) |
 |-----------|--------------------------------------------|-------------------------------------|
@@ -54,18 +54,17 @@ Epic 3 requires a **schedule-first** feed so `NflGame` **kickoffs** and **week n
 
 ### Decision: schedule source of truth
 
-**Selected: [API-Sports American Football](https://v1.american-football.api-sports.io)** — **not** replacing The Odds API for **betting lines**; **only** authoritative **regular-season schedule** upsert into `nfl_games`.
+**Current ops: [The Odds API](https://the-odds-api.com/)** `/events` (quota-free) — schedule + results + lines under one vendor. Story 3.9 originally selected API-Sports for schedule; that integration was **retired** after free-tier 2026 coverage gaps.
 
 - **Why not stay on seed only:** picks and deadlines need **real `kickoffAt`** across **weeks 1–18** without hand-maintaining JSON.
 - **Why not SportsDataIO for MVP:** recurring cost and procurement friction; **revisit** if we consolidate on one paid NFL data vendor later.
-- **Fallback if API-Sports is insufficient** (quota cuts, coverage gaps, NFL product changes): (1) extend **`prisma/data`** + seed for missing weeks; (2) spike **SportsDataIO** (or similar) with a **budget**; (3) **never** rely on The Odds API alone as the **full 18-week** schedule authority (see § Clarification above).
-- **Paid tier note:** MVP stays on **free / low self-serve** API-Sports usage (**one** `/games` call per full-season sync). If production needed **> free quota**, document **paid** API-Sports tier before accepting recurring cost — **SportsDataIO** remains the “enterprise single pane” alternative from the comparison tables, not the default.
+- **Fallback if Odds schedule sync is insufficient** (coverage gaps, product changes): (1) extend **`prisma/data`** + seed for missing weeks; (2) spike **SportsDataIO** (or similar) with a **budget**; (3) use admin manual score entry where results lookback misses a game.
 
 ### Schedule sync semantics
 
-- **One run = full season:** a single GET `/games?league=1&season={nflSeasonYear}&timezone=UTC` returns all games; the app **filters** to **regular season** **weeks 1–18** and **upserts** (`create` new natural keys, **`update` `kickoffAt` only** on existing rows so **`NflGame.id`** stays stable for `NflGameOddsLine` FKs).
+- **One run = full season slate from `/events`:** map events to **weeks 1–18** (week inferred from kickoff ET), **upsert** by natural key (`create` new rows, **`update` `kickoffAt` only** on existing so **`NflGame.id`** stays stable for `NflGameOddsLine` FKs), then **delete** season-year games absent from the mapped set (orphan cleanup gated for safety — see `sync-nfl-schedule-from-odds.ts`).
 - **Natural key:** **`(nflSeasonYear, weekNumber, homeTeamId, awayTeamId)`** (unique in DB — Story 3.9). Re-running sync is **idempotent** (no duplicate rows).
-- **Pick / deadline compatibility:** **`Pick`** references **`teamId` + `nflWeekNumber`**, not `nfl_game_id` — updating **`kickoffAt`** does not break pick uniqueness; deadline rules remain **server-authoritative UTC** (`docs/project-context.md`). If a **flex** or schedule change **moves** a game to another **week**, that is a **rare** operator-visible edge case: the provider row’s **week** changes so the sync may **create** a new `NflGame` for the new slot (and lines may need re-snapshot); document operational follow-up rather than silent partial state.
+- **Pick / deadline compatibility:** **`Pick`** references **`teamId` + `nflWeekNumber`**, not `nfl_game_id` — updating **`kickoffAt`** does not break pick uniqueness; deadline rules remain **server-authoritative UTC** (`docs/project-context.md`). If a **flex** or schedule change **moves** a game to another **week**, that is a **rare** operator-visible edge case: week inference may place the game in a new slot (and lines may need re-snapshot); document operational follow-up rather than silent partial state.
 - **Unknown teams:** sync **fails** with **`422`** and **structured logs** (`nfl_schedule_sync_mapping_failure`) — **no** silent bad FKs.
 
 ### Clarification: The Odds API *does* include matchups
@@ -76,9 +75,9 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 
 1. **Betting-centric listing** — The feed reflects **games the books are offering** (and when). Early in the week or in certain windows, a **full NFL week** may be **partially** represented vs “all regular-season games we model in `nfl_games`.”
 2. **No first-class NFL week key** — You infer **regular-season week** from kickoff (and league calendar rules), not from a dedicated `week: 7` field.
-3. **Stable `NflGame` rows** — Picks and deadlines assume **our** persisted games (team FKs, `week_number`, kickoff). Story 3.2 **matches** odds events **onto** those rows; it does **not** replace them with the odds API as the only source of truth.
+3. **Stable `NflGame` rows** — Picks and deadlines assume **our** persisted games (team FKs, `week_number`, kickoff). Schedule sync **upserts** those rows from `/events`; odds snapshot still **matches** lines onto existing `NflGame` rows.
 
-A **future** enhancement could **upsert** `NflGame` from The Odds API (or combine API + seed). That was **out of scope** for 3.2; **Story 3.9** chose **API-Sports** for schedule authority instead of growing seed-only JSON.
+**Implemented:** The Odds API **upserts** `NflGame` from `/events` (schedule) and finalizes scores from `/scores` (results), in addition to lines from `/odds`.
 
 ## When to re-open vendor choice
 
@@ -86,8 +85,8 @@ A **future** enhancement could **upsert** `NflGame` from The Odds API (or combin
 |---------|--------|
 | The Odds API **free tier removed**, **quota cut**, or **repeated production failures** at snapshot | Compare **SportsGameOdds** vs **paid The Odds API** tier; spike **one** alternative with fixtures. |
 | Product needs **props**, **multi-book consensus**, or **sharp** lines | Compare **SportsGameOdds** (breadth) vs upgraded **The Odds API** plan. |
-| Business will pay for **one vendor** for **schedule + odds + scores** | Budgeted evaluation of **SportsDataIO** (or similar) with **sales quote** and trial. |
-| Only **schedule** automation needed | **Implemented:** **API-Sports** + The Odds API for lines; **revisit** only if **total cost of ownership** favors a **single** vendor (e.g. **SportsDataIO**). |
+| Business will pay for **one vendor** for **schedule + odds + scores** | Budgeted evaluation of **SportsDataIO** (or similar) with **sales quote** and trial — note schedule + results + lines already run on The Odds API today. |
+| Odds **`/events` schedule coverage** insufficient | Spike **SportsDataIO** (or similar) with a budget; extend seed JSON as interim. |
 
 ## Current integration (summary)
 
@@ -96,7 +95,7 @@ A **future** enhancement could **upsert** `NflGame` from The Odds API (or combin
 | **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `american`). Server-only via `ODDS_API_KEY`. |
 | **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — `POST /api/admin/nfl/sync-schedule` upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. |
 | **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; sync soon after the week completes. |
-| **Operational provider** | **Single vendor for ops:** The Odds API for schedule + results + lines. Legacy **API-Sports** modules remain in-repo but are **not** required for admin happy path (`API_SPORTS_KEY` unused by these routes). |
+| **Operational provider** | **Single vendor for ops:** The Odds API for schedule + results + lines (`ODDS_API_KEY` only). |
 | **Compliance** | Follow each vendor’s **terms of use**; no keys in client bundles (`docs/project-context.md`). |
 | **Fallback** | Failed odds snapshot → structured error + logs; **manual** odds PATCH / league admin UI. Failed schedule/results sync → structured error + logs. Mapping lives primarily in `src/lib/integrations/the-odds-api/`. |
 | **Team logos (bonus / 3.8)** | Not from this odds integration; evaluate static assets or image-capable providers later. |
@@ -127,7 +126,7 @@ A snapshot **can succeed** (`200` + `COMPLETED` run) when the provider only matc
 
 ## Environment variables
 
-See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, and odds snapshots), optional `ODDS_SNAPSHOT_SECRET` for `Authorization: Bearer` automation (bypasses browser CSRF checks; still server-only). **`API_SPORTS_KEY`** is **legacy** (unused by current admin schedule/results routes; keep until explicitly retired). Optional **`ODDS_API_DEBUG_LOG_RESPONSE=true`** logs the **full** raw odds JSON body from The Odds API (verbose; use only when debugging).
+See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, and odds snapshots), optional `ODDS_SNAPSHOT_SECRET` for `Authorization: Bearer` automation (bypasses browser CSRF checks; still server-only). Optional **`ODDS_API_DEBUG_LOG_RESPONSE=true`** logs the **full** raw odds JSON body from The Odds API (verbose; use only when debugging).
 
 ---
 
@@ -186,7 +185,7 @@ See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, an
 
 | Piece | Location |
 |-------|----------|
-| Provider HTTP client + Zod | `src/lib/integrations/the-odds-api/` (events, scores, odds); legacy **`src/lib/integrations/api-sports-nfl/`** unused by admin sync routes |
+| Provider HTTP client + Zod | `src/lib/integrations/the-odds-api/` (events, scores, odds); shared team lookup in `src/lib/nfl/team-lookup.ts` |
 | Snapshot + manual line persistence | `src/lib/nfl/snapshot-nfl-week-odds.ts`, `src/lib/nfl/effective-odds.ts` |
 | **Schedule sync** | **`src/lib/nfl/sync-nfl-schedule-from-odds.ts`**, **`POST /api/admin/nfl/sync-schedule`** (Odds `/events`) |
 | **Results sync** | **`src/lib/nfl/sync-nfl-results-from-odds.ts`**, **`POST /api/admin/nfl/sync-results`** (Odds `/scores?daysFrom=3`) |
@@ -201,7 +200,7 @@ See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, an
 npm test
 ```
 
-Uses recorded JSON under `src/lib/integrations/the-odds-api/fixtures/` — **no** `ODDS_API_KEY` required for CI. Schedule mapping tests use **`src/lib/integrations/api-sports-nfl/fixtures/`** — **no** `API_SPORTS_KEY` in default **`npm test`**.
+Uses recorded JSON under `src/lib/integrations/the-odds-api/fixtures/` — **no** `ODDS_API_KEY` required for CI.
 
 ---
 

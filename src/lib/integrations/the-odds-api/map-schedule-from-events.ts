@@ -1,7 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-import type { ScheduleUpsertInput } from "@/lib/integrations/api-sports-nfl/map-schedule";
-import { buildTeamLookup } from "@/lib/integrations/api-sports-nfl/map-schedule";
 import { canonicalTeamDisplayName } from "@/lib/integrations/the-odds-api/team-names";
 import type { TheOddsApiScheduleEvent } from "@/lib/integrations/the-odds-api/schemas";
 import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
@@ -9,6 +7,7 @@ import {
   NFL_REGULAR_SEASON_WEEK_MAX,
   NFL_REGULAR_SEASON_WEEK_MIN,
 } from "@/lib/nfl/nfl-regular-season";
+import { buildTeamLookup, type ScheduleUpsertInput } from "@/lib/nfl/team-lookup";
 
 export type ScheduleMapError = { message: string; context: Record<string, unknown> };
 

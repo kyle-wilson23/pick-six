@@ -33,9 +33,10 @@ Set in Vercel → **Settings → Environment Variables → Production**. Vercel 
 | `RESEND_WEBHOOK_SECRET` | Webhook signature verification | Resend → Webhooks |
 | `CRON_SECRET` | Cron route auth (`Authorization: Bearer …`) | `openssl rand -hex 32` — **no trailing newlines** |
 | `ODDS_API_KEY` | NFL schedule sync, results sync, odds snapshots | [The Odds API](https://the-odds-api.com/) |
-| `API_SPORTS_KEY` | Legacy (unused by current schedule/results admin routes) | [API-Sports](https://api-sports.io/) — optional until code retirement |
 
-Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`, `RESEND_FROM` (local smoke / verified domain override), `API_SPORTS_HOST`, `ALLOW_TEST_LEAGUES` (ops toggle: unset/`true`/`1` allow test-league creation; `false`/`0` deny — not a secret), `TEST_LEAGUE_EMAIL_MODE` (rehearsal email policy: unset/`send` sends real emails to invited testers with `[TEST]` labeling; `suppress` skips Resend and surfaces would-send in admin UI — not a secret). Set `TEST_LEAGUE_EMAIL_MODE=suppress` on any shared staging/rehearsal deploy where others might create test leagues during ad-hoc dry runs; leave unset for your own controlled rehearsal with real testers. Production cron **never** sends for rehearsal leagues — only admin manual send buttons on `/leagues/[leagueId]/admin`. For the full rehearsal walkthrough (create → invite → simulate weeks → delete), see [rehearsal-runbook.md](./rehearsal-runbook.md).
+If an older deploy still has `API_SPORTS_KEY` / `API_SPORTS_HOST` in Vercel, remove them — the app no longer reads those variables.
+
+Optional: `WEATHER_API_KEY`, `ODDS_SNAPSHOT_SECRET`, `RESEND_FROM` (local smoke / verified domain override), `ALLOW_TEST_LEAGUES` (ops toggle: unset/`true`/`1` allow test-league creation; `false`/`0` deny — not a secret), `TEST_LEAGUE_EMAIL_MODE` (rehearsal email policy: unset/`send` sends real emails to invited testers with `[TEST]` labeling; `suppress` skips Resend and surfaces would-send in admin UI — not a secret). Set `TEST_LEAGUE_EMAIL_MODE=suppress` on any shared staging/rehearsal deploy where others might create test leagues during ad-hoc dry runs; leave unset for your own controlled rehearsal with real testers. Production cron **never** sends for rehearsal leagues — only admin manual send buttons on `/leagues/[leagueId]/admin`. For the full rehearsal walkthrough (create → invite → simulate weeks → delete), see [rehearsal-runbook.md](./rehearsal-runbook.md).
 
 Cross-check [`.env.example`](../.env.example) whenever this table drifts.
 

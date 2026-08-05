@@ -1,8 +1,8 @@
 import type { NflGameStatus } from "@prisma/client";
 
-import { buildTeamLookup } from "@/lib/integrations/api-sports-nfl/map-schedule";
 import { canonicalTeamDisplayName } from "@/lib/integrations/the-odds-api/team-names";
 import type { TheOddsApiScoreEvent } from "@/lib/integrations/the-odds-api/schemas";
+import { buildTeamLookup } from "@/lib/nfl/team-lookup";
 
 export type OddsGameResultUpdate = {
   nflGameId: string;

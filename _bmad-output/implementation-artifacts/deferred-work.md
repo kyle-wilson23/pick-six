@@ -483,10 +483,10 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: code review of 3-9-nfl-schedule-provider-spike-and-sync.md (2026-05-23)
 
-- **Serial `for-await` upserts inside `$transaction`** (`src/lib/nfl/sync-nfl-schedule.ts`) — N sequential DB round-trips for up to 280+ games; `Promise.all` or a batch upsert strategy would improve throughput. Admin-only low-frequency operation; acceptable at MVP scale.
-- **Overly permissive Zod schemas** (`src/lib/integrations/api-sports-nfl/schemas.ts`) — all team/date fields are optional; validation errors surface only at the mapping layer with less precise messages. Consistent with existing `the-odds-api` integration pattern; revisit if schema drift causes mapping noise.
+- ~~**Serial `for-await` upserts inside `$transaction`** (`src/lib/nfl/sync-nfl-schedule.ts`)~~ — **Moot** (API-Sports sync retired; Odds sync has its own path).
+- ~~**Overly permissive Zod schemas** (`src/lib/integrations/api-sports-nfl/schemas.ts`)~~ — **Moot** (package deleted in spec-retire-api-sports).
 - **Rename migration adds noise** (`prisma/migrations/20260511022811_2026_first_games_migration/migration.sql`) — only truncates an index name to fit Postgres identifier limits; already applied to DB; no functional change.
-- **All 32 teams loaded from DB on every sync call** (`src/lib/nfl/sync-nfl-schedule.ts`) — negligible at current scale; worth caching or narrowing if team table ever grows meaningfully.
+- ~~**All 32 teams loaded from DB on every sync call** (`src/lib/nfl/sync-nfl-schedule.ts`)~~ — **Moot** (API-Sports sync retired).
 
 ## Deferred from: code review of 3-10-kickoff-time-weather-forecast (2026-05-24)
 
@@ -714,5 +714,5 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 - **Week inference DST / Tuesday-boundary precision** — `map-schedule-from-events.ts` uses ms/(7d) from week-1 Tuesday ET; rare DST edges could mis-bucket. Revisit if flex/DST complaints appear.
 - **Concurrent schedule sync races** — no advisory lock / serializable isolation on upsert+orphan-delete for the same season year.
-- **Retire API-Sports modules + env** — Ask First in spec; code/env still present for legacy. Remove only after explicit approval.
+- ~~**Retire API-Sports modules + env**~~ — **Done** (spec-retire-api-sports): helpers rehomed to `src/lib/nfl/team-lookup.ts`; `api-sports-nfl` + API-Sports sync wrappers removed; `API_SPORTS_*` dropped from `.env.example` / ops docs. Remove stale keys from Vercel if still set.
 - **Odds `/events` mid-season incompleteness** — orphan delete is gated (≥200 games + SCHEDULED-only); mid-season upsert-only may leave stale SCHEDULED fixture leftovers until a full-slate sync. Manual cleanup path if needed.

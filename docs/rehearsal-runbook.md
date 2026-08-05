@@ -8,6 +8,7 @@ End-to-end guide for league admins running a **pre-season dry run** with invited
 
 - [Local email smoke test](./email-local-smoke-test-runbook.md) — Resend sandbox setup (`RESEND_API_KEY`, `RESEND_FROM`, recipient restrictions)
 - [Deployment guide](./deployment.md) — production env vars and ops toggles
+- [ADR 001 — hybrid schedule isolation](./adr/001-hybrid-canonical-live-league-sim-schedule.md) — test leagues use league-scoped sim games; real leagues use the Odds-backed live slate
 - [`.env.example`](../.env.example) — full variable list
 
 ---
@@ -79,7 +80,7 @@ This starts the simulation clock: `simulatedCurrentWeek` is set to `firstCompeti
 
 **Route:** `/leagues/{leagueId}/admin` — **Simulation** section (`src/components/admin/AdminSimulationControls.tsx`)
 
-**Safety — league-scoped scoring:** **Simulate results** scores picks **only for the test league you are administering**. Other leagues (including production) that share the same NFL `(season year, week)` are not affected — their picks stay unscored even when fixture games make the global week fully finalized.
+**Safety — league-scoped schedule + scoring:** Rehearsal matchups, fixture odds, and jailed team live in **this league’s** sim tables (`LeagueSimGame` / sim odds / `LeagueWeekJailedTeam`) — not the shared live `NflGame` slate. **Simulate results** scores picks **only for the test league you are administering**. Production leagues keep the Odds-backed schedule and are unaffected.
 
 Repeat steps 1–4 for **every** simulated week, including the final week. Then advance (step 5) only when a next week exists.
 
@@ -87,10 +88,10 @@ When the pointer is on the **last** configured week, status reads *"Simulation c
 
 | Step | Who | Action | What happens |
 |------|-----|--------|--------------|
-| 1 | **Admin** | Click **"Apply odds snapshot for Week {n}"** | Loads fixture odds for the current week and computes the jailed team (`POST /api/leagues/[leagueId]/simulation/apply-odds-snapshot`). Success: *"Applied fixture odds for Week {week} — {games} games, jailed team: {abbr} ({by})."* |
-| 2 | **Participants** | Submit picks on `/leagues/{leagueId}/picks` | Matchups show odds, spread, and weather from the fixture snapshot. Jailed-team messaging applies if relevant. |
+| 1 | **Admin** | Click **"Apply odds snapshot for Week {n}"** | Ensures this league’s sim games for the week (from the fixture schedule), writes league-scoped fixture odds, and computes **this league’s** jailed team (`POST /api/leagues/[leagueId]/simulation/apply-odds-snapshot`). Success: *"Applied fixture odds for Week {week} — {games} games, jailed team: {abbr} ({by})."* |
+| 2 | **Participants** | Submit picks on `/leagues/{leagueId}/picks` | Matchups show odds, spread, and weather from this league’s fixture snapshot (not live Odds API overlay). Jailed-team messaging applies if relevant. |
 | 3 | **Admin** *(optional)* | Send weekly emails (see [Weekly email choices](#weekly-email-choices)) | Tuesday digest, Wednesday reminder, Thursday reminder — manual buttons only in rehearsal. |
-| 4 | **Admin** | Click **"Simulate results for Week {n}"** | Finalizes fixture games and scores picks when the week is fully final (`POST /api/leagues/[leagueId]/simulation/apply-results`). Success: *"Simulated results for Week {week} — {finalized} games finalized, {scored} picks scored."* |
+| 4 | **Admin** | Click **"Simulate results for Week {n}"** | Finalizes **this league’s** sim games and scores its picks when the sim week is fully final (`POST /api/leagues/[leagueId]/simulation/apply-results`). Success: *"Simulated results for Week {week} — {finalized} games finalized, {scored} picks scored."* |
 | 5 | **Admin** | Click **"Advance to Week {next}"** → confirm dialog | Moves the rehearsal clock forward. Dialog: *"Advance to Week {next}?"* / *"This moves the rehearsal clock from Week X to Week Y. It does not create games or scores — only the week pointer changes."* Click **"Confirm"**. Skip this step on the final week (button disabled). |
 
 After advancing, return to step 1 for the next week. Participants can check **standings** and **pick history** after simulated results — peer picks stay hidden until the Tuesday reveal cycle (Epic 5).
@@ -140,20 +141,20 @@ When rehearsal is complete:
 4. Type **`delete`** in **"Type delete to confirm"**.
 5. Click **"Delete permanently"** (`DELETE /api/leagues/[leagueId]` → redirect to `/leagues`).
 
-### What delete removes (Story 8.7)
+### What delete removes (Story 8.7 + hybrid schedule)
 
-**Always removes** (everything scoped to `leagueId`):
+**Always removes** (everything scoped to `leagueId`, including cascade):
 
 - The league, its season, memberships, invitations, picks, audit entries, and league email config
+- This league’s sim schedule/odds/jailed rows (`LeagueSimGame`, sim odds snapshot runs/lines, `LeagueWeekJailedTeam`) — they cascade with the league delete and are **not** shared with other test leagues
 
-**Global rehearsal fixtures** (not scoped to `leagueId`):
+**Legacy global cleanup** (only after a **test** league delete):
 
-- During rehearsal, the app creates shared `NflGame`, `OddsSnapshotRun` (`source: "test_fixture"`), `NflGameOddsLine`, and `NflWeekJailedTeam` rows. These are visible across test leagues, not tied to one league row.
-- When you delete a test league and **other rehearsal leagues still exist**, those shared fixtures **stay** until the last test league is deleted.
-- When you delete the **last** remaining test league, the server automatically removes `test_fixture` snapshot runs, fixture-only games (including any simulated scores), and jailed-team rows for weeks that no longer have any games. Games that also carry real synced odds are **kept**.
+- The server also attempts a one-off cleanup of leftover **pre-hybrid** global `test_fixture` rows on `NflGame` / `OddsSnapshotRun` (if any still exist from older rehearsal runs). That does **not** remove another open test league’s sim data.
+- Live Odds-backed `NflGame` rows used by production leagues are never part of rehearsal sim storage and are not deleted by this path.
 - Practice/rehearsal data is **not retained** for season history (NFR25 applies to real-season participant data, not test leagues).
 
-Production leagues use the same delete flow; global fixture cleanup runs **only** when the deleted league was a test league and no other test leagues remain.
+Production leagues use the same delete UI; sim cascade + legacy fixture cleanup run only when the deleted league was a test league.
 
 ---
 
@@ -165,6 +166,7 @@ For the real NFL season:
 
 1. Create a **new production league** at `/leagues/new` with **"Test / rehearsal league" unchecked**.
 2. Invite real participants, run pre-season init, and let production cron handle weekly emails.
+3. Sync (or keep synced) the **live** NFL schedule via admin Odds schedule sync — the new league reads the canonical slate, never this rehearsal’s fixture matchups.
 
 Settings for a test league confirm this: **"League type"** shows **"Test / rehearsal"** with helper *"Set at creation only. For a real season, create a new production league."*
 
@@ -210,4 +212,5 @@ This table is a **sign-off aid only** — a rehearsal is not blocked on filling 
 | **Admin override** | Admin submits/changes a pick on behalf of a participant (incl. post-deadline); entry in audit log | Epic 4 | | | |
 | **Weekly email cycle** | Tuesday digest (or suppressed equivalent) reflects correct simulated week and content | Story 8.5 AC1 | | | |
 | **Test league labeling** | Banner and **"Test"** chip appear as expected. In **`send`** mode, also verify **`[TEST]`** email subject; in **`suppress`** mode, verify the admin would-send alert instead (no inbox mail) | Story 8.1 | | | |
-| **Delete cleanup** | League deletes cleanly; when deleting the **last** test league, global fixture rows are removed (see [delete section](#what-delete-removes-story-87)); deleting one of several test leagues leaves shared fixtures in place | Story 8.7 | | | |
+| **Delete cleanup** | League deletes cleanly; this league’s sim games/odds/jailed cascade away; other open test leagues keep their own sim data (see [delete section](#what-delete-removes-story-87--hybrid-schedule)) | Story 8.7 / ADR 001 | | | |
+| **Isolation vs production** | After (or during) rehearsal, a **production** league’s picks week shows the live Odds slate (or empty until synced) — not the 4-game fixture cycle | ADR 001 | | | |

@@ -26,7 +26,7 @@ Sim data cascades with `League` delete (`onDelete: Cascade`). Odds schedule sync
 - Real leagues after test leagues see the live slate (or empty until synced) — never fixture-only matchups.
 - Two test leagues have independent sim rows.
 - Test jailed cannot overwrite global `NflWeekJailedTeam`.
-- Fixture JSON volume (~4 games/week) remains **deferred** — see `_bmad-output/implementation-artifacts/deferred-work.md`. Odds schedule/results cron auto-sync is shipped (`spec-cron-odds-schedule-results-auto-sync.md`).
+- Test-league fixture JSON is full-volume (~13–16 games/week, ≥6 weeks) in `prisma/data/nfl-simulation-fixture-schedule.json` (`spec-full-volume-simulation-fixtures.md`). Odds schedule/results cron auto-sync is shipped (`spec-cron-odds-schedule-results-auto-sync.md`).
 
 ## Alternatives considered
 

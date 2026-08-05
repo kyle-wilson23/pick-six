@@ -4,15 +4,38 @@
       { "home": "PHI", "away": "DAL" },
       { "home": "KC", "away": "BUF" },
       { "home": "SF", "away": "SEA" },
-      { "home": "GB", "away": "MIN" }
+      { "home": "GB", "away": "MIN" },
+      { "home": "BAL", "away": "PIT" },
+      { "home": "MIA", "away": "NYJ" },
+      { "home": "LAR", "away": "ARI" },
+      { "home": "DET", "away": "CHI" },
+      { "home": "CIN", "away": "CLE" },
+      { "home": "HOU", "away": "IND" },
+      { "home": "DEN", "away": "LV" },
+      { "home": "NO", "away": "TB" },
+      { "home": "NE", "away": "NYG" },
+      { "home": "JAX", "away": "TEN" },
+      { "home": "LAC", "away": "WAS" },
+      { "home": "ATL", "away": "CAR" }
     ]
   },
   {
     "games": [
       { "home": "BAL", "away": "PIT" },
-      { "home": "MIA", "away": "NYJ" },
-      { "home": "LAR", "away": "ARI" },
-      { "home": "DET", "away": "CHI" }
+      { "home": "BUF", "away": "MIA" },
+      { "home": "KC", "away": "LV" },
+      { "home": "PHI", "away": "WAS" },
+      { "home": "DAL", "away": "NYG" },
+      { "home": "SF", "away": "ARI" },
+      { "home": "SEA", "away": "LAR" },
+      { "home": "GB", "away": "DET" },
+      { "home": "MIN", "away": "CHI" },
+      { "home": "CIN", "away": "CLE" },
+      { "home": "HOU", "away": "JAX" },
+      { "home": "IND", "away": "TEN" },
+      { "home": "DEN", "away": "LAC" },
+      { "home": "NO", "away": "TB" },
+      { "home": "NE", "away": "NYJ" }
     ]
   },
   {
@@ -20,7 +43,17 @@
       { "home": "CIN", "away": "CLE" },
       { "home": "HOU", "away": "IND" },
       { "home": "DEN", "away": "LV" },
-      { "home": "NO", "away": "TB" }
+      { "home": "NO", "away": "TB" },
+      { "home": "PHI", "away": "DAL" },
+      { "home": "KC", "away": "BUF" },
+      { "home": "SF", "away": "SEA" },
+      { "home": "GB", "away": "MIN" },
+      { "home": "BAL", "away": "PIT" },
+      { "home": "MIA", "away": "NYJ" },
+      { "home": "LAR", "away": "ARI" },
+      { "home": "DET", "away": "CHI" },
+      { "home": "JAX", "away": "TEN" },
+      { "home": "LAC", "away": "WAS" }
     ]
   },
   {
@@ -28,7 +61,16 @@
       { "home": "NE", "away": "NYG" },
       { "home": "JAX", "away": "TEN" },
       { "home": "LAC", "away": "DEN" },
-      { "home": "WAS", "away": "PHI" }
+      { "home": "WAS", "away": "PHI" },
+      { "home": "KC", "away": "LV" },
+      { "home": "BUF", "away": "MIA" },
+      { "home": "DAL", "away": "SF" },
+      { "home": "SEA", "away": "ARI" },
+      { "home": "BAL", "away": "CLE" },
+      { "home": "CIN", "away": "PIT" },
+      { "home": "HOU", "away": "NYJ" },
+      { "home": "IND", "away": "NO" },
+      { "home": "TB", "away": "LAR" }
     ]
   },
   {
@@ -36,7 +78,19 @@
       { "home": "KC", "away": "LV" },
       { "home": "BUF", "away": "MIA" },
       { "home": "DAL", "away": "WAS" },
-      { "home": "SF", "away": "ARI" }
+      { "home": "SF", "away": "ARI" },
+      { "home": "SEA", "away": "LAR" },
+      { "home": "GB", "away": "DET" },
+      { "home": "MIN", "away": "CHI" },
+      { "home": "PIT", "away": "BAL" },
+      { "home": "CIN", "away": "CLE" },
+      { "home": "HOU", "away": "IND" },
+      { "home": "DEN", "away": "LAC" },
+      { "home": "NO", "away": "TB" },
+      { "home": "NE", "away": "NYJ" },
+      { "home": "JAX", "away": "TEN" },
+      { "home": "PHI", "away": "NYG" },
+      { "home": "ATL", "away": "CAR" }
     ]
   },
   {
@@ -44,7 +98,18 @@
       { "home": "SEA", "away": "LAR" },
       { "home": "GB", "away": "DET" },
       { "home": "MIN", "away": "CHI" },
-      { "home": "PIT", "away": "BAL" }
+      { "home": "PIT", "away": "BAL" },
+      { "home": "PHI", "away": "DAL" },
+      { "home": "KC", "away": "BUF" },
+      { "home": "SF", "away": "ARI" },
+      { "home": "MIA", "away": "NYJ" },
+      { "home": "CIN", "away": "CLE" },
+      { "home": "HOU", "away": "IND" },
+      { "home": "DEN", "away": "LV" },
+      { "home": "NO", "away": "TB" },
+      { "home": "NE", "away": "NYG" },
+      { "home": "LAC", "away": "WAS" },
+      { "home": "ATL", "away": "CAR" }
     ]
   }
 ]

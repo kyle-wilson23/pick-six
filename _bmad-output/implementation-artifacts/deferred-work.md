@@ -9,10 +9,10 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 ## Deferred from: quick-dev split of Option B hybrid schedule (2026-08-04)
 
-Split from implementing research `technical-league-scoped-vs-canonical-nfl-schedule-research-2026-08-04.md` Option B. Current scope is hybrid isolation only (`spec-hybrid-canonical-live-league-sim-schedule.md`).
+Split from implementing research `technical-league-scoped-vs-canonical-nfl-schedule-research-2026-08-04.md` Option B. Hybrid isolation (`spec-hybrid-canonical-live-league-sim-schedule.md`) and follow-ons below.
 
 - ~~**Cron auto-sync Odds schedule/results**~~ — **Resolved** (`spec-cron-odds-schedule-results-auto-sync.md`): `/api/cron/sync-nfl-schedule` + `/api/cron/sync-nfl-results` → canonical `NflGame` only; admin sync remains override.
-- **Full-volume simulation fixtures** — Expand test-league weeks from ~4 games to ~13–16 games/week (typical NFL week volume). Research goal (2). Depends on league-scoped sim store shipping first.
+- ~~**Full-volume simulation fixtures**~~ — **Resolved** (`spec-full-volume-simulation-fixtures.md`): fixture JSON ≥6 weeks × 13–16 games/week; `buildFixtureKickoffTimes` emits pairwise-distinct ET slots for N≤16.
 
 ## Deferred from: review of spec-cron-odds-schedule-results-auto-sync.md (2026-08-04)
 
@@ -140,7 +140,7 @@ Split from implementing research `technical-league-scoped-vs-canonical-nfl-sched
 | 8.4 No colocated tests for `AdminSimulationControls` | **Park** | Kyle — when UI-component test convention exists |
 | 8.4 No mid-loop `$transaction` failure test | **Accept** | Kyle — route 500 already handles; low value |
 | 8.4 “0 games finalized” alert ambiguity | **Accept** | Kyle — cosmetic; revisit if confusing in practice |
-| 8.3 Kickoff-slot duplication if fixture week >4 games | **Accept** | Kyle — unreached (fixture always 4) |
+| 8.3 Kickoff-slot duplication if fixture week >4 games | **Resolved** | Kyle — `spec-full-volume-simulation-fixtures.md` |
 | 8.3 Raw `Error` on missing team abbr → opaque 500 | **Accept** | Kyle — ops precondition; teams pre-seeded |
 | 8.3 Membership/season lookups outside try/catch | **Accept** | Kyle — matches advance-week pattern |
 | 8.3 No `homeTeamId === awayTeamId` guard | **Accept** | Kyle — unreachable via validated fixtures |
@@ -375,7 +375,7 @@ Split from implementing research `technical-league-scoped-vs-canonical-nfl-sched
 
 ## Deferred from: code review of 8-3-simulated-odds-and-jailed-team-for-rehearsal (2026-07-20)
 
-- **Kickoff-slot duplication if a fixture week ever exceeds 4 games** — `src/lib/nfl/simulation-fixture-schedule.ts:65-76`. `buildFixtureKickoffTimes` only defines 4 kickoff slots (Thu/Sun/Sun/Mon) and cycles them via `slots[i % slots.length]`; a 5th+ game in a fixture week would get an identical `kickoffAt` to an earlier game. AC2 only enforces `games.length >= 4` (no upper bound), and the current committed fixture JSON is always exactly 4 games/week, so this is unreached today. Add a 5th+ slot or an explicit cap/assertion if the fixture file ever gains a >4-game week.
+- ~~**Kickoff-slot duplication if a fixture week ever exceeds 4 games**~~ — **Resolved** (`spec-full-volume-simulation-fixtures.md`): `buildFixtureKickoffTimes` now builds 16 distinct Thu/Sun/Mon ET slots (minute staggers in early/late Sunday windows); fixture weeks are 13–16 games.
 - **Raw untyped `Error` on missing team abbreviation surfaces as opaque `INTERNAL_ERROR`** — `src/lib/nfl/apply-simulation-odds-snapshot.ts:144-149`. `ensureFixtureGamesForWeek` throws a plain `Error` (not the module's own `{ ok: false, code, message, httpStatus }` shape) if a fixture abbreviation isn't found in `Team`, which the route's generic `catch` turns into a 500 `INTERNAL_ERROR` — losing the actionable "seed nfl teams first" message client-side (still visible in server logs via the route's `console.error`). Ops-only precondition failure; teams are pre-seeded per Dev Notes, so low priority.
 - **Membership/season lookups run outside the route's `try/catch`** — `src/app/api/leagues/[leagueId]/simulation/apply-odds-snapshot/route.ts:70-121`. A DB error thrown by `prisma.leagueMembership.findUnique` or `resolveCurrentSeasonForLeague` bypasses the `{ error: { code, message } }` envelope used by every other failure path in the function. Matches `advance-week/route.ts`'s (Story 8.2) pre-existing, identical scoping — not a regression introduced by this story; fix both together if a cross-route hardening pass is ever done.
 - **No guard against `homeTeamId === awayTeamId` in `deriveFixtureOddsLine`** — `src/lib/domain/derive-fixture-odds-line.ts:32`. A degenerate self-matchup input would silently produce a "valid-looking" odds line. Unreachable via any current call path (fixture JSON structural test forbids a team facing itself within a week; real schedule sync never produces a self-game), so no defensive guard was added — consistent with the codebase's general "trust validated upstream inputs" style (e.g. `jailed.ts`).

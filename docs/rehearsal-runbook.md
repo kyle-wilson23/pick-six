@@ -213,4 +213,4 @@ This table is a **sign-off aid only** — a rehearsal is not blocked on filling 
 | **Weekly email cycle** | Tuesday digest (or suppressed equivalent) reflects correct simulated week and content | Story 8.5 AC1 | | | |
 | **Test league labeling** | Banner and **"Test"** chip appear as expected. In **`send`** mode, also verify **`[TEST]`** email subject; in **`suppress`** mode, verify the admin would-send alert instead (no inbox mail) | Story 8.1 | | | |
 | **Delete cleanup** | League deletes cleanly; this league’s sim games/odds/jailed cascade away; other open test leagues keep their own sim data (see [delete section](#what-delete-removes-story-87--hybrid-schedule)) | Story 8.7 / ADR 001 | | | |
-| **Isolation vs production** | After (or during) rehearsal, a **production** league’s picks week shows the live Odds slate (or empty until synced) — not the 4-game fixture cycle | ADR 001 | | | |
+| **Isolation vs production** | After (or during) rehearsal, a **production** league’s picks week shows the live Odds slate (or empty until synced) — not the full-volume sim fixture cycle | ADR 001 | | | |

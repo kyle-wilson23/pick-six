@@ -18,8 +18,14 @@ function game(status: NflGameStatus) {
 
 function makePrisma(games: Array<{ status: NflGameStatus }> = []) {
   return {
+    league: {
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }),
+    },
     nflGame: {
       findMany: vi.fn().mockResolvedValue(games),
+    },
+    leagueSimGame: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
   } as unknown as PrismaClient;
 }

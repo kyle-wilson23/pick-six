@@ -47,6 +47,9 @@ function makePrisma({
     season: {
       findUnique: vi.fn().mockResolvedValue(season),
     },
+    league: {
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }),
+    },
     leagueMembership: {
       findMany: vi.fn().mockResolvedValue(
         memberships.map((membership) => ({
@@ -60,6 +63,9 @@ function makePrisma({
     },
     nflWeekJailedTeam: {
       findMany: vi.fn().mockResolvedValue(jailedRows),
+    },
+    leagueWeekJailedTeam: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
   } as unknown as PrismaClient;
 }

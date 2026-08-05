@@ -10,8 +10,11 @@ export type ScoreNflWeekResult =
  * Score picks for a season week whose games are FINAL.
  *
  * When `opts.leagueId` is provided, only picks belonging to seasons for that league
- * are scored (`season: { nflSeasonYear, leagueId }`). When omitted, all picks for the
- * NFL year+week are scored (production admin multi-league path — Story 5.2).
+ * are scored (`season: { nflSeasonYear, leagueId }`). When omitted, picks for
+ * **non-test** leagues for the NFL year+week are scored (production admin multi-league
+ * path — Story 5.2) so canonical winners never overwrite test-league picks.
+ *
+ * Test leagues score against that league’s `LeagueSimGame` FINAL rows (hybrid Option B).
  *
  * Idempotent — re-running updates outcomes and refreshes scoredAt.
  */
@@ -20,19 +23,63 @@ export async function scoreNflWeek(
   opts: { nflSeasonYear: number; weekNumber: number; leagueId?: string },
 ): Promise<ScoreNflWeekResult> {
   try {
-    const finalGames = await prisma.nflGame.findMany({
-      where: {
-        nflSeasonYear: opts.nflSeasonYear,
-        weekNumber: opts.weekNumber,
-        status: "FINAL",
-      },
-      select: {
-        homeTeamId: true,
-        awayTeamId: true,
-        homeScore: true,
-        awayScore: true,
-      },
-    });
+    let finalGames: Array<{
+      homeTeamId: string;
+      awayTeamId: string;
+      homeScore: number | null;
+      awayScore: number | null;
+    }>;
+
+    if (opts.leagueId !== undefined) {
+      const league = await prisma.league.findUnique({
+        where: { id: opts.leagueId },
+        select: { isTestLeague: true },
+      });
+      if (league?.isTestLeague) {
+        finalGames = await prisma.leagueSimGame.findMany({
+          where: {
+            leagueId: opts.leagueId,
+            nflSeasonYear: opts.nflSeasonYear,
+            weekNumber: opts.weekNumber,
+            status: "FINAL",
+          },
+          select: {
+            homeTeamId: true,
+            awayTeamId: true,
+            homeScore: true,
+            awayScore: true,
+          },
+        });
+      } else {
+        finalGames = await prisma.nflGame.findMany({
+          where: {
+            nflSeasonYear: opts.nflSeasonYear,
+            weekNumber: opts.weekNumber,
+            status: "FINAL",
+          },
+          select: {
+            homeTeamId: true,
+            awayTeamId: true,
+            homeScore: true,
+            awayScore: true,
+          },
+        });
+      }
+    } else {
+      finalGames = await prisma.nflGame.findMany({
+        where: {
+          nflSeasonYear: opts.nflSeasonYear,
+          weekNumber: opts.weekNumber,
+          status: "FINAL",
+        },
+        select: {
+          homeTeamId: true,
+          awayTeamId: true,
+          homeScore: true,
+          awayScore: true,
+        },
+      });
+    }
 
     const winnerByTeamId = new Map<string, ReturnType<typeof getGameWinner>>();
 
@@ -56,7 +103,9 @@ export async function scoreNflWeek(
         season: {
           nflSeasonYear: opts.nflSeasonYear,
           // Use !== undefined (not truthy) so "" cannot silently fall through to unscoped scoring.
-          ...(opts.leagueId !== undefined ? { leagueId: opts.leagueId } : {}),
+          ...(opts.leagueId !== undefined
+            ? { leagueId: opts.leagueId }
+            : { league: { isTestLeague: false } }),
         },
       },
       select: { id: true, teamId: true, antiJailedBonus: true },

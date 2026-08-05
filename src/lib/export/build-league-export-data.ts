@@ -64,15 +64,21 @@ export async function buildLeagueExportData(
     exportTeamLabel: "",
   }));
 
-  const season = await prisma.season.findUnique({
-    where: {
-      leagueId_nflSeasonYear: {
-        leagueId: opts.leagueId,
-        nflSeasonYear: opts.nflSeasonYear,
+  const [season, league] = await Promise.all([
+    prisma.season.findUnique({
+      where: {
+        leagueId_nflSeasonYear: {
+          leagueId: opts.leagueId,
+          nflSeasonYear: opts.nflSeasonYear,
+        },
       },
-    },
-    select: { id: true },
-  });
+      select: { id: true },
+    }),
+    prisma.league.findUnique({
+      where: { id: opts.leagueId },
+      select: { isTestLeague: true },
+    }),
+  ]);
 
   if (!season) {
     return {
@@ -82,6 +88,30 @@ export async function buildLeagueExportData(
       jailedByWeek: [],
     };
   }
+
+  const isTestLeague = league?.isTestLeague ?? false;
+  const jailedRowsPromise = isTestLeague
+    ? prisma.leagueWeekJailedTeam.findMany({
+        where: {
+          leagueId: opts.leagueId,
+          nflSeasonYear: opts.nflSeasonYear,
+          weekNumber: { gte: 1, lte: REGULAR_SEASON_WEEKS },
+        },
+        select: {
+          weekNumber: true,
+          jailedTeam: { select: { abbreviation: true, name: true } },
+        },
+      })
+    : prisma.nflWeekJailedTeam.findMany({
+        where: {
+          nflSeasonYear: opts.nflSeasonYear,
+          weekNumber: { gte: 1, lte: REGULAR_SEASON_WEEKS },
+        },
+        select: {
+          weekNumber: true,
+          jailedTeam: { select: { abbreviation: true, name: true } },
+        },
+      });
 
   const [memberships, picks, jailedRows] = await Promise.all([
     prisma.leagueMembership.findMany({
@@ -103,16 +133,7 @@ export async function buildLeagueExportData(
         team: { select: { abbreviation: true, name: true } },
       },
     }),
-    prisma.nflWeekJailedTeam.findMany({
-      where: {
-        nflSeasonYear: opts.nflSeasonYear,
-        weekNumber: { gte: 1, lte: REGULAR_SEASON_WEEKS },
-      },
-      select: {
-        weekNumber: true,
-        jailedTeam: { select: { abbreviation: true, name: true } },
-      },
-    }),
+    jailedRowsPromise,
   ]);
 
   const picksByMembership = new Map<string, typeof picks>();

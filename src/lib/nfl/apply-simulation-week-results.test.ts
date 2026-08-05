@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { NflGameStatus, PrismaClient } from "@prisma/client";
 
-import { ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE } from "@/lib/nfl/apply-simulation-odds-snapshot";
 import { applySimulationWeekResults } from "@/lib/nfl/apply-simulation-week-results";
 
 vi.mock("@/lib/scoring/finalize-nfl-week", () => ({
@@ -32,12 +31,19 @@ type MockGame = {
 function makePrisma(opts: {
   candidates?: MockGame[];
   update?: ReturnType<typeof vi.fn>;
+  isTestLeague?: boolean;
+  leagueMissing?: boolean;
 }) {
   const update = opts.update ?? vi.fn().mockResolvedValue({});
-  const tx = { nflGame: { update } };
+  const tx = { leagueSimGame: { update } };
 
   return {
-    nflGame: {
+    league: {
+      findUnique: vi.fn().mockResolvedValue(
+        opts.leagueMissing ? null : { isTestLeague: opts.isTestLeague ?? true },
+      ),
+    },
+    leagueSimGame: {
       findMany: vi.fn().mockResolvedValue(opts.candidates ?? []),
       update,
     },
@@ -45,36 +51,8 @@ function makePrisma(opts: {
       fn(tx),
     ),
   } as unknown as PrismaClient & {
-    nflGame: { findMany: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+    leagueSimGame: { findMany: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
     $transaction: ReturnType<typeof vi.fn>;
-  };
-}
-
-/**
- * Simulates a full `(year, week)` game slate (both fixture-provenance and real games) and applies
- * a mock `findMany` that only returns games flagged `hasFixtureOdds` — mirroring what the real
- * `oddsLines.some(...)` provenance filter would do at the DB layer. This lets a mocked-Prisma test
- * assert the orchestration never touches a real game's id, without requiring a real DB.
- */
-function makePrismaWithMixedSlate(allGames: Array<MockGame & { hasFixtureOdds: boolean }>) {
-  const update = vi.fn().mockResolvedValue({});
-  const tx = { nflGame: { update } };
-  const fixtureOnly = allGames.filter((g) => g.hasFixtureOdds);
-
-  return {
-    prisma: {
-      nflGame: {
-        findMany: vi.fn().mockResolvedValue(fixtureOnly),
-        update,
-      },
-      $transaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
-        fn(tx),
-      ),
-    } as unknown as PrismaClient & {
-      nflGame: { findMany: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-      $transaction: ReturnType<typeof vi.fn>;
-    },
-    update,
   };
 }
 
@@ -84,7 +62,7 @@ describe("applySimulationWeekResults", () => {
     vi.mocked(deriveFixtureGameResult).mockClear();
   });
 
-  it("returns SIMULATION_GAMES_NOT_LOADED when no fixture-odds games exist", async () => {
+  it("returns SIMULATION_GAMES_NOT_LOADED when no sim games with odds exist", async () => {
     const prisma = makePrisma({ candidates: [] });
 
     const result = await applySimulationWeekResults(prisma, {
@@ -102,17 +80,17 @@ describe("applySimulationWeekResults", () => {
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(vi.mocked(finalizeNflWeek)).not.toHaveBeenCalled();
-
-    // Provenance filter must be present on the findMany where clause.
-    expect(prisma.nflGame.findMany).toHaveBeenCalledWith(
+    expect(prisma.leagueSimGame.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          leagueId: LEAGUE_ID,
           nflSeasonYear: SEASON_YEAR,
           weekNumber: WEEK,
           oddsLines: {
             some: {
-              oddsSnapshotRun: {
-                source: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE,
+              leagueSimOddsSnapshotRun: {
+                status: "COMPLETED",
+                source: "test_fixture",
               },
             },
           },
@@ -121,28 +99,37 @@ describe("applySimulationWeekResults", () => {
     );
   });
 
-  it("never updates a real game sharing the same (year, week) as fixture candidates", async () => {
-    // Simulates a mixed slate: a "real" NflGame row (no test_fixture odds line — would be
-    // excluded by the actual `oddsLines.some(...)` where-clause) alongside a fixture-provenance
-    // game. The mocked findMany applies that same fixture-only filter, so this proves the
-    // orchestration's update/derive calls are driven entirely by the filtered candidate set and
-    // never reach for the real game's id or team ids, however they made it into the raw slate.
-    const { prisma, update } = makePrismaWithMixedSlate([
-      {
-        id: "real-game-1",
-        homeTeamId: "real-home-team",
-        awayTeamId: "real-away-team",
-        status: "SCHEDULED",
-        hasFixtureOdds: false,
-      },
-      {
-        id: "fixture-scheduled",
-        homeTeamId: "home-fixture",
-        awayTeamId: "away-fixture",
-        status: "SCHEDULED",
-        hasFixtureOdds: true,
-      },
-    ]);
+  it("refuses non-test leagues without writing", async () => {
+    const prisma = makePrisma({ isTestLeague: false, candidates: [] });
+
+    const result = await applySimulationWeekResults(prisma, {
+      nflSeasonYear: SEASON_YEAR,
+      weekNumber: WEEK,
+      leagueId: LEAGUE_ID,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "NOT_TEST_LEAGUE",
+      httpStatus: 403,
+    });
+    expect(prisma.leagueSimGame.findMany).not.toHaveBeenCalled();
+    expect(vi.mocked(finalizeNflWeek)).not.toHaveBeenCalled();
+  });
+
+  it("never touches NflGame — only updates LeagueSimGame ids", async () => {
+    const update = vi.fn().mockResolvedValue({});
+    const prisma = makePrisma({
+      candidates: [
+        {
+          id: "sim-scheduled",
+          homeTeamId: "home-fixture",
+          awayTeamId: "away-fixture",
+          status: "SCHEDULED",
+        },
+      ],
+      update,
+    });
     vi.mocked(finalizeNflWeek).mockResolvedValueOnce({
       ok: true,
       allGamesFinalized: true,
@@ -161,32 +148,12 @@ describe("applySimulationWeekResults", () => {
     expect(result.ok).toBe(true);
     expect(update).toHaveBeenCalledOnce();
     expect(update.mock.calls[0]![0]).toEqual(
-      expect.objectContaining({ where: { id: "fixture-scheduled" } }),
+      expect.objectContaining({ where: { id: "sim-scheduled" } }),
     );
-    expect(vi.mocked(deriveFixtureGameResult)).not.toHaveBeenCalledWith(
-      expect.objectContaining({ homeTeamId: "real-home-team" }),
-    );
-    // The real game's id is never referenced by any update call.
-    expect(JSON.stringify(update.mock.calls)).not.toContain("real-game-1");
-
-    // Provenance filter is present on the findMany where clause — the actual DB-layer exclusion
-    // of the real game (asserted above by simulation) relies on Prisma enforcing this clause.
-    expect(prisma.nflGame.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          oddsLines: {
-            some: {
-              oddsSnapshotRun: {
-                source: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE,
-              },
-            },
-          },
-        }),
-      }),
-    );
+    expect(JSON.stringify(update.mock.calls)).not.toContain("nflGame");
   });
 
-  it("leaves already-FINAL fixture games untouched and finalizes only SCHEDULED ones", async () => {
+  it("leaves already-FINAL sim games untouched and finalizes only SCHEDULED ones", async () => {
     const update = vi.fn().mockResolvedValue({});
     const prisma = makePrisma({
       candidates: [
@@ -248,12 +215,6 @@ describe("applySimulationWeekResults", () => {
         }),
       }),
     );
-    expect(vi.mocked(deriveFixtureGameResult)).toHaveBeenCalledWith({
-      nflSeasonYear: SEASON_YEAR,
-      weekNumber: WEEK,
-      homeTeamId: "home-b",
-      awayTeamId: "away-b",
-    });
   });
 
   it("propagates finalizeNflWeek errors unchanged", async () => {

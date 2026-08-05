@@ -2,6 +2,18 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-hybrid-canonical-live-league-sim-schedule.md
+
+- **Non-atomic sim odds snapshot + jailed persist** — `applySimulationOddsSnapshot` writes the completed sim odds run, then calls `computeAndPersistLeagueWeekJailed` in a separate step (pre-existing global snapshot + jailed pattern). A mid-flight failure can leave odds without a matching jailed row until retry.
+- **Duplicated jailed persist logic between global and league paths** — `computeAndPersistNflWeekJailed` and `computeAndPersistLeagueWeekJailed` share resolution/audit shape but diverge on deadline gating and table targets; drift risk if one path is hardened without the other.
+
+## Deferred from: quick-dev split of Option B hybrid schedule (2026-08-04)
+
+Split from implementing research `technical-league-scoped-vs-canonical-nfl-schedule-research-2026-08-04.md` Option B. Current scope is hybrid isolation only (`spec-hybrid-canonical-live-league-sim-schedule.md`).
+
+- **Cron auto-sync Odds schedule/results** — Automate Odds `/events` + `/scores` → canonical live `NflGame` only (no admin required for real leagues). Keep admin sync as override. Research goal (1).
+- **Full-volume simulation fixtures** — Expand test-league weeks from ~4 games to ~13–16 games/week (typical NFL week volume). Research goal (2). Depends on league-scoped sim store shipping first.
+
 ## Deferred from: review of spec-live-display-odds-picks.md (2026-08-03)
 
 - **Multi-instance in-memory TTL** — `src/lib/nfl/live-display-odds.ts` cache is per process (same pattern as weather). Each Vercel instance / cold start can spend ~2 Odds API credits on cache miss. Acceptable for Hobby MVP; shared cache later if quota pressure appears.

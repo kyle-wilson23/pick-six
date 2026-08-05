@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { getAppBaseUrl } from "@/lib/email/app-base-url";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { getJailedWithTeamForLeagueWeek } from "@/lib/nfl/league-jailed";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import {
   resolveActiveWeekNumber,
   type MinimalNflGameForPicksWeek,
@@ -74,16 +76,14 @@ export async function getTuesdayDigestData(
     throw new NoActiveWeekError();
   }
 
-  const minimalGames = await prisma.nflGame.findMany({
-    where: { nflSeasonYear: season.nflSeasonYear },
-    select: {
-      weekNumber: true,
-      kickoffAt: true,
-    },
+  const minimalGames = await resolveGamesForLeague(prisma, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    isTestLeague: league.isTestLeague,
   });
 
   const gamesForResolve: MinimalNflGameForPicksWeek[] = minimalGames
-    .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
+    .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
   if (
@@ -111,16 +111,11 @@ export async function getTuesdayDigestData(
 
   const [standings, jailedRow, memberships] = await Promise.all([
     getLeagueStandings(prisma, { leagueId, nflSeasonYear: season.nflSeasonYear }),
-    prisma.nflWeekJailedTeam.findUnique({
-      where: {
-        nflSeasonYear_weekNumber: {
-          nflSeasonYear: season.nflSeasonYear,
-          weekNumber,
-        },
-      },
-      include: {
-        jailedTeam: { select: { name: true, abbreviation: true } },
-      },
+    getJailedWithTeamForLeagueWeek(prisma, {
+      leagueId,
+      nflSeasonYear: season.nflSeasonYear,
+      weekNumber,
+      isTestLeague: league.isTestLeague,
     }),
     prisma.leagueMembership.findMany({
       where: { leagueId },

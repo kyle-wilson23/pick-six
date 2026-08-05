@@ -3,7 +3,9 @@ import type { Prisma } from "@prisma/client";
 import { validateDuplicateTeamAcrossSeason, validateJailedLineupAndBonus } from "@/lib/domain/picks";
 import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/league/first-competition-week";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
 import { isWeekInLeagueCompetition } from "@/lib/nfl/nfl-regular-season";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 
 export type Tx = Prisma.TransactionClient;
 
@@ -69,15 +71,19 @@ export async function submitPickOnBehalf(
     return err(404, "MEMBER_NOT_FOUND", "Target membership not found in this league");
   }
 
-  const jailed = await tx.nflWeekJailedTeam.findUnique({
-    where: {
-      nflSeasonYear_weekNumber: {
-        nflSeasonYear: season.nflSeasonYear,
-        weekNumber: nflWeekNumber,
-      },
-    },
+  const leagueRow = await tx.league.findUnique({
+    where: { id: leagueId },
+    select: { isTestLeague: true },
   });
-  if (!jailed) {
+  const isTestLeague = leagueRow?.isTestLeague ?? false;
+
+  const jailedTeamId = await getJailedTeamIdForLeagueWeek(tx, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    weekNumber: nflWeekNumber,
+    isTestLeague,
+  });
+  if (!jailedTeamId) {
     return err(
       400,
       "JAILED_NOT_COMPUTED",
@@ -85,9 +91,11 @@ export async function submitPickOnBehalf(
     );
   }
 
-  const games = await tx.nflGame.findMany({
-    where: { nflSeasonYear: season.nflSeasonYear, weekNumber: nflWeekNumber },
-    select: { homeTeamId: true, awayTeamId: true, kickoffAt: true },
+  const games = await resolveGamesForLeague(tx, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    weekNumber: nflWeekNumber,
+    isTestLeague,
   });
   if (games.length === 0) {
     return err(
@@ -118,7 +126,7 @@ export async function submitPickOnBehalf(
 
   const lineup = validateJailedLineupAndBonus({
     teamId,
-    jailedTeamId: jailed.jailedTeamId,
+    jailedTeamId,
     antiJailedBonus,
     games: gamesWithKickoff,
   });

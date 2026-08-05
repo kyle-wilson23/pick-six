@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockSeasonFindUnique = vi.fn();
 const mockLeagueFindUnique = vi.fn();
 const mockNflGameFindMany = vi.fn();
+const mockLeagueSimGameFindMany = vi.fn();
 const mockNflWeekJailedFindUnique = vi.fn();
+const mockLeagueWeekJailedFindUnique = vi.fn();
 const mockTeamFindMany = vi.fn();
 
 vi.mock("@/lib/db", () => ({
@@ -11,8 +13,12 @@ vi.mock("@/lib/db", () => ({
     season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
     league: { findUnique: (...args: unknown[]) => mockLeagueFindUnique(...args) },
     nflGame: { findMany: (...args: unknown[]) => mockNflGameFindMany(...args) },
+    leagueSimGame: { findMany: (...args: unknown[]) => mockLeagueSimGameFindMany(...args) },
     nflWeekJailedTeam: {
       findUnique: (...args: unknown[]) => mockNflWeekJailedFindUnique(...args),
+    },
+    leagueWeekJailedTeam: {
+      findUnique: (...args: unknown[]) => mockLeagueWeekJailedFindUnique(...args),
     },
     team: { findMany: (...args: unknown[]) => mockTeamFindMany(...args) },
   },
@@ -85,7 +91,7 @@ describe("getJailedVerification", () => {
 
     mockNflWeekJailedFindUnique.mockResolvedValue({
       jailedTeamId: "team-phi",
-      jailedTeam: { id: "team-phi", name: "Philadelphia Eagles" },
+      jailedTeam: { id: "team-phi", name: "Philadelphia Eagles", abbreviation: "PHI" },
       resolvedBy: "MONEYLINE",
       randomSeed: null,
       computedAt: new Date("2026-09-09T12:00:00.000Z"),
@@ -106,7 +112,7 @@ describe("getJailedVerification", () => {
     );
   });
 
-  it("test league: week follows simulatedCurrentWeek regardless of now (AC6)", async () => {
+  it("test league: week follows simulatedCurrentWeek; reads league-scoped jailed", async () => {
     const now = new Date("2026-03-01T12:00:00.000Z");
     mockLeagueFindUnique.mockResolvedValue({ isTestLeague: true });
     mockSeasonFindUnique.mockResolvedValue({
@@ -117,10 +123,10 @@ describe("getJailedVerification", () => {
       simulatedCurrentWeek: 3,
       simulationWeekCount: 4,
     });
-    mockNflGameFindMany.mockResolvedValue([]);
-    mockNflWeekJailedFindUnique.mockResolvedValue({
+    mockLeagueSimGameFindMany.mockResolvedValue([]);
+    mockLeagueWeekJailedFindUnique.mockResolvedValue({
       jailedTeamId: "team-phi",
-      jailedTeam: { id: "team-phi", name: "Philadelphia Eagles" },
+      jailedTeam: { id: "team-phi", name: "Philadelphia Eagles", abbreviation: "PHI" },
       resolvedBy: "MONEYLINE",
       randomSeed: null,
       computedAt: new Date("2026-02-15T12:00:00.000Z"),
@@ -131,13 +137,19 @@ describe("getJailedVerification", () => {
 
     expect(view).not.toBeNull();
     expect(view!.weekNumber).toBe(3);
-    expect(mockNflWeekJailedFindUnique).toHaveBeenCalledWith(
+    expect(mockLeagueWeekJailedFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          nflSeasonYear_weekNumber: { nflSeasonYear: 2026, weekNumber: 3 },
+          leagueId_nflSeasonYear_weekNumber: {
+            leagueId: "league-test",
+            nflSeasonYear: 2026,
+            weekNumber: 3,
+          },
         },
       }),
     );
+    expect(mockNflWeekJailedFindUnique).not.toHaveBeenCalled();
+    expect(mockNflGameFindMany).not.toHaveBeenCalled();
   });
 
   it("returns null when pre-season is not initialized", async () => {

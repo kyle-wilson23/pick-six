@@ -6,11 +6,14 @@ const mockNflGameFindMany = vi.fn();
 const mockMembershipFindMany = vi.fn();
 const mockPickFindMany = vi.fn();
 
+const mockLeagueSimGameFindMany = vi.fn();
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
     league: { findUnique: (...args: unknown[]) => mockLeagueFindUnique(...args) },
     nflGame: { findMany: (...args: unknown[]) => mockNflGameFindMany(...args) },
+    leagueSimGame: { findMany: (...args: unknown[]) => mockLeagueSimGameFindMany(...args) },
     leagueMembership: { findMany: (...args: unknown[]) => mockMembershipFindMany(...args) },
     pick: { findMany: (...args: unknown[]) => mockPickFindMany(...args) },
   },
@@ -175,7 +178,7 @@ describe("buildSubmissionStatus", () => {
       simulatedCurrentWeek: 3,
       simulationWeekCount: 4,
     });
-    mockNflGameFindMany.mockResolvedValue([]);
+    mockLeagueSimGameFindMany.mockResolvedValue([]);
     mockMembershipFindMany.mockResolvedValue([
       {
         id: "mem-1",
@@ -189,5 +192,6 @@ describe("buildSubmissionStatus", () => {
 
     expect(payload.weekNumber).toBe(3);
     expect(payload.participants).toHaveLength(1);
+    expect(mockNflGameFindMany).not.toHaveBeenCalled();
   });
 });

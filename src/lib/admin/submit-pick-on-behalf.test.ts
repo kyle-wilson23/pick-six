@@ -11,12 +11,16 @@ const mockPickUpsert = vi.fn();
 const mockSeasonUpdateMany = vi.fn();
 const mockAuditLogCreate = vi.fn();
 
+const mockLeagueFindUnique = vi.fn();
+
 function createTx() {
   return {
     season: { findUnique: mockSeasonFindUnique, updateMany: mockSeasonUpdateMany },
+    league: { findUnique: mockLeagueFindUnique },
     leagueMembership: { findFirst: mockMembershipFindFirst },
     nflWeekJailedTeam: { findUnique: mockJailedFindUnique },
     nflGame: { findMany: mockGameFindMany },
+    leagueSimGame: { findMany: vi.fn().mockResolvedValue([]) },
     pick: {
       count: mockPickCount,
       findMany: mockPickFindMany,
@@ -65,9 +69,21 @@ const baseArgs = {
 
 function setupHappyPath() {
   mockSeasonFindUnique.mockResolvedValue(baseSeason);
+  mockLeagueFindUnique.mockResolvedValue({ isTestLeague: false });
   mockMembershipFindFirst.mockResolvedValue({ id: "target-mem" });
   mockJailedFindUnique.mockResolvedValue({ jailedTeamId: "team-jailed" });
-  mockGameFindMany.mockResolvedValue(baseGames);
+  mockGameFindMany.mockResolvedValue(
+    baseGames.map((g, i) => ({
+      id: `game-${i}`,
+      nflSeasonYear: 2026,
+      weekNumber: 1,
+      ...g,
+      status: "SCHEDULED" as const,
+      homeScore: null,
+      awayScore: null,
+      finalizedAt: null,
+    })),
+  );
   mockPickCount.mockResolvedValue(1);
   mockPickFindMany.mockResolvedValue([]);
   mockPickFindUnique.mockResolvedValue(null);

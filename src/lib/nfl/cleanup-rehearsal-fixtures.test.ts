@@ -8,6 +8,17 @@ import {
   handlePostTestLeagueDeleteFixtureCleanup,
 } from "@/lib/nfl/cleanup-rehearsal-fixtures";
 
+vi.mock("@/lib/nfl/backfill-league-sim-from-legacy-fixtures", () => ({
+  backfillLeagueSimFromLegacyFixtures: vi.fn().mockResolvedValue({
+    testLeagues: 0,
+    simGamesUpserted: 0,
+    oddsRunsCreated: 0,
+    jailedRowsCopied: 0,
+  }),
+}));
+
+import { backfillLeagueSimFromLegacyFixtures } from "@/lib/nfl/backfill-league-sim-from-legacy-fixtures";
+
 const SEASON_YEAR = 2026;
 const WEEK = 3;
 
@@ -17,38 +28,44 @@ function makeCleanupPrisma(opts: {
   fixtureOnlyGames?: FixtureGame[];
   deleteSnapshotRunsCount?: number;
   deleteGamesCount?: number;
-  gamesRemainingByWeek?: Record<string, number>;
+  remainingGamesByWeek?: Record<
+    string,
+    Array<{ id: string; oddsLines: Array<{ id: string }> }>
+  >;
   deleteJailedCount?: number;
 }) {
   const {
     fixtureOnlyGames = [],
     deleteSnapshotRunsCount = 0,
     deleteGamesCount = 0,
-    gamesRemainingByWeek = {},
+    remainingGamesByWeek = {},
     deleteJailedCount = 0,
   } = opts;
 
-  const nflGameFindMany = vi.fn().mockResolvedValue(fixtureOnlyGames);
+  const nflGameFindMany = vi
+    .fn()
+    .mockResolvedValueOnce(fixtureOnlyGames)
+    .mockImplementation(({ where }: { where: { nflSeasonYear: number; weekNumber: number } }) => {
+      const key = `${where.nflSeasonYear}:${where.weekNumber}`;
+      return Promise.resolve(remainingGamesByWeek[key] ?? []);
+    });
   const oddsSnapshotRunDeleteMany = vi.fn().mockResolvedValue({ count: deleteSnapshotRunsCount });
   const nflGameDeleteMany = vi.fn().mockResolvedValue({ count: deleteGamesCount });
-  const nflGameCount = vi.fn().mockImplementation(({ where }: { where: { nflSeasonYear: number; weekNumber: number } }) => {
-    const key = `${where.nflSeasonYear}:${where.weekNumber}`;
-    return Promise.resolve(gamesRemainingByWeek[key] ?? 0);
-  });
   const nflWeekJailedTeamDeleteMany = vi.fn().mockResolvedValue({ count: deleteJailedCount });
 
   const tx = {
     nflGame: {
       findMany: nflGameFindMany,
       deleteMany: nflGameDeleteMany,
-      count: nflGameCount,
     },
     oddsSnapshotRun: { deleteMany: oddsSnapshotRunDeleteMany },
     nflWeekJailedTeam: { deleteMany: nflWeekJailedTeamDeleteMany },
   };
 
   const prisma = {
-    $transaction: vi.fn().mockImplementation(async (fn: (inner: typeof tx) => Promise<unknown>) => fn(tx)),
+    $transaction: vi.fn().mockImplementation(async (fn: (inner: typeof tx) => Promise<unknown>) =>
+      fn(tx),
+    ),
     league: { count: vi.fn() },
   } as unknown as PrismaClient;
 
@@ -58,7 +75,6 @@ function makeCleanupPrisma(opts: {
     nflGameFindMany,
     oddsSnapshotRunDeleteMany,
     nflGameDeleteMany,
-    nflGameCount,
     nflWeekJailedTeamDeleteMany,
   };
 }
@@ -79,9 +95,15 @@ describe("countRemainingTestLeagues", () => {
 describe("cleanupOrphanTestFixtureData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(backfillLeagueSimFromLegacyFixtures).mockResolvedValue({
+      testLeagues: 0,
+      simGamesUpserted: 0,
+      oddsRunsCreated: 0,
+      jailedRowsCopied: 0,
+    });
   });
 
-  it("removes fixture-only games, test_fixture runs, and jailed rows for empty weeks", async () => {
+  it("backfills then removes leftover global fixture-only games and empty-week jailed", async () => {
     const fixtureOnlyGames = [
       { id: "game-fixture-1", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK },
     ];
@@ -95,12 +117,13 @@ describe("cleanupOrphanTestFixtureData", () => {
       fixtureOnlyGames,
       deleteSnapshotRunsCount: 2,
       deleteGamesCount: 1,
-      gamesRemainingByWeek: { [`${SEASON_YEAR}:${WEEK}`]: 0 },
+      remainingGamesByWeek: { [`${SEASON_YEAR}:${WEEK}`]: [] },
       deleteJailedCount: 1,
     });
 
     const result = await cleanupOrphanTestFixtureData(prisma);
 
+    expect(backfillLeagueSimFromLegacyFixtures).toHaveBeenCalledWith(prisma);
     expect(result).toEqual({
       deletedSnapshotRuns: 2,
       deletedGames: 1,
@@ -131,59 +154,51 @@ describe("cleanupOrphanTestFixtureData", () => {
     });
   });
 
-  it("keeps mixed-provenance games: only fixture-only ids deleted; runs deleted; jailed kept if games remain", async () => {
-    // Query returns only exclusive test_fixture games — mixed-source games are
-    // filtered out by oddsLines.none { source not test_fixture }.
-    const fixtureOnlyGames = [
-      { id: "game-fixture-only", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK },
-    ];
+  it("deletes jailed when remaining games lack non-fixture completed odds", async () => {
     const {
       prisma,
-      nflGameFindMany,
-      oddsSnapshotRunDeleteMany,
-      nflGameDeleteMany,
       nflWeekJailedTeamDeleteMany,
     } = makeCleanupPrisma({
-      fixtureOnlyGames,
+      fixtureOnlyGames: [
+        { id: "game-fixture-1", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK },
+      ],
       deleteSnapshotRunsCount: 1,
       deleteGamesCount: 1,
-      // Remaining includes a mixed-provenance (or real) game still in the week
-      gamesRemainingByWeek: { [`${SEASON_YEAR}:${WEEK}`]: 1 },
+      remainingGamesByWeek: {
+        [`${SEASON_YEAR}:${WEEK}`]: [{ id: "orphan-no-odds", oddsLines: [] }],
+      },
+      deleteJailedCount: 1,
     });
 
     const result = await cleanupOrphanTestFixtureData(prisma);
 
-    expect(nflGameFindMany).toHaveBeenCalledWith({
-      where: {
-        oddsLines: {
-          some: {
-            oddsSnapshotRun: { source: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE },
-          },
-          none: {
-            oddsSnapshotRun: { source: { not: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE } },
-          },
-        },
+    expect(result.deletedJailedRows).toBe(1);
+    expect(nflWeekJailedTeamDeleteMany).toHaveBeenCalled();
+  });
+
+  it("keeps jailed when remaining games still have non-fixture odds", async () => {
+    const {
+      prisma,
+      nflWeekJailedTeamDeleteMany,
+    } = makeCleanupPrisma({
+      fixtureOnlyGames: [
+        { id: "game-fixture-1", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK },
+      ],
+      deleteSnapshotRunsCount: 1,
+      deleteGamesCount: 1,
+      remainingGamesByWeek: {
+        [`${SEASON_YEAR}:${WEEK}`]: [{ id: "live-g", oddsLines: [{ id: "line-1" }] }],
       },
-      select: { id: true, nflSeasonYear: true, weekNumber: true },
+      deleteJailedCount: 0,
     });
-    expect(oddsSnapshotRunDeleteMany).toHaveBeenCalledWith({
-      where: { source: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE },
-    });
-    expect(nflGameDeleteMany).toHaveBeenCalledWith({
-      where: { id: { in: ["game-fixture-only"] } },
-    });
-    expect(nflGameDeleteMany).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: { in: expect.arrayContaining(["game-mixed"]) } },
-      }),
-    );
-    expect(result.deletedGames).toBe(1);
-    expect(result.deletedSnapshotRuns).toBe(1);
+
+    const result = await cleanupOrphanTestFixtureData(prisma);
+
     expect(result.deletedJailedRows).toBe(0);
     expect(nflWeekJailedTeamDeleteMany).not.toHaveBeenCalled();
   });
 
-  it("real-only week: no test_fixture runs → no games or jailed deleted", async () => {
+  it("real-only week: no fixture-only games → no NflGame or jailed deletes", async () => {
     const {
       prisma,
       nflGameDeleteMany,
@@ -207,34 +222,27 @@ describe("cleanupOrphanTestFixtureData", () => {
     expect(nflGameDeleteMany).not.toHaveBeenCalled();
     expect(nflWeekJailedTeamDeleteMany).not.toHaveBeenCalled();
   });
-
-  it("deletes test_fixture runs but no games or jailed rows when no fixture-only games exist", async () => {
-    const { prisma, nflGameDeleteMany, nflWeekJailedTeamDeleteMany, oddsSnapshotRunDeleteMany } =
-      makeCleanupPrisma({
-        fixtureOnlyGames: [],
-        deleteSnapshotRunsCount: 3,
-      });
-
-    const result = await cleanupOrphanTestFixtureData(prisma);
-
-    expect(result).toEqual({
-      deletedSnapshotRuns: 3,
-      deletedGames: 0,
-      deletedJailedRows: 0,
-    });
-    expect(oddsSnapshotRunDeleteMany).toHaveBeenCalled();
-    expect(nflGameDeleteMany).not.toHaveBeenCalled();
-    expect(nflWeekJailedTeamDeleteMany).not.toHaveBeenCalled();
-  });
 });
 
 describe("handlePostTestLeagueDeleteFixtureCleanup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(backfillLeagueSimFromLegacyFixtures).mockResolvedValue({
+      testLeagues: 0,
+      simGamesUpserted: 0,
+      oddsRunsCreated: 0,
+      jailedRowsCopied: 0,
+    });
   });
 
-  it("skips cleanup when other test leagues remain", async () => {
-    const { prisma, nflGameFindMany } = makeCleanupPrisma({});
+  it("always cleans leftover global fixtures even when other test leagues remain", async () => {
+    const { prisma, nflGameFindMany } = makeCleanupPrisma({
+      fixtureOnlyGames: [{ id: "g1", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK }],
+      deleteSnapshotRunsCount: 1,
+      deleteGamesCount: 1,
+      remainingGamesByWeek: { [`${SEASON_YEAR}:${WEEK}`]: [] },
+      deleteJailedCount: 1,
+    });
     (prisma.league as { count: ReturnType<typeof vi.fn> }).count = vi
       .fn()
       .mockResolvedValue(1);
@@ -245,10 +253,12 @@ describe("handlePostTestLeagueDeleteFixtureCleanup", () => {
     });
 
     expect(result).toEqual({
-      outcome: "fixtures_retained",
-      remainingTestLeagueCount: 1,
+      outcome: "fixtures_cleaned",
+      deletedSnapshotRuns: 1,
+      deletedGames: 1,
+      deletedJailedRows: 1,
     });
-    expect(nflGameFindMany).not.toHaveBeenCalled();
+    expect(nflGameFindMany).toHaveBeenCalled();
   });
 
   it("runs cleanup when no test leagues remain", async () => {
@@ -256,7 +266,7 @@ describe("handlePostTestLeagueDeleteFixtureCleanup", () => {
       fixtureOnlyGames: [{ id: "g1", nflSeasonYear: SEASON_YEAR, weekNumber: WEEK }],
       deleteSnapshotRunsCount: 1,
       deleteGamesCount: 2,
-      gamesRemainingByWeek: { [`${SEASON_YEAR}:${WEEK}`]: 0 },
+      remainingGamesByWeek: { [`${SEASON_YEAR}:${WEEK}`]: [] },
       deleteJailedCount: 1,
     });
     (prisma.league as { count: ReturnType<typeof vi.fn> }).count = vi

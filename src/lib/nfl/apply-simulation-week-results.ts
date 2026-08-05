@@ -27,14 +27,12 @@ export type ApplySimulationWeekResultsResult =
   | ApplySimulationWeekResultsFailure;
 
 /**
- * Finalize fixture games for `(nflSeasonYear, weekNumber)` with deterministic scores, then
- * run the production `finalizeNflWeek` pipeline (score + reveal when the week is fully final).
+ * Finalize sim games for `(leagueId, nflSeasonYear, weekNumber)` with deterministic scores, then
+ * run the production `finalizeNflWeek` pipeline against that league’s sim slate.
  *
- * Safety: only games that carry at least one `test_fixture`-sourced odds line are candidates —
- * real synced games sharing the same global `(year, week)` are never force-finalized.
- *
- * Pick scoring is league-scoped via required `leagueId` (passed through to `finalizeNflWeek`).
- * Callers must gate on `isTestLeague` before invoking (Story 8.4 AC7).
+ * Only `LeagueSimGame` rows for this league are candidates — never touches canonical `NflGame`.
+ * Pick scoring is league-scoped via required `leagueId`.
+ * Fail-closed: refuses missing / non-test leagues (defense in depth vs route gates).
  */
 export async function applySimulationWeekResults(
   prisma: PrismaClient,
@@ -43,13 +41,36 @@ export async function applySimulationWeekResults(
 ): Promise<ApplySimulationWeekResultsResult> {
   const { nflSeasonYear, weekNumber, leagueId } = params;
 
-  const candidates = await prisma.nflGame.findMany({
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { isTestLeague: true },
+  });
+  if (!league) {
+    return {
+      ok: false,
+      code: "LEAGUE_NOT_FOUND",
+      message: "League not found",
+      httpStatus: 409,
+    };
+  }
+  if (!league.isTestLeague) {
+    return {
+      ok: false,
+      code: "NOT_TEST_LEAGUE",
+      message: "Applying simulation results is only available for test / rehearsal leagues",
+      httpStatus: 403,
+    };
+  }
+
+  const candidates = await prisma.leagueSimGame.findMany({
     where: {
+      leagueId,
       nflSeasonYear,
       weekNumber,
       oddsLines: {
         some: {
-          oddsSnapshotRun: {
+          leagueSimOddsSnapshotRun: {
+            status: "COMPLETED",
             source: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE,
           },
         },
@@ -86,7 +107,7 @@ export async function applySimulationWeekResults(
           homeTeamId: game.homeTeamId,
           awayTeamId: game.awayTeamId,
         });
-        await tx.nflGame.update({
+        await tx.leagueSimGame.update({
           where: { id: game.id },
           data: {
             status: "FINAL",

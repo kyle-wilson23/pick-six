@@ -93,12 +93,14 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 | Topic | Decision |
 |-------|----------|
 | **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `american`). Server-only via `ODDS_API_KEY`. |
-| **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — `POST /api/admin/nfl/sync-schedule` upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. |
+| **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — `POST /api/admin/nfl/sync-schedule` upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. **Canonical-only** — never writes test-league sim tables. |
 | **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; sync soon after the week completes. |
+| **Test / rehearsal leagues** | **Hybrid Option B** — schedules, fixture odds, and jailed live in league-scoped `LeagueSimGame` / sim odds / `LeagueWeekJailedTeam`. League reads use `resolveGamesForLeague`. See [`docs/adr/001-hybrid-canonical-live-league-sim-schedule.md`](./adr/001-hybrid-canonical-live-league-sim-schedule.md). |
 | **Operational provider** | **Single vendor for ops:** The Odds API for schedule + results + lines (`ODDS_API_KEY` only). |
 | **Compliance** | Follow each vendor’s **terms of use**; no keys in client bundles (`docs/project-context.md`). |
 | **Fallback** | Failed odds snapshot → structured error + logs; **manual** odds PATCH / league admin UI. Failed schedule/results sync → structured error + logs. Mapping lives primarily in `src/lib/integrations/the-odds-api/`. |
 | **Team logos (bonus / 3.8)** | Not from this odds integration; evaluate static assets or image-capable providers later. |
+| **Deferred** | Cron auto-sync for Odds schedule/results; expanding fixture JSON to full NFL week volume — tracked in `_bmad-output/implementation-artifacts/deferred-work.md`. |
 
 ## Mapping
 
@@ -110,7 +112,8 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 
 ## Snapshot semantics (“mid-week”)
 
-- **Tuesday / admin snapshot (jailed authority):** Odds for a given `NflGame` are persisted as `NflGameOddsLine` rows under a completed `OddsSnapshotRun`. **Jailed team** computation and any mid-week jailed recompute read **`getEffectiveOddsLinesForWeek`** (latest completed snapshot lines) — **not** live display overlay. New snapshot rows appear only after an explicit **snapshot** (`POST /api/admin/nfl/snapshot-odds`) or a **manual** line save (Tuesday cadence / admin).
+- **Tuesday / admin snapshot (jailed authority):** Odds for a given `NflGame` are persisted as `NflGameOddsLine` rows under a completed `OddsSnapshotRun`. **Jailed team** computation and any mid-week jailed recompute read **`getEffectiveOddsLinesForWeek`** (latest completed snapshot lines, excluding `test_fixture` source) — **not** live display overlay. New snapshot rows appear only after an explicit **snapshot** (`POST /api/admin/nfl/snapshot-odds`) or a **manual** line save (Tuesday cadence / admin).
+- **Test / rehearsal leagues (hybrid Option B):** Schedule, odds, and jailed are league-scoped. Readers use **`resolveGamesForLeague`** → `LeagueSimGame`, **`getEffectiveOddsLinesForSimWeek`** → `LeagueSimGameOddsLine`, and **`LeagueWeekJailedTeam`** (not global `NflWeekJailedTeam`). Sim writers never touch canonical `NflGame` / `OddsSnapshotRun`.
 - **Picks display overlay (current week only):** The league picks page may call The Odds API on load for the league’s **current** active week, behind a **30-minute in-memory TTL** (+ in-flight coalesce) in `src/lib/nfl/live-display-odds.ts`. That path is **display-only** — it does **not** write snapshot rows and does **not** change `NflWeekJailedTeam`. Past weeks (`?weekNumber=`), **test leagues**, missing `ODDS_API_KEY`, or provider failure fall back to effective snapshot lines. Quota: ~**2 credits** per cache miss (`h2h` + `spreads` × `us`).
 
 ### Partial week coverage (AC4)

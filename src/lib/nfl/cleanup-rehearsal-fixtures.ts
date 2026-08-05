@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE } from "@/lib/nfl/apply-simulation-odds-snapshot";
+import { backfillLeagueSimFromLegacyFixtures } from "@/lib/nfl/backfill-league-sim-from-legacy-fixtures";
 
 export type RehearsalFixtureCleanupStats = {
   deletedSnapshotRuns: number;
@@ -9,7 +10,6 @@ export type RehearsalFixtureCleanupStats = {
 };
 
 export type PostTestLeagueDeleteFixtureOutcome =
-  | { outcome: "fixtures_retained"; remainingTestLeagueCount: number }
   | ({ outcome: "fixtures_cleaned" } & RehearsalFixtureCleanupStats)
   | { outcome: "cleanup_failed"; error: unknown };
 
@@ -19,14 +19,19 @@ export async function countRemainingTestLeagues(prisma: PrismaClient): Promise<n
 }
 
 /**
- * Remove global rehearsal fixture rows when no test leagues remain.
+ * Remove leftover global rehearsal fixture rows stamped onto `NflGame` before hybrid Option B.
  *
- * Provenance: only deletes `NflGame` rows whose odds lines are exclusively from
- * `test_fixture` snapshot runs. Mixed weeks keep real-sourced games and jailed rows.
+ * Sim schedule/odds/jailed for test leagues now live on league-scoped tables and cascade with
+ * `League` delete — this only cleans orphan **canonical** `test_fixture`-only games and
+ * legacy global `OddsSnapshotRun` rows with `source=test_fixture`.
+ *
+ * Before deletes, backfills remaining test leagues from legacy fixture rows (idempotent).
  */
 export async function cleanupOrphanTestFixtureData(
   prisma: PrismaClient,
 ): Promise<RehearsalFixtureCleanupStats> {
+  await backfillLeagueSimFromLegacyFixtures(prisma);
+
   return prisma.$transaction(async (tx) => {
     const fixtureOnlyGames = await tx.nflGame.findMany({
       where: {
@@ -59,10 +64,25 @@ export async function cleanupOrphanTestFixtureData(
     let deletedJailedRows = 0;
     for (const weekKey of affectedWeekKeys) {
       const [nflSeasonYear, weekNumber] = weekKey.split(":").map(Number);
-      const remainingGames = await tx.nflGame.count({
+      const remainingGames = await tx.nflGame.findMany({
         where: { nflSeasonYear, weekNumber },
+        select: {
+          id: true,
+          oddsLines: {
+            where: {
+              oddsSnapshotRun: {
+                status: "COMPLETED",
+                source: { not: ODDS_SNAPSHOT_SOURCE_TEST_FIXTURE },
+              },
+            },
+            select: { id: true },
+            take: 1,
+          },
+        },
       });
-      if (remainingGames === 0) {
+
+      const hasNonFixtureOdds = remainingGames.some((g) => g.oddsLines.length > 0);
+      if (remainingGames.length === 0 || !hasNonFixtureOdds) {
         const result = await tx.nflWeekJailedTeam.deleteMany({
           where: { nflSeasonYear, weekNumber },
         });
@@ -79,8 +99,9 @@ export async function cleanupOrphanTestFixtureData(
 }
 
 /**
- * After a test league row is deleted, retain shared fixtures while other test leagues exist;
- * otherwise run global fixture cleanup (Story 8.7 AC2/AC3).
+ * After a test league row is deleted, sim games/odds/jailed cascade with the league.
+ * Always attempt one-off cleanup of leftover global `test_fixture` NflGame rows (pre-hybrid).
+ * Does **not** retain shared schedule fixtures for remaining test leagues.
  */
 export async function handlePostTestLeagueDeleteFixtureCleanup(
   prisma: PrismaClient,
@@ -90,27 +111,14 @@ export async function handlePostTestLeagueDeleteFixtureCleanup(
 
   try {
     const remainingTestLeagueCount = await countRemainingTestLeagues(prisma);
-
-    if (remainingTestLeagueCount > 0) {
-      console.info(
-        JSON.stringify({
-          action: "rehearsal_fixtures_retained",
-          reason: "other_test_leagues_remain",
-          remainingTestLeagueCount,
-          leagueId: params.leagueId,
-          actorUserId: params.actorUserId,
-          timestamp,
-        }),
-      );
-      return { outcome: "fixtures_retained", remainingTestLeagueCount };
-    }
-
     const stats = await cleanupOrphanTestFixtureData(prisma);
     console.info(
       JSON.stringify({
         action: "rehearsal_fixtures_cleaned",
         leagueId: params.leagueId,
         actorUserId: params.actorUserId,
+        remainingTestLeagueCount,
+        note: "sim_data_cascaded_with_league; cleaned_legacy_global_test_fixture_rows",
         ...stats,
         timestamp,
       }),

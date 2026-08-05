@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockLeagueFindUnique = vi.fn();
 const mockSeasonFindUnique = vi.fn();
 const mockNflGameFindMany = vi.fn();
+const mockLeagueSimGameFindMany = vi.fn();
 const mockNflWeekJailedTeamFindUnique = vi.fn();
+const mockLeagueWeekJailedTeamFindUnique = vi.fn();
 const mockMembershipFindMany = vi.fn();
 const mockGetLeagueStandings = vi.fn();
 const mockGetAppBaseUrl = vi.fn();
@@ -13,8 +15,12 @@ vi.mock("@/lib/db", () => ({
     league: { findUnique: (...args: unknown[]) => mockLeagueFindUnique(...args) },
     season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
     nflGame: { findMany: (...args: unknown[]) => mockNflGameFindMany(...args) },
+    leagueSimGame: { findMany: (...args: unknown[]) => mockLeagueSimGameFindMany(...args) },
     nflWeekJailedTeam: {
       findUnique: (...args: unknown[]) => mockNflWeekJailedTeamFindUnique(...args),
+    },
+    leagueWeekJailedTeam: {
+      findUnique: (...args: unknown[]) => mockLeagueWeekJailedTeamFindUnique(...args),
     },
     leagueMembership: { findMany: (...args: unknown[]) => mockMembershipFindMany(...args) },
   },
@@ -135,8 +141,16 @@ describe("getTuesdayDigestData", () => {
       name: "Test League",
       isTestLeague: true,
     });
+    mockSeasonFindUnique.mockResolvedValue({
+      id: "season-1",
+      nflSeasonYear: SEASON_YEAR,
+      preSeasonInitializedAt: new Date("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+      simulatedCurrentWeek: 3,
+    });
+    mockLeagueSimGameFindMany.mockResolvedValue([]);
     mockGetLeagueStandings.mockResolvedValue([]);
-    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockLeagueWeekJailedTeamFindUnique.mockResolvedValue(null);
     mockMembershipFindMany.mockResolvedValue([]);
 
     const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
@@ -159,9 +173,9 @@ describe("getTuesdayDigestData", () => {
       simulatedCurrentWeek: 3,
       simulationWeekCount: 4,
     });
-    mockNflGameFindMany.mockResolvedValue([]);
+    mockLeagueSimGameFindMany.mockResolvedValue([]);
     mockGetLeagueStandings.mockResolvedValue([]);
-    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockLeagueWeekJailedTeamFindUnique.mockResolvedValue(null);
     mockMembershipFindMany.mockResolvedValue([]);
 
     const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID }, now);

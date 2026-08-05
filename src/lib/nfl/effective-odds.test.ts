@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -19,7 +19,11 @@ function mockPrisma(games: { id: string }[], lines: LineRow[]): PrismaClient {
       findMany: async () => games,
     },
     nflGameOddsLine: {
-      findMany: async () => lines,
+      findMany: async (args?: { where?: { oddsSnapshotRun?: unknown } }) => {
+        // Production filter excludes test_fixture; mock returns only non-fixture lines.
+        void args;
+        return lines;
+      },
     },
   } as unknown as PrismaClient;
 }
@@ -112,5 +116,27 @@ describe("getEffectiveOddsLinesForWeek", () => {
     const out = await getEffectiveOddsLinesForWeek(prisma, 2026, 5);
     expect(out.get(g1)?.homeMoneylineAmerican).toBe(-150);
     expect(out.get(g2)?.awayMoneylineAmerican).toBe(250);
+  });
+
+  it("queries only COMPLETED non-test_fixture snapshot lines", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      nflGame: { findMany: vi.fn().mockResolvedValue([{ id: "g1" }]) },
+      nflGameOddsLine: { findMany },
+    } as unknown as PrismaClient;
+
+    await getEffectiveOddsLinesForWeek(prisma, 2026, 1);
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          nflGameId: { in: ["g1"] },
+          oddsSnapshotRun: {
+            status: "COMPLETED",
+            source: { not: "test_fixture" },
+          },
+        },
+      }),
+    );
   });
 });

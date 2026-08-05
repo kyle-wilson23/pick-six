@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { JailedCandidateAudit } from "@/lib/domain/jailed";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { getJailedWithTeamForLeagueWeek } from "@/lib/nfl/league-jailed";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import {
   resolveActiveWeekNumber,
   type MinimalNflGameForPicksWeek,
@@ -155,13 +157,14 @@ export async function getJailedVerification(
 
   const isTestLeague = leagueRow?.isTestLeague ?? false;
 
-  const minimalGames = await db.nflGame.findMany({
-    where: { nflSeasonYear: season.nflSeasonYear },
-    select: { weekNumber: true, kickoffAt: true },
+  const minimalGames = await resolveGamesForLeague(db, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    isTestLeague,
   });
 
   const gamesForResolve: MinimalNflGameForPicksWeek[] = minimalGames
-    .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
+    .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
   if (!canResolveActiveWeek({ season, gamesWithKickoff: gamesForResolve, isTestLeague })) {
@@ -181,14 +184,11 @@ export async function getJailedVerification(
     now,
   });
 
-  const jailed = await db.nflWeekJailedTeam.findUnique({
-    where: {
-      nflSeasonYear_weekNumber: {
-        nflSeasonYear: season.nflSeasonYear,
-        weekNumber,
-      },
-    },
-    include: { jailedTeam: { select: { id: true, name: true } } },
+  const jailed = await getJailedWithTeamForLeagueWeek(db, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    weekNumber,
+    isTestLeague,
   });
 
   if (!jailed) {

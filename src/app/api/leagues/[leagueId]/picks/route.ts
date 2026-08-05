@@ -18,7 +18,9 @@ import { validateDuplicateTeamAcrossSeason, validateJailedLineupAndBonus } from 
 import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/league/first-competition-week";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
+import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
 import { isWeekInLeagueCompetition } from "@/lib/nfl/nfl-regular-season";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import { checkPickMutationDeadline } from "@/lib/picks/assert-pick-mutation-allowed";
 import { postPickBodySchema } from "@/lib/picks/post-pick-body";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
@@ -321,15 +323,19 @@ async function runPickMutation(
     );
   }
 
-  const jailed = await tx.nflWeekJailedTeam.findUnique({
-    where: {
-      nflSeasonYear_weekNumber: {
-        nflSeasonYear: season.nflSeasonYear,
-        weekNumber: nflWeekNumber,
-      },
-    },
+  const leagueRow = await tx.league.findUnique({
+    where: { id: leagueId },
+    select: { isTestLeague: true },
   });
-  if (!jailed) {
+  const isTestLeague = leagueRow?.isTestLeague ?? false;
+
+  const jailedTeamId = await getJailedTeamIdForLeagueWeek(tx, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    weekNumber: nflWeekNumber,
+    isTestLeague,
+  });
+  if (!jailedTeamId) {
     return err(
       400,
       "JAILED_NOT_COMPUTED",
@@ -337,9 +343,11 @@ async function runPickMutation(
     );
   }
 
-  const games = await tx.nflGame.findMany({
-    where: { nflSeasonYear: season.nflSeasonYear, weekNumber: nflWeekNumber },
-    select: { homeTeamId: true, awayTeamId: true, kickoffAt: true },
+  const games = await resolveGamesForLeague(tx, {
+    leagueId,
+    nflSeasonYear: season.nflSeasonYear,
+    weekNumber: nflWeekNumber,
+    isTestLeague,
   });
   if (games.length === 0) {
     return err(
@@ -375,7 +383,7 @@ async function runPickMutation(
 
   const lineup = validateJailedLineupAndBonus({
     teamId,
-    jailedTeamId: jailed.jailedTeamId,
+    jailedTeamId,
     antiJailedBonus,
     games: gamesWithKickoff,
   });

@@ -24,16 +24,43 @@ export function isWeekFullyFinalized(
 /**
  * Check whether all games for a week are resolved; if so, run weekly pick scoring.
  * Idempotent — re-running with the same data returns the same result.
+ *
+ * When `leagueId` is a test league, completeness uses that league’s `LeagueSimGame` rows
+ * (not the global canonical slate).
  */
 export async function finalizeNflWeek(
   prisma: PrismaClient,
   opts: { nflSeasonYear: number; weekNumber: number; leagueId?: string },
 ): Promise<FinalizeNflWeekResult> {
   try {
-    const games = await prisma.nflGame.findMany({
-      where: { nflSeasonYear: opts.nflSeasonYear, weekNumber: opts.weekNumber },
-      select: { status: true },
-    });
+    let games: Array<{ status: NflGameStatus }>;
+
+    if (opts.leagueId !== undefined) {
+      const league = await prisma.league.findUnique({
+        where: { id: opts.leagueId },
+        select: { isTestLeague: true },
+      });
+      if (league?.isTestLeague) {
+        games = await prisma.leagueSimGame.findMany({
+          where: {
+            leagueId: opts.leagueId,
+            nflSeasonYear: opts.nflSeasonYear,
+            weekNumber: opts.weekNumber,
+          },
+          select: { status: true },
+        });
+      } else {
+        games = await prisma.nflGame.findMany({
+          where: { nflSeasonYear: opts.nflSeasonYear, weekNumber: opts.weekNumber },
+          select: { status: true },
+        });
+      }
+    } else {
+      games = await prisma.nflGame.findMany({
+        where: { nflSeasonYear: opts.nflSeasonYear, weekNumber: opts.weekNumber },
+        select: { status: true },
+      });
+    }
 
     const finalCount = games.filter(
       (g) => g.status === "FINAL" || g.status === "CANCELLED",

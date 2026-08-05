@@ -1,5 +1,6 @@
 import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import { isWeekFullyFinalized } from "@/lib/scoring/finalize-nfl-week";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
 import { userDisplayName } from "@/lib/user-display-name";
@@ -34,7 +35,7 @@ export async function getLeaguePeerPickHistory(
     callerRole: LeagueMembershipRole;
   },
 ): Promise<LeaguePeerPickHistory> {
-  const [season, allGames] = await Promise.all([
+  const [season, league] = await Promise.all([
     prisma.season.findUnique({
       where: {
         leagueId_nflSeasonYear: {
@@ -44,12 +45,18 @@ export async function getLeaguePeerPickHistory(
       },
       select: { id: true },
     }),
-    prisma.nflGame.findMany({
-      where: { nflSeasonYear: opts.nflSeasonYear },
-      select: { weekNumber: true, status: true },
+    prisma.league.findUnique({
+      where: { id: opts.leagueId },
+      select: { isTestLeague: true },
     }),
   ]);
   if (!season) return { ...EMPTY };
+
+  const allGames = await resolveGamesForLeague(prisma, {
+    leagueId: opts.leagueId,
+    nflSeasonYear: opts.nflSeasonYear,
+    isTestLeague: league?.isTestLeague ?? false,
+  });
 
   const isAdmin = opts.callerRole === LeagueMembershipRole.ADMIN;
 

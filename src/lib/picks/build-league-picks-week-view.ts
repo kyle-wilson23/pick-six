@@ -10,12 +10,17 @@ import {
   computePickDeadlineUtc,
   getFirstKickoffUtc,
 } from "@/lib/domain/pick-deadline";
-import { getEffectiveOddsLinesForWeek } from "@/lib/nfl/effective-odds";
+import { getEffectiveOddsLinesForLeague } from "@/lib/nfl/effective-odds";
+import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
 import {
   getLiveDisplayOddsLinesForWeek,
   mergeLiveDisplayOddsOverEffective,
   shouldUseLiveDisplayOdds,
 } from "@/lib/nfl/live-display-odds";
+import {
+  resolveGamesForLeague,
+  resolveGamesForLeagueWithTeams,
+} from "@/lib/nfl/resolve-games-for-league";
 import {
   computePicksUiIsPreview,
   resolveActiveWeekNumber,
@@ -80,16 +85,14 @@ export async function buildLeaguePicksWeekView(
   const isTestLeague = leagueRow?.isTestLeague ?? false;
   const nflSeasonYear = season.nflSeasonYear;
 
-  const minimalGames = await db.nflGame.findMany({
-    where: { nflSeasonYear },
-    select: {
-      weekNumber: true,
-      kickoffAt: true,
-    },
+  const minimalGames = await resolveGamesForLeague(db, {
+    leagueId,
+    nflSeasonYear,
+    isTestLeague,
   });
 
   const gamesForResolve: MinimalNflGameForPicksWeek[] = minimalGames
-    .filter((g): g is { weekNumber: number; kickoffAt: Date } => g.kickoffAt != null)
+    .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
     .map((g) => ({ weekNumber: g.weekNumber, kickoffAt: g.kickoffAt }));
 
   const seasonForResolve: MinimalSeasonForPicksWeek = {
@@ -107,13 +110,11 @@ export async function buildLeaguePicksWeekView(
   const targetWeek =
     explicitWeekNumber != null && explicitWeekNumber > 0 ? explicitWeekNumber : resolvedWeek;
 
-  const gamesForWeek = await db.nflGame.findMany({
-    where: { nflSeasonYear, weekNumber: targetWeek },
-    include: {
-      homeTeam: { select: { id: true, abbreviation: true, name: true } },
-      awayTeam: { select: { id: true, abbreviation: true, name: true } },
-    },
-    orderBy: { kickoffAt: "asc" },
+  const gamesForWeek = await resolveGamesForLeagueWithTeams(db, {
+    leagueId,
+    nflSeasonYear,
+    weekNumber: targetWeek,
+    isTestLeague,
   });
 
   if (explicitWeekNumber != null && gamesForWeek.length === 0) {
@@ -133,7 +134,12 @@ export async function buildLeaguePicksWeekView(
     isTestLeague,
   });
 
-  const effectiveOdds = await getEffectiveOddsLinesForWeek(db, nflSeasonYear, targetWeek);
+  const effectiveOdds = await getEffectiveOddsLinesForLeague(db, {
+    leagueId,
+    nflSeasonYear,
+    weekNumber: targetWeek,
+    isTestLeague,
+  });
   const baselineDisplayOdds = new Map(
     [...effectiveOdds.entries()].map(([gameId, line]) => [
       gameId,
@@ -184,11 +190,11 @@ export async function buildLeaguePicksWeekView(
     }
   }
 
-  const jailedRow = await db.nflWeekJailedTeam.findUnique({
-    where: {
-      nflSeasonYear_weekNumber: { nflSeasonYear, weekNumber: targetWeek },
-    },
-    select: { jailedTeamId: true },
+  const jailedTeamId = await getJailedTeamIdForLeagueWeek(db, {
+    leagueId,
+    nflSeasonYear,
+    weekNumber: targetWeek,
+    isTestLeague,
   });
 
   // Story 3.7 — caller's own pick context. Always filtered by `leagueMembershipId`; never returns
@@ -252,7 +258,7 @@ export async function buildLeaguePicksWeekView(
       weekNumber: targetWeek,
       isPreview,
       pickDeadlineUtc,
-      jailedTeamId: jailedRow?.jailedTeamId ?? null,
+      jailedTeamId: jailedTeamId,
       matchups,
       currentPick: mapCurrentPick(currentPickRow),
       seasonPickedTeams: mapSeasonPickedTeams(otherWeekPickRows),

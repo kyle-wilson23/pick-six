@@ -59,6 +59,9 @@ model League {
   invitations Invitation[]
   auditLogEntries AuditLogEntry[]
   weekEmailConfigs LeagueWeekEmailConfig[]
+  simGames         LeagueSimGame[]
+  simOddsSnapshotRuns LeagueSimOddsSnapshotRun[]
+  weekJailedTeams  LeagueWeekJailedTeam[]
 
   @@map("leagues")
 }
@@ -119,8 +122,11 @@ model Team {
 
   homeGames           NflGame[]           @relation("NflGameHomeTeam")
   awayGames           NflGame[]           @relation("NflGameAwayTeam")
+  simHomeGames        LeagueSimGame[]     @relation("LeagueSimGameHomeTeam")
+  simAwayGames        LeagueSimGame[]     @relation("LeagueSimGameAwayTeam")
   picks               Pick[]
   nflWeekJailedAsTeam NflWeekJailedTeam[]
+  leagueWeekJailedAsTeam LeagueWeekJailedTeam[]
   auditEntriesAsBefore AuditLogEntry[] @relation("AuditBeforeTeam")
   auditEntriesAsAfter  AuditLogEntry[] @relation("AuditAfterTeam")
 
@@ -243,6 +249,91 @@ model NflWeekJailedTeam {
   @@unique([nflSeasonYear, weekNumber])
   @@index([jailedTeamId])
   @@map("nfl_week_jailed_teams")
+}
+
+/// Test-league rehearsal game (league-scoped). Hybrid Option B: live Odds slate stays on
+/// `NflGame`; sim ensure/odds/results write only here so real leagues never inherit fixtures.
+model LeagueSimGame {
+  id            String         @id @default(cuid())
+  leagueId      String         @map("league_id")
+  nflSeasonYear Int            @map("nfl_season_year")
+  weekNumber    Int            @map("week_number")
+  homeTeamId    String         @map("home_team_id")
+  awayTeamId    String         @map("away_team_id")
+  kickoffAt     DateTime       @map("kickoff_at") @db.Timestamptz
+  status        NflGameStatus  @default(SCHEDULED) @map("status")
+  homeScore     Int?           @map("home_score")
+  awayScore     Int?           @map("away_score")
+  finalizedAt   DateTime?      @map("finalized_at") @db.Timestamptz
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  league    League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  homeTeam  Team                     @relation("LeagueSimGameHomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
+  awayTeam  Team                     @relation("LeagueSimGameAwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
+  oddsLines LeagueSimGameOddsLine[]
+
+  @@unique([leagueId, nflSeasonYear, weekNumber, homeTeamId, awayTeamId])
+  @@index([leagueId, nflSeasonYear, weekNumber])
+  @@index([leagueId, nflSeasonYear, weekNumber, status])
+  @@map("league_sim_games")
+}
+
+/// Fixture odds snapshot run for a test league week (parallel to `OddsSnapshotRun`, no FK to `NflGame`).
+model LeagueSimOddsSnapshotRun {
+  id            String             @id @default(cuid())
+  leagueId      String             @map("league_id")
+  nflSeasonYear Int                @map("nfl_season_year")
+  weekNumber    Int                @map("week_number")
+  status        OddsSnapshotStatus
+  /// Typically `test_fixture` for rehearsal lines.
+  source        String             @map("source")
+  errorMessage  String?            @map("error_message") @db.Text
+  startedAt     DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  completedAt   DateTime?          @map("completed_at") @db.Timestamptz
+
+  league League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  lines  LeagueSimGameOddsLine[]
+
+  @@index([leagueId, nflSeasonYear, weekNumber, status])
+  @@map("league_sim_odds_snapshot_runs")
+}
+
+model LeagueSimGameOddsLine {
+  id                         String   @id @default(cuid())
+  leagueSimGameId            String   @map("league_sim_game_id")
+  leagueSimOddsSnapshotRunId String   @map("league_sim_odds_snapshot_run_id")
+  homeMoneylineAmerican      Int?     @map("home_moneyline_american")
+  awayMoneylineAmerican      Int?     @map("away_moneyline_american")
+  homeSpreadPoints           Decimal? @map("home_spread_points") @db.Decimal(5, 1)
+
+  leagueSimGame            LeagueSimGame            @relation(fields: [leagueSimGameId], references: [id], onDelete: Cascade)
+  leagueSimOddsSnapshotRun LeagueSimOddsSnapshotRun @relation(fields: [leagueSimOddsSnapshotRunId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueSimOddsSnapshotRunId, leagueSimGameId])
+  @@index([leagueSimGameId])
+  @@map("league_sim_game_odds_lines")
+}
+
+/// Test-league jailed result (league-scoped). Real leagues keep using global `NflWeekJailedTeam`.
+model LeagueWeekJailedTeam {
+  id                 String                    @id @default(cuid())
+  leagueId           String                    @map("league_id")
+  nflSeasonYear      Int                       @map("nfl_season_year")
+  weekNumber         Int                       @map("week_number")
+  jailedTeamId       String                    @map("jailed_team_id")
+  resolvedBy         NflJailedResolutionMethod @map("resolved_by")
+  randomSeed         String?                   @map("random_seed") @db.Text
+  auditJson          Json                      @map("audit_json")
+  computedAt         DateTime                  @default(now()) @map("computed_at") @db.Timestamptz
+  oddsLineSourceNote String?                   @map("odds_line_source_note") @db.Text
+
+  league     League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  jailedTeam Team   @relation(fields: [jailedTeamId], references: [id], onDelete: Restrict)
+
+  @@unique([leagueId, nflSeasonYear, weekNumber])
+  @@index([jailedTeamId])
+  @@map("league_week_jailed_teams")
 }
 
 /// Stores per-week admin-editable email config and idempotency guard for the Tuesday digest (Story 6.2).

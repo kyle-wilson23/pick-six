@@ -6,7 +6,7 @@ import {
   selectFixtureMatchups,
 } from "@/lib/nfl/simulation-fixture-schedule";
 import {
-  computeAndPersistNflWeekJailed,
+  computeAndPersistLeagueWeekJailed,
   type JailedComputeActor,
 } from "@/lib/nfl/jailed-computation";
 
@@ -36,26 +36,49 @@ export type ApplySimulationOddsSnapshotResult =
   | ApplySimulationOddsSnapshotFailure;
 
 /**
- * Ensure games exist for `(nflSeasonYear, weekNumber)` (create from fixture only when none),
- * write a completed `test_fixture` odds snapshot, then run the production jailed algorithm.
+ * Ensure sim games exist for `(leagueId, nflSeasonYear, weekNumber)` (create from fixture only when
+ * none), write a completed `test_fixture` sim odds snapshot, then persist league-scoped jailed.
  *
- * Not league-scoped — callers must gate on `isTestLeague` before invoking (Story 8.3 AC7).
+ * Writes **only** `LeagueSimGame` / sim odds / `LeagueWeekJailedTeam` — never `NflGame`.
+ * Fail-closed: refuses missing / non-test leagues (defense in depth vs route gates).
  */
 export async function applySimulationOddsSnapshot(
   prisma: PrismaClient,
-  params: { nflSeasonYear: number; weekNumber: number },
+  params: { leagueId: string; nflSeasonYear: number; weekNumber: number },
   actor: JailedComputeActor,
   now: Date = new Date(),
 ): Promise<ApplySimulationOddsSnapshotResult> {
-  const { nflSeasonYear, weekNumber } = params;
+  const { leagueId, nflSeasonYear, weekNumber } = params;
 
-  let games = await prisma.nflGame.findMany({
-    where: { nflSeasonYear, weekNumber },
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { isTestLeague: true },
+  });
+  if (!league) {
+    return {
+      ok: false,
+      code: "LEAGUE_NOT_FOUND",
+      message: "League not found",
+      httpStatus: 409,
+    };
+  }
+  if (!league.isTestLeague) {
+    return {
+      ok: false,
+      code: "NOT_TEST_LEAGUE",
+      message: "Applying fixture odds is only available for test / rehearsal leagues",
+      httpStatus: 403,
+    };
+  }
+
+  let games = await prisma.leagueSimGame.findMany({
+    where: { leagueId, nflSeasonYear, weekNumber },
     select: { id: true, homeTeamId: true, awayTeamId: true },
   });
 
   if (games.length === 0) {
-    const ensured = await ensureFixtureGamesForWeek(prisma, {
+    const ensured = await ensureFixtureSimGamesForWeek(prisma, {
+      leagueId,
       nflSeasonYear,
       weekNumber,
       now,
@@ -68,16 +91,13 @@ export async function applySimulationOddsSnapshot(
         httpStatus: 409,
       };
     }
-    games = await prisma.nflGame.findMany({
-      where: { nflSeasonYear, weekNumber },
+    games = await prisma.leagueSimGame.findMany({
+      where: { leagueId, nflSeasonYear, weekNumber },
       select: { id: true, homeTeamId: true, awayTeamId: true },
     });
   }
 
   if (games.length === 0) {
-    // Defensive-only: unreachable while the fixture JSON keeps its structural ≥4-games-per-week
-    // guarantee. Distinct from jailed.ts / jailed-computation.ts / snapshot-nfl-week-odds.ts's
-    // own (differently-scoped) `NO_GAMES_FOR_WEEK` so callers can tell them apart by code.
     return {
       ok: false,
       code: "FIXTURE_GAMES_UNAVAILABLE",
@@ -87,12 +107,10 @@ export async function applySimulationOddsSnapshot(
   }
 
   const completedAt = new Date();
-  // Single transaction so a failure between the two writes cannot leave a `COMPLETED`
-  // `OddsSnapshotRun` with zero `NflGameOddsLine` rows (which `getEffectiveOddsLinesForWeek`'s
-  // "latest completed wins" merge would otherwise treat as authoritative-but-empty).
   const run = await prisma.$transaction(async (tx) => {
-    const createdRun = await tx.oddsSnapshotRun.create({
+    const createdRun = await tx.leagueSimOddsSnapshotRun.create({
       data: {
+        leagueId,
         nflSeasonYear,
         weekNumber,
         status: "COMPLETED",
@@ -101,7 +119,7 @@ export async function applySimulationOddsSnapshot(
       },
     });
 
-    await tx.nflGameOddsLine.createMany({
+    await tx.leagueSimGameOddsLine.createMany({
       data: games.map((g) => {
         const line = deriveFixtureOddsLine({
           nflSeasonYear,
@@ -110,8 +128,8 @@ export async function applySimulationOddsSnapshot(
           awayTeamId: g.awayTeamId,
         });
         return {
-          nflGameId: g.id,
-          oddsSnapshotRunId: createdRun.id,
+          leagueSimGameId: g.id,
+          leagueSimOddsSnapshotRunId: createdRun.id,
           homeMoneylineAmerican: line.homeMoneylineAmerican,
           awayMoneylineAmerican: line.awayMoneylineAmerican,
           homeSpreadPoints: new Prisma.Decimal(line.homeSpreadPoints),
@@ -122,9 +140,9 @@ export async function applySimulationOddsSnapshot(
     return createdRun;
   });
 
-  const jailed = await computeAndPersistNflWeekJailed(
+  const jailed = await computeAndPersistLeagueWeekJailed(
     prisma,
-    { nflSeasonYear, weekNumber },
+    { leagueId, nflSeasonYear, weekNumber },
     actor,
   );
 
@@ -149,14 +167,14 @@ export async function applySimulationOddsSnapshot(
   };
 }
 
-async function ensureFixtureGamesForWeek(
+async function ensureFixtureSimGamesForWeek(
   prisma: PrismaClient,
-  args: { nflSeasonYear: number; weekNumber: number; now: Date },
+  args: { leagueId: string; nflSeasonYear: number; weekNumber: number; now: Date },
 ): Promise<
   | { ok: true }
   | { ok: false; code: "TEAMS_NOT_SEEDED"; message: string }
 > {
-  const { nflSeasonYear, weekNumber, now } = args;
+  const { leagueId, nflSeasonYear, weekNumber, now } = args;
   const matchups = selectFixtureMatchups(weekNumber);
   const abbreviations = [...new Set(matchups.flatMap((m) => [m.home, m.away]))];
 
@@ -184,9 +202,10 @@ async function ensureFixtureGamesForWeek(
       const m = matchups[i]!;
       const homeTeamId = byAbbr.get(m.home)!;
       const awayTeamId = byAbbr.get(m.away)!;
-      await tx.nflGame.upsert({
+      await tx.leagueSimGame.upsert({
         where: {
-          nflSeasonYear_weekNumber_homeTeamId_awayTeamId: {
+          leagueId_nflSeasonYear_weekNumber_homeTeamId_awayTeamId: {
+            leagueId,
             nflSeasonYear,
             weekNumber,
             homeTeamId,
@@ -194,13 +213,13 @@ async function ensureFixtureGamesForWeek(
           },
         },
         create: {
+          leagueId,
           nflSeasonYear,
           weekNumber,
           homeTeamId,
           awayTeamId,
           kickoffAt: kickoffs[i]!,
         },
-        // Existing row (race / prior ensure): leave kickoff untouched — "real data wins".
         update: {},
       });
     }

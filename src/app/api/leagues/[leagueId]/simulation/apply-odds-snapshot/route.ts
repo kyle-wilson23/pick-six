@@ -128,6 +128,7 @@ export async function POST(
     const result = await applySimulationOddsSnapshot(
       prisma,
       {
+        leagueId,
         nflSeasonYear: season.nflSeasonYear,
         weekNumber: season.simulatedCurrentWeek,
       },

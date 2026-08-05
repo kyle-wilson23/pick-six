@@ -4,10 +4,16 @@ import { NflJailedResolutionMethod, Prisma, type PrismaClient } from "@prisma/cl
 
 import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { resolveJailedTeam, type JailedFailure } from "@/lib/domain/jailed";
-import { getEffectiveOddsLinesForWeek } from "@/lib/nfl/effective-odds";
+import {
+  getEffectiveOddsLinesForSimWeek,
+  getEffectiveOddsLinesForWeek,
+} from "@/lib/nfl/effective-odds";
 
 const ODDS_LINE_SOURCE_NOTE =
   "Computed from NflGame + effective snapshot lines (Story 3.2/3.3).";
+
+const SIM_ODDS_LINE_SOURCE_NOTE =
+  "Computed from LeagueSimGame + effective sim snapshot lines (hybrid Option B).";
 
 /**
  * Identifies who triggered a jailed compute, recorded on every NFR45 log line so the audit trail
@@ -204,6 +210,180 @@ export async function computeAndPersistNflWeekJailed(
       randomSeed: result.randomSeed ?? null,
       auditJson,
       oddsLineSourceNote: ODDS_LINE_SOURCE_NOTE,
+      computedAt: new Date(),
+    },
+    include: {
+      jailedTeam: { select: { id: true, abbreviation: true, name: true } },
+    },
+  });
+
+  return { ok: true as const, result, row };
+}
+
+/**
+ * Test-league jailed: uses sim games/odds and upserts `LeagueWeekJailedTeam`.
+ * Never writes global `NflWeekJailedTeam` (hybrid Option B isolation).
+ * Fail-closed on missing / non-test leagues. Skips wall-clock pick-deadline gating
+ * (admin-driven rehearsal may recompute after fixture kickoffs).
+ */
+export async function computeAndPersistLeagueWeekJailed(
+  prisma: PrismaClient,
+  params: { leagueId: string; nflSeasonYear: number; weekNumber: number },
+  actor: JailedComputeActor,
+) {
+  const { leagueId, nflSeasonYear, weekNumber } = params;
+
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { isTestLeague: true },
+  });
+  if (!league) {
+    return {
+      ok: false as const,
+      error: {
+        ok: false as const,
+        code: "LEAGUE_NOT_FOUND",
+        message: "League not found",
+        httpStatus: 409,
+      },
+    };
+  }
+  if (!league.isTestLeague) {
+    return {
+      ok: false as const,
+      error: {
+        ok: false as const,
+        code: "NOT_TEST_LEAGUE",
+        message: "League-scoped jailed compute is only available for test / rehearsal leagues",
+        httpStatus: 403,
+      },
+    };
+  }
+
+  const games = await prisma.leagueSimGame.findMany({
+    where: { leagueId, nflSeasonYear, weekNumber },
+    select: {
+      id: true,
+      homeTeamId: true,
+      awayTeamId: true,
+      kickoffAt: true,
+    },
+    orderBy: { kickoffAt: "asc" },
+  });
+
+  const gamesWithKickoff = games.filter(
+    (g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null,
+  );
+
+  // Incomplete schedule still refused; wall-clock deadline is skipped for sim rehearsal.
+  if (games.length > 0 && gamesWithKickoff.length !== games.length) {
+    return {
+      ok: false as const,
+      error: {
+        ok: false,
+        code: "NO_GAMES_FOR_WEEK",
+        message:
+          "Schedule data is incomplete (some games are missing kickoff times); jailed recompute is not allowed until the schedule is fully ingested.",
+        httpStatus: 400,
+      } satisfies JailedFailure & { httpStatus: number },
+    };
+  }
+
+  const lineMap = await getEffectiveOddsLinesForSimWeek(prisma, {
+    leagueId,
+    nflSeasonYear,
+    weekNumber,
+  });
+  const randomSeed = randomBytes(32).toString("hex");
+
+  const inputs = games.map((g) => {
+    const line = lineMap.get(g.id);
+    return {
+      nflGameId: g.id,
+      homeTeamId: g.homeTeamId,
+      awayTeamId: g.awayTeamId,
+      homeMoneylineAmerican: line?.homeMoneylineAmerican ?? null,
+      awayMoneylineAmerican: line?.awayMoneylineAmerican ?? null,
+      homeSpreadPoints: spreadToNumber(line?.homeSpreadPoints ?? null),
+    };
+  });
+
+  const resolved = resolveJailedTeam(inputs, randomSeed);
+  if (!resolved.ok) {
+    const status =
+      resolved.code === "JAILED_RESOLUTION_INCONSISTENT" ? 500 : 400;
+    const logFn = status >= 500 ? console.error : console.warn;
+    logFn("[jailed] resolution failed", {
+      action: "compute_league_sim_jailed",
+      via: actor.via,
+      userId: actor.userId ?? null,
+      leagueId,
+      nflSeasonYear,
+      weekNumber,
+      code: resolved.code,
+      message: resolved.message,
+    });
+    return {
+      ok: false as const,
+      error: { ...resolved, httpStatus: status } satisfies ComputeJailedError,
+    };
+  }
+
+  const { result } = resolved;
+  const auditJson: Prisma.InputJsonValue = {
+    v: 1,
+    jailedTeamId: result.jailedTeamId,
+    resolvedBy: result.resolvedBy,
+    randomSeed: result.randomSeed ?? null,
+    ...result.audit,
+  };
+
+  const existing = await prisma.leagueWeekJailedTeam.findUnique({
+    where: {
+      leagueId_nflSeasonYear_weekNumber: { leagueId, nflSeasonYear, weekNumber },
+    },
+    select: {
+      jailedTeamId: true,
+      resolvedBy: true,
+      computedAt: true,
+    },
+  });
+  if (existing) {
+    console.info("[jailed] recompute", {
+      action: "compute_league_sim_jailed",
+      via: actor.via,
+      userId: actor.userId ?? null,
+      leagueId,
+      nflSeasonYear,
+      weekNumber,
+      previousJailedTeamId: existing.jailedTeamId,
+      previousResolvedBy: existing.resolvedBy,
+      previousComputedAt: existing.computedAt.toISOString(),
+      newJailedTeamId: result.jailedTeamId,
+      newResolvedBy: result.resolvedBy,
+    });
+  }
+
+  const row = await prisma.leagueWeekJailedTeam.upsert({
+    where: {
+      leagueId_nflSeasonYear_weekNumber: { leagueId, nflSeasonYear, weekNumber },
+    },
+    create: {
+      leagueId,
+      nflSeasonYear,
+      weekNumber,
+      jailedTeamId: result.jailedTeamId,
+      resolvedBy: toNflJailedMethod(result.resolvedBy),
+      randomSeed: result.randomSeed ?? null,
+      auditJson,
+      oddsLineSourceNote: SIM_ODDS_LINE_SOURCE_NOTE,
+    },
+    update: {
+      jailedTeamId: result.jailedTeamId,
+      resolvedBy: toNflJailedMethod(result.resolvedBy),
+      randomSeed: result.randomSeed ?? null,
+      auditJson,
+      oddsLineSourceNote: SIM_ODDS_LINE_SOURCE_NOTE,
       computedAt: new Date(),
     },
     include: {

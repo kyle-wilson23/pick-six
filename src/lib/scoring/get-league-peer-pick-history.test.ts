@@ -45,8 +45,27 @@ function makePrisma({
     season: {
       findUnique: vi.fn().mockResolvedValue(season),
     },
+    league: {
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }),
+    },
     nflGame: {
-      findMany: vi.fn().mockResolvedValue(games),
+      findMany: vi.fn().mockResolvedValue(
+        games.map((g) => ({
+          id: `g-${g.weekNumber}`,
+          nflSeasonYear: SEASON_YEAR,
+          weekNumber: g.weekNumber,
+          homeTeamId: "h",
+          awayTeamId: "a",
+          kickoffAt: new Date("2026-09-14T17:00:00.000Z"),
+          status: g.status,
+          homeScore: null,
+          awayScore: null,
+          finalizedAt: null,
+        })),
+      ),
+    },
+    leagueSimGame: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
     pick: {
       findMany: vi.fn().mockResolvedValue(picks),

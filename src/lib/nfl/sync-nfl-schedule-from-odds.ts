@@ -10,6 +10,9 @@ export type SyncNflScheduleFromOddsResult =
 /**
  * Full-season schedule sync from The Odds API `/events`.
  * Upserts by natural key; deletes season-year games absent from the mapped set.
+ *
+ * **Canonical-only (hybrid Option B):** writes/deletes `NflGame` only. Test-league
+ * `LeagueSimGame` rows are never read or deleted here.
  */
 export async function syncNflScheduleFromOdds(
   prisma: PrismaClient,

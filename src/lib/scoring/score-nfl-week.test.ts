@@ -15,6 +15,7 @@ function makePrisma({
   finalGames = [],
   picks = [],
   pickUpdate = vi.fn().mockResolvedValue({}),
+  isTestLeague = false,
 }: {
   finalGames?: Array<{
     homeTeamId: string;
@@ -24,11 +25,18 @@ function makePrisma({
   }>;
   picks?: MockPick[];
   pickUpdate?: ReturnType<typeof vi.fn>;
+  isTestLeague?: boolean;
 } = {}) {
   const pickFindMany = vi.fn().mockResolvedValue(picks);
   return {
+    league: {
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague }),
+    },
     nflGame: {
       findMany: vi.fn().mockResolvedValue(finalGames),
+    },
+    leagueSimGame: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
     pick: {
       findMany: pickFindMany,
@@ -207,7 +215,7 @@ describe("scoreNflWeek", () => {
     expect(outcomes).toContainEqual({ outcome: "LOSS", pointsEarned: 0 });
   });
 
-  it("without leagueId, pick query filters by year and week only", async () => {
+  it("without leagueId, pick query excludes test-league seasons", async () => {
     const prisma = makePrisma({
       finalGames: [FINAL_HOME_WIN],
       picks: [{ id: "pick-1", teamId: HOME, antiJailedBonus: false }],
@@ -218,11 +226,15 @@ describe("scoreNflWeek", () => {
     expect(prisma._pickFindMany).toHaveBeenCalledWith({
       where: {
         nflWeekNumber: WEEK,
-        season: { nflSeasonYear: SEASON_YEAR },
+        season: {
+          nflSeasonYear: SEASON_YEAR,
+          league: { isTestLeague: false },
+        },
       },
       select: { id: true, teamId: true, antiJailedBonus: true },
     });
   });
+
 
   it("with leagueId, pick query includes season.leagueId", async () => {
     const LEAGUE_ID = "league-test-1";
@@ -287,7 +299,9 @@ describe("scoreNflWeek", () => {
       },
     );
     const prisma = {
+      league: { findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }) },
       nflGame: { findMany: vi.fn().mockResolvedValue([FINAL_HOME_WIN]) },
+      leagueSimGame: { findMany: vi.fn().mockResolvedValue([]) },
       pick: { findMany: pickFindMany },
       $transaction: vi.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
         fn({ pick: { update: pickUpdate } }),

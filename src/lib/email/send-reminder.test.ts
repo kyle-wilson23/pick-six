@@ -45,6 +45,7 @@ const PRELOADED_DATA = {
   isTestLeague: true,
   nflSeasonYear: 2026,
   weekNumber: 1,
+  isPreviewWeek: false,
   jailedTeamName: null,
   jailedTeamAbbreviation: null,
   picksUrl: "http://localhost:3000/leagues/league-test/picks",

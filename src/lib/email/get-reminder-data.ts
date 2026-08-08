@@ -4,6 +4,7 @@ import {
   LeagueNotFoundError,
   NoActiveWeekError,
 } from "@/lib/email/get-tuesday-digest-data";
+import { isAutomatedEmailWeekActive } from "@/lib/email/is-automated-email-week-active";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedWithTeamForLeagueWeek } from "@/lib/nfl/league-jailed";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
@@ -20,6 +21,8 @@ export type ReminderData = {
   isTestLeague: boolean;
   nflSeasonYear: number;
   weekNumber: number;
+  /** True when competition has not started (picks preview). Cron skips; admin may still send. */
+  isPreviewWeek: boolean;
   jailedTeamName: string | null;
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
@@ -100,6 +103,17 @@ export async function getReminderData(
     now,
   });
 
+  const isPreviewWeek = !isAutomatedEmailWeekActive({
+    isTestLeague: league.isTestLeague,
+    season: {
+      preSeasonInitializedAt: season.preSeasonInitializedAt,
+      firstCompetitionWeek: season.firstCompetitionWeek,
+    },
+    resolvedWeekNumber: weekNumber,
+    allSeasonGames: gamesForResolve,
+    now,
+  });
+
   const [jailedRow, memberships, picks] = await Promise.all([
     getJailedWithTeamForLeagueWeek(prisma, {
       leagueId,
@@ -140,6 +154,7 @@ export async function getReminderData(
     isTestLeague: league.isTestLeague,
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
+    isPreviewWeek,
     jailedTeamName: jailedRow?.jailedTeam.name ?? null,
     jailedTeamAbbreviation: jailedRow?.jailedTeam.abbreviation ?? null,
     picksUrl,

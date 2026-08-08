@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
   let sent = 0;
   let skippedAlreadySent = 0;
   let skippedNoWeek = 0;
+  let skippedPreview = 0;
   let failed = 0;
 
   // Shared across the whole invocation so a Resend outage aborts every
@@ -90,6 +91,22 @@ export async function POST(request: NextRequest) {
 
     try {
       const data = await getReminderData({ leagueId });
+
+      if (data.isPreviewWeek) {
+        skippedPreview++;
+        processed++;
+        logEvent({
+          level: "info",
+          domain: "cron",
+          route: ROUTE,
+          action: "preview_week_skip",
+          code: "CRON_PREVIEW_WEEK",
+          leagueId,
+          message: "thursday-reminder: skipped — competition week not started (preview)",
+          context: { weekNumber: data.weekNumber, nflSeasonYear: data.nflSeasonYear },
+        });
+        continue;
+      }
 
       const existing = await prisma.leagueWeekEmailConfig.findUnique({
         where: {
@@ -148,6 +165,7 @@ export async function POST(request: NextRequest) {
     sent,
     skippedAlreadySent,
     skippedNoWeek,
+    skippedPreview,
     failed,
   };
 

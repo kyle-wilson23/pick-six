@@ -54,6 +54,7 @@ const PRELOADED_DATA = {
   isTestLeague: true,
   nflSeasonYear: 2026,
   weekNumber: 1,
+  isPreviewWeek: false,
   standings: [],
   jailedTeamName: null,
   jailedTeamAbbreviation: null,

@@ -136,6 +136,38 @@ describe("getReminderData", () => {
     expect(result.picksUrl).toBe(`http://localhost:3000/leagues/${LEAGUE_ID}/picks`);
   });
 
+  it("sets isPreviewWeek true before first competition kickoff", async () => {
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockPickFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-08T23:20:00.000Z") },
+    ]);
+
+    const result = await getReminderData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-08-08T12:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.isPreviewWeek).toBe(true);
+  });
+
+  it("sets isPreviewWeek false after first competition kickoff", async () => {
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockPickFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-08T23:20:00.000Z") },
+    ]);
+
+    const result = await getReminderData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-09-09T12:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.isPreviewWeek).toBe(false);
+  });
+
   it("propagates isTestLeague: true from the league row", async () => {
     mockLeagueFindUnique.mockResolvedValue({
       id: LEAGUE_ID,

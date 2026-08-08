@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-off-season-reminder-email-gate.md (2026-08-08)
+
+- **No colocated cron route tests for `skippedPreview`** — Helper + `get*Data` cover preview eligibility; Tue/Wed/Thu cron early-continue paths are untested at the route layer. Add if regression risk rises.
+
 ## Deferred from: review of spec-hybrid-canonical-live-league-sim-schedule.md
 
 - **Non-atomic sim odds snapshot + jailed persist** — `applySimulationOddsSnapshot` writes the completed sim odds run, then calls `computeAndPersistLeagueWeekJailed` in a separate step (pre-existing global snapshot + jailed pattern). A mid-flight failure can leave odds without a matching jailed row until retry.

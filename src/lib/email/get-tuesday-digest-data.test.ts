@@ -158,6 +158,40 @@ describe("getTuesdayDigestData", () => {
     expect(result.isTestLeague).toBe(true);
   });
 
+  it("sets isPreviewWeek true before first competition kickoff", async () => {
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-08T23:20:00.000Z") },
+    ]);
+
+    const result = await getTuesdayDigestData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-08-08T12:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.isPreviewWeek).toBe(true);
+  });
+
+  it("sets isPreviewWeek false after first competition kickoff", async () => {
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-08T23:20:00.000Z") },
+    ]);
+
+    const result = await getTuesdayDigestData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-09-09T12:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.isPreviewWeek).toBe(false);
+  });
+
   it("test league: weekNumber follows simulatedCurrentWeek regardless of now", async () => {
     const now = new Date("2026-03-01T12:00:00.000Z");
     mockLeagueFindUnique.mockResolvedValue({

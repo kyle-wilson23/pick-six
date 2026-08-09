@@ -143,7 +143,8 @@ export function WeekMatchupList({
 
   const interactive = !isPreview;
   const dirty = isPickDraftDirty(draft, saved);
-  const showSubmitButton = interactive && !isLocked;
+  // Visible only with a pending (dirty) selection — no disabled placeholder FAB.
+  const showSubmitButton = interactive && !isLocked && dirty;
 
   const handleTeamSelect = useCallback(
     (teamId: string, ev: SelectionEvent) => {
@@ -344,9 +345,9 @@ export function WeekMatchupList({
       {showSubmitButton ? (
         <Button
           type="button"
-          variant={dirty ? "contained" : "outlined"}
+          variant="contained"
           color="primary"
-          disabled={!dirty || submitting}
+          disabled={submitting}
           onClick={() => {
             void handleSubmitPick();
           }}
@@ -364,7 +365,7 @@ export function WeekMatchupList({
               md: 24,
             },
             zIndex: (t) => t.zIndex.tooltip,
-            boxShadow: dirty ? 4 : 1,
+            boxShadow: 4,
           }}
         >
           {submitLabel}

@@ -26,6 +26,8 @@ model User {
   image         String?
   emailVerified DateTime? @map("email_verified") @db.Timestamptz
   passwordHash  String?   @map("password_hash")
+  /// UI color mode preference (dark default).
+  colorMode     ColorMode @default(DARK) @map("color_mode")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -35,6 +37,13 @@ model User {
   passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
+}
+
+enum ColorMode {
+  DARK
+  LIGHT
+
+  @@map("color_mode")
 }
 
 enum LeagueMembershipRole {

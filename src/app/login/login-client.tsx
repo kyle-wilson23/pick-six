@@ -14,8 +14,11 @@ import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
 import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
+import { ColorModeToggle } from "@/components/color-mode/ColorModeToggle";
+import { useColorMode } from "@/components/color-mode/color-mode-context";
 import { getSafeCallbackPath } from "@/lib/callback-url";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { syncColorModeAfterAuth } from "@/lib/sync-color-mode";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
 const loginSchema = z.object({
@@ -30,6 +33,7 @@ type FieldErrors = {
 
 export function LoginClient() {
   const searchParams = useSearchParams();
+  const { mode } = useColorMode();
   const alertRef = useRef<HTMLDivElement>(null);
   const [resetBanner, setResetBanner] = useState(
     () => searchParams.get("reset") === "1",
@@ -109,6 +113,8 @@ export function LoginClient() {
         );
         return;
       }
+      // Guest preference write-through (overwrites account); never blocks login.
+      await syncColorModeAfterAuth(mode);
       const rawCallback = searchParams.get("callbackUrl");
       const nextPath = getSafeCallbackPath(rawCallback, {
         defaultPath: "/home",
@@ -153,6 +159,7 @@ export function LoginClient() {
         <Typography variant="h4" component="h1">
           Login
         </Typography>
+        <ColorModeToggle />
 
         <Stack
           component="form"

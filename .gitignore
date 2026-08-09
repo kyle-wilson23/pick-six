@@ -46,3 +46,6 @@ next-env.d.ts
 docs/guided-cutover-runbook.md
 _bmad-output/implementation-artifacts/pre-launch-*.md
 _bmad-output/implementation-artifacts/post-epic-9-*.md
+
+# Local priorities / wishlist (not published)
+PRIORITIES.md

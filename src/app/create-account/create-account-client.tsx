@@ -13,6 +13,8 @@ import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
 import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
+import { useColorMode } from "@/components/color-mode/color-mode-context";
+import { syncColorModeAfterAuth } from "@/lib/sync-color-mode";
 import { createAccountBodySchema } from "@/lib/create-account";
 import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
@@ -31,6 +33,7 @@ const formSchema = createAccountBodySchema
   });
 
 export function CreateAccountClient() {
+  const { mode } = useColorMode();
   const alertRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +156,7 @@ export function CreateAccountClient() {
         return;
       }
 
+      await syncColorModeAfterAuth(mode);
       window.location.assign("/home");
     } catch {
       if (accountCreated) {

@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { cache } from "react";
 
+import { colorModeFromPrisma } from "@/lib/color-mode";
 import { prisma } from "@/lib/db";
 import { logEvent } from "@/lib/logging/log-event";
 import { normalizeEmail } from "@/lib/normalize-email";
@@ -84,6 +85,7 @@ const nextAuth = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image,
+          colorMode: colorModeFromPrisma(user.colorMode),
         };
       },
     }),
@@ -94,17 +96,21 @@ const nextAuth = NextAuth({
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
+        if (user.colorMode === "dark" || user.colorMode === "light") {
+          token.colorMode = user.colorMode;
+        }
       }
       // Profile (and other) client `update()` calls must not trust client-supplied
       // identity claims — re-read from DB so forged session.update cannot change email/name.
       if (trigger === "update" && typeof token.id === "string") {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
-          select: { name: true, email: true },
+          select: { name: true, email: true, colorMode: true },
         });
         if (dbUser) {
           token.name = dbUser.name;
           token.email = dbUser.email;
+          token.colorMode = colorModeFromPrisma(dbUser.colorMode);
         }
       }
       return token;
@@ -117,6 +123,9 @@ const nextAuth = NextAuth({
         }
         if (typeof token.email === "string") {
           session.user.email = token.email;
+        }
+        if (token.colorMode === "dark" || token.colorMode === "light") {
+          session.user.colorMode = token.colorMode;
         }
       }
       return session;

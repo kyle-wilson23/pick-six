@@ -9,6 +9,9 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { ColorModeToggle } from "@/components/color-mode/ColorModeToggle";
+import { useColorMode } from "@/components/color-mode/color-mode-context";
+import type { ColorMode } from "@/lib/color-mode";
 import { updateProfileBodySchema } from "@/lib/profile";
 import { USER_NAME_PART_MAX_LENGTH } from "@/lib/user-display-name";
 
@@ -16,11 +19,18 @@ type ProfileClientProps = {
   email: string;
   firstName: string;
   lastName: string;
+  colorMode: ColorMode;
 };
 
-export function ProfileClient({ email, firstName, lastName }: ProfileClientProps) {
+export function ProfileClient({
+  email,
+  firstName,
+  lastName,
+  colorMode: initialColorMode,
+}: ProfileClientProps) {
   const router = useRouter();
   const { update } = useSession();
+  const { mode, setMode } = useColorMode();
   const alertRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +40,15 @@ export function ProfileClient({ email, firstName, lastName }: ProfileClientProps
   const [emailError, setEmailError] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
   const [pending, setPending] = useState(false);
+  const [colorModePending, setColorModePending] = useState(false);
+  const [colorModeError, setColorModeError] = useState<string | null>(null);
+  const colorModeRequestRef = useRef(0);
+  const colorModeAlertRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (colorModePending) return;
+    setMode(initialColorMode);
+  }, [initialColorMode, colorModePending, setMode]);
 
   useEffect(() => {
     if (focusNonce > 0) {
@@ -37,8 +56,52 @@ export function ProfileClient({ email, firstName, lastName }: ProfileClientProps
     }
   }, [focusNonce]);
 
+  useEffect(() => {
+    if (colorModeError) {
+      colorModeAlertRef.current?.focus();
+    }
+  }, [colorModeError]);
+
   function announceAlert() {
     setFocusNonce((n) => n + 1);
+  }
+
+  async function persistColorMode(next: ColorMode) {
+    const previous = mode;
+    const requestId = ++colorModeRequestRef.current;
+    setColorModeError(null);
+    setColorModePending(true);
+    try {
+      const res = await fetch("/api/profile/color-mode", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ colorMode: next }),
+      });
+      if (requestId !== colorModeRequestRef.current) {
+        return;
+      }
+      if (!res.ok) {
+        setMode(previous);
+        setColorModeError("Could not save appearance preference. Try again.");
+        return;
+      }
+      try {
+        await update();
+      } catch {
+        /* DB already saved */
+      }
+      router.refresh();
+    } catch {
+      if (requestId !== colorModeRequestRef.current) {
+        return;
+      }
+      setMode(previous);
+      setColorModeError("Could not save appearance preference. Try again.");
+    } finally {
+      if (requestId === colorModeRequestRef.current) {
+        setColorModePending(false);
+      }
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -142,6 +205,29 @@ export function ProfileClient({ email, firstName, lastName }: ProfileClientProps
       <Typography variant="body2" color="text.secondary">
         Update your email and name. Your name appears in the nav and on league standings.
       </Typography>
+
+      <Stack spacing={1}>
+        <Typography variant="subtitle1" component="h2">
+          Appearance
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Defaults to dark. Light mode uses white backgrounds across the app.
+        </Typography>
+        <ColorModeToggle
+          disabled={colorModePending}
+          onModeChange={(next) => void persistColorMode(next)}
+        />
+        {colorModeError ? (
+          <Alert
+            ref={colorModeAlertRef}
+            severity="error"
+            tabIndex={-1}
+            role="alert"
+          >
+            {colorModeError}
+          </Alert>
+        ) : null}
+      </Stack>
 
       <Stack component="form" spacing={2} onSubmit={handleSubmit} noValidate>
         {success ? (

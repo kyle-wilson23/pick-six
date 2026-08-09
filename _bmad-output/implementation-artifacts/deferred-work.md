@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-color-mode-toggle.md (2026-08-09)
+
+- **Root layout Prisma colorMode lookup on every request** — `resolveInitialColorMode` calls `auth()` + `user.findUnique` so DB wins over a stale JWT after login write-through. Future: prefer JWT `colorMode` when fresh and only hit DB on mismatch / post-update, or cache the preference without making the whole tree dynamic-heavy.
+- **API/route-level tests for color-mode PATCH** — Helpers cover parse/Zod; CSRF + auth write-through paths untested at the route layer. Add if regression risk rises.
+
 ## Deferred from: review of spec-off-season-reminder-email-gate.md (2026-08-08)
 
 - **No colocated cron route tests for `skippedPreview`** — Helper + `get*Data` cover preview eligibility; Tue/Wed/Thu cron early-continue paths are untested at the route layer. Add if regression risk rises.

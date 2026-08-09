@@ -12,11 +12,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
+import { useColorMode } from "@/components/color-mode/color-mode-context";
 import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
   signupPasswordFieldSchema,
 } from "@/lib/invitations";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { syncColorModeAfterAuth } from "@/lib/sync-color-mode";
 import {
   firstNameFieldSchema,
   lastNameFieldSchema,
@@ -37,6 +39,7 @@ type SignupFormProps = {
 
 export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) {
   const router = useRouter();
+  const { mode } = useColorMode();
   const alertRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [firstNameError, setFirstNameError] = useState<string | null>(null);
@@ -131,6 +134,7 @@ export function SignupForm({ token, invitedEmail, loginHref }: SignupFormProps) 
         announceAlert();
         return;
       }
+      await syncColorModeAfterAuth(mode);
       router.push("/");
       router.refresh();
     } finally {

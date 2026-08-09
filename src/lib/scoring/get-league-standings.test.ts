@@ -14,7 +14,7 @@ function makePrisma({
   season?: { id: string } | null;
   memberships?: Array<{
     id: string;
-    user: { name: string | null; email: string };
+    user: { name: string | null; email: string; image?: string | null };
     picks?: Array<{ outcome: string; pointsEarned: number | null }>;
   }>;
 } = {}) {
@@ -26,7 +26,7 @@ function makePrisma({
       findMany: vi.fn().mockResolvedValue(
         memberships.map((m) => ({
           id: m.id,
-          user: m.user,
+          user: { image: null, ...m.user },
           picks: m.picks ?? [],
         })),
       ),
@@ -155,6 +155,29 @@ describe("getLeagueStandings", () => {
     const bob = result.find((e) => e.membershipId === "mem-b");
     expect(anon?.displayName).toBe("anon@example.com");
     expect(bob?.displayName).toBe("Bob");
+    expect(anon?.imageUrl).toBeNull();
+    expect(bob?.imageUrl).toBeNull();
+  });
+
+  it("maps user.image onto imageUrl", async () => {
+    const result = await getLeagueStandings(
+      makePrisma({
+        memberships: [
+          {
+            id: "mem-a",
+            user: {
+              name: "Alice",
+              email: "alice@example.com",
+              image: "https://example.com/a.jpg",
+            },
+            picks: [],
+          },
+        ],
+      }),
+      { leagueId: LEAGUE_ID, nflSeasonYear: SEASON_YEAR },
+    );
+
+    expect(result[0]?.imageUrl).toBe("https://example.com/a.jpg");
   });
 
   it("uses wins as secondary tiebreaker when totalPoints are equal", async () => {

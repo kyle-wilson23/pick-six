@@ -8,6 +8,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 
+import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import type { StandingsEntry } from "@/lib/scoring/get-league-standings";
 
 type StandingsTableProps = {
@@ -84,7 +85,10 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {entry.displayName}
+                    <UserIdentityCell
+                      displayName={entry.displayName}
+                      imageUrl={entry.imageUrl}
+                    />
                     {isCurrentUser ? (
                       <Typography
                         component="span"

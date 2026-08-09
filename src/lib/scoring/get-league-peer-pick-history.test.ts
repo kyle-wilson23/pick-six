@@ -12,6 +12,7 @@ function makePick(overrides: {
   nflWeekNumber: number;
   membershipId?: string;
   displayName?: string;
+  imageUrl?: string | null;
   outcome?: PickOutcome | null;
   pointsEarned?: number | null;
   antiJailedBonus?: boolean;
@@ -27,7 +28,11 @@ function makePick(overrides: {
     team: overrides.team ?? { abbreviation: "KC", name: "Kansas City Chiefs" },
     leagueMembership: {
       id: membershipId,
-      user: { name: displayName, email: `${membershipId}@example.com` },
+      user: {
+        name: displayName,
+        email: `${membershipId}@example.com`,
+        image: overrides.imageUrl ?? null,
+      },
     },
   };
 }
@@ -85,6 +90,7 @@ describe("getLeaguePeerPickHistory", () => {
           nflWeekNumber: 5,
           membershipId: "mem-1",
           displayName: "Alice",
+          imageUrl: "https://example.com/alice.jpg",
           outcome: PickOutcome.WIN,
           pointsEarned: 1,
         }),
@@ -107,6 +113,10 @@ describe("getLeaguePeerPickHistory", () => {
     expect(result.weeks).toHaveLength(1);
     expect(result.weeks[0]).toMatchObject({ weekNumber: 5, isRevealed: true });
     expect(result.weeks[0].entries).toHaveLength(2);
+    expect(result.weeks[0].entries.map((e) => e.imageUrl)).toEqual([
+      "https://example.com/alice.jpg",
+      null,
+    ]);
   });
 
   it("excludes unrevealed week picks for non-admin callers", async () => {

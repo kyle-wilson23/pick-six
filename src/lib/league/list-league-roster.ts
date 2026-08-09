@@ -7,6 +7,7 @@ export type LeagueRosterEntry = {
   membershipId: string;
   role: LeagueMembershipRole;
   displayName: string;
+  imageUrl: string | null;
   user: { name: string | null; email: string };
 };
 
@@ -31,7 +32,7 @@ export function compareLeagueRosterMembers(
 export async function listLeagueRoster(leagueId: string): Promise<LeagueRosterEntry[]> {
   const memberships = await prisma.leagueMembership.findMany({
     where: { leagueId },
-    include: { user: { select: { name: true, email: true } } },
+    include: { user: { select: { name: true, email: true, image: true } } },
   });
 
   return [...memberships]
@@ -41,5 +42,6 @@ export async function listLeagueRoster(leagueId: string): Promise<LeagueRosterEn
       role: m.role,
       user: { name: m.user.name, email: m.user.email },
       displayName: userDisplayName(m.user),
+      imageUrl: m.user.image,
     }));
 }

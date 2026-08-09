@@ -6,12 +6,13 @@ import { userDisplayName } from "@/lib/user-display-name";
 export type LeagueWeekPeerPickRow = {
   membershipId: string;
   displayName: string;
+  imageUrl: string | null;
   team: { abbreviation: string; name: string } | null;
 };
 
 type MembershipRow = {
   id: string;
-  user: { name: string | null; email: string };
+  user: { name: string | null; email: string; image: string | null };
 };
 
 type PickRow = {
@@ -37,6 +38,7 @@ export function buildLeagueWeekPeerPickRows(
     return {
       membershipId: membership.id,
       displayName: userDisplayName(membership.user),
+      imageUrl: membership.user.image,
       team: pick
         ? {
             abbreviation: pick.team.abbreviation,
@@ -97,7 +99,7 @@ export async function getLeagueWeekPeerPicks(
       },
       select: {
         id: true,
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, image: true } },
       },
     }),
     prisma.pick.findMany({

@@ -6,8 +6,11 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
+import { UserIdentityCell } from "@/components/user/UserIdentityCell";
+
 export type AdminSubmissionCardProps = {
   displayName: string;
+  imageUrl?: string | null;
   submittedPick: {
     teamName: string;
     antiJailedBonus: boolean;
@@ -37,7 +40,12 @@ function buildDetailLine(
   return `${teamLabel} — submitted ${formatSubmittedTimestamp(submittedPick.updatedAt)}`;
 }
 
-export function AdminSubmissionCard({ displayName, submittedPick, onOverride }: AdminSubmissionCardProps) {
+export function AdminSubmissionCard({
+  displayName,
+  imageUrl = null,
+  submittedPick,
+  onOverride,
+}: AdminSubmissionCardProps) {
   const isSubmitted = submittedPick != null;
   const statusLabel = isSubmitted ? "SUBMITTED" : "PENDING";
   const paletteKey = isSubmitted ? "success" : "warning";
@@ -53,11 +61,18 @@ export function AdminSubmissionCard({ displayName, submittedPick, onOverride }: 
     >
       <Stack spacing={1}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-          <Typography variant="body1">{displayName}</Typography>
+          <Stack sx={{ minWidth: 0, flex: 1 }}>
+            <UserIdentityCell
+              displayName={displayName}
+              imageUrl={imageUrl}
+              typographyVariant="body1"
+            />
+          </Stack>
           <Chip
             label={statusLabel}
             size="small"
             sx={{
+              flexShrink: 0,
               bgcolor: (t) => `${t.palette[paletteKey].main}26`,
               color: (t) => t.palette[paletteKey].main,
               fontWeight: 600,

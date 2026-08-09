@@ -11,6 +11,7 @@ import { userDisplayName } from "@/lib/user-display-name";
 export type AdminSubmissionStatusParticipant = {
   membershipId: string;
   displayName: string;
+  imageUrl: string | null;
   userId: string;
   submittedPick: {
     teamName: string;
@@ -28,7 +29,7 @@ export type AdminSubmissionStatusPayload = {
 type MembershipRow = {
   id: string;
   createdAt: Date;
-  user: { id: string; name: string | null; email: string };
+  user: { id: string; name: string | null; email: string; image: string | null };
 };
 
 type PickRow = {
@@ -52,6 +53,7 @@ export function mergeSubmissionStatusParticipants(
     return {
       membershipId: membership.id,
       displayName: userDisplayName(membership.user),
+      imageUrl: membership.user.image,
       userId: membership.user.id,
       submittedPick: pick
         ? {
@@ -136,7 +138,7 @@ export async function buildSubmissionStatus(
   const [memberships, picks] = await Promise.all([
     db.leagueMembership.findMany({
       where: { leagueId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, image: true } } },
       orderBy: { createdAt: "asc" },
     }),
     db.pick.findMany({

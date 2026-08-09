@@ -10,6 +10,7 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 
 import { TeamLogo } from "@/components/picks/TeamLogo";
+import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import type {
   LeaguePeerPickHistory,
   PeerPickEntry,
@@ -153,7 +154,12 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
                         : undefined
                     }
                   >
-                    <TableCell>{entry.displayName}</TableCell>
+                    <TableCell>
+                      <UserIdentityCell
+                        displayName={entry.displayName}
+                        imageUrl={entry.imageUrl}
+                      />
+                    </TableCell>
                     <TableCell>
                       <TeamCell entry={entry} />
                     </TableCell>

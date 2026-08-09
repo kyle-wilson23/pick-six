@@ -106,7 +106,13 @@ export function ProfileClient({
     try {
       await update();
     } catch {
-      /* DB already saved */
+      // Avatar is already persisted; surface refresh failure so nav is not left silently stale.
+      setAvatarError(
+        "Photo saved, but your session could not refresh. Reload the page or sign out and back in.",
+      );
+      announceAlert();
+      router.refresh();
+      return;
     }
     router.refresh();
   }

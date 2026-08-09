@@ -90,6 +90,7 @@ export function AdminDashboardClient({
           <AdminSubmissionCard
             key={participant.membershipId}
             displayName={participant.displayName}
+            imageUrl={participant.imageUrl}
             submittedPick={participant.submittedPick}
             onOverride={() => openOverride(participant)}
           />

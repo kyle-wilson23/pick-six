@@ -8,6 +8,7 @@ import { userDisplayName } from "@/lib/user-display-name";
 export type PeerPickEntry = {
   membershipId: string;
   displayName: string;
+  imageUrl: string | null;
   teamAbbreviation: string;
   teamName: string;
   antiJailedBonus: boolean;
@@ -83,7 +84,7 @@ export async function getLeaguePeerPickHistory(
       leagueMembership: {
         select: {
           id: true,
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, image: true } },
         },
       },
     },
@@ -99,6 +100,7 @@ export async function getLeaguePeerPickHistory(
     entries.push({
       membershipId: p.leagueMembership.id,
       displayName: userDisplayName(p.leagueMembership.user),
+      imageUrl: p.leagueMembership.user.image,
       teamAbbreviation: p.team.abbreviation,
       teamName: p.team.name,
       antiJailedBonus: p.antiJailedBonus,

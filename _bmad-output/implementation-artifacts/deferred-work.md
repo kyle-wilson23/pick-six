@@ -6,8 +6,13 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 
 Split to keep the core Profile upload + nav avatar shippable. Also tracked under Priority Items in local `PRIORITIES.md`.
 
-- **Profile picture thumbnails on in-app list surfaces** — Thread `imageUrl` beside `displayName` through standings, results/peer history, opponents’ picks, roster, and admin submission cards; render shared `UserAvatar` thumb left of username (initials when null).
+- ~~**Profile picture thumbnails on in-app list surfaces**~~ — Shipped in `spec-profile-picture-list-thumbnails.md` (2026-08-09).
 - **Profile picture thumbnails in Tuesday digest email standings** — Absolute Blob URLs as small thumbs left of names in `TuesdayDigestEmail` standings rows (+ digest data/preview wiring).
+
+## Deferred from: review of spec-profile-picture-list-thumbnails.md (2026-08-09)
+
+- **Avatar session `update()` soft failures** — Profile only surfaces an error when `update()` throws; a resolve-without-throw soft failure could leave nav stale without the new alert. Watch in prod; add retry/assert on session image if reported.
+- **Roster `imageUrl` loader unit coverage** — `list-league-roster.test.ts` still covers sort only; mapping is covered by TypeScript + hub UI wiring.
 
 ## Deferred from: review of spec-profile-picture-uploads.md (2026-08-09)
 

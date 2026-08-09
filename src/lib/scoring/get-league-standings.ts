@@ -5,6 +5,7 @@ import { userDisplayName } from "@/lib/user-display-name";
 export type StandingsEntry = {
   membershipId: string;
   displayName: string;
+  imageUrl: string | null;
   totalPoints: number;
   wins: number;
   losses: number;
@@ -24,7 +25,7 @@ export async function getLeagueStandings(
   const memberships = await prisma.leagueMembership.findMany({
     where: { leagueId: opts.leagueId },
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, image: true } },
       picks: season
         ? {
             where: { seasonId: season.id, scoredAt: { not: null } },
@@ -43,6 +44,7 @@ export async function getLeagueStandings(
     return {
       membershipId: m.id,
       displayName: userDisplayName(m.user),
+      imageUrl: m.user.image,
       totalPoints,
       wins,
       losses,

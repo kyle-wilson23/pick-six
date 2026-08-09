@@ -11,7 +11,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useId, useState } from "react";
 
 import { UserAvatar } from "@/components/user/UserAvatar";
@@ -26,6 +26,13 @@ export function UserNavMenu({
   userImageUrl = null,
 }: UserNavMenuProps) {
   const menuId = useId();
+  const { data: session, status } = useSession();
+  // Prefer live client session after Profile `update()`; keep SSR prop when session
+  // has not mapped `image` yet (`undefined`), but honor explicit `null` after remove.
+  const sessionImage =
+    status === "authenticated" ? session?.user?.image : undefined;
+  const resolvedImageUrl =
+    sessionImage !== undefined ? sessionImage : userImageUrl;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = anchorEl != null;
 
@@ -60,7 +67,7 @@ export function UserNavMenu({
         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, width: "100%" }}>
           <UserAvatar
             displayName={userDisplayName}
-            imageUrl={userImageUrl}
+            imageUrl={resolvedImageUrl}
             size="nav"
           />
           <Typography

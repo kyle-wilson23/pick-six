@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { TestLeagueBanner } from "@/components/league/TestLeagueBanner";
 import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import { LeagueHubQuickActions } from "@/components/league/LeagueHubQuickActions";
+import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
@@ -97,7 +98,11 @@ export default async function LeagueHomePage({ params }: PageProps) {
               {roster.map((entry) => (
                 <Paper key={entry.membershipId} variant="outlined" sx={{ p: 1.5 }}>
                   <Stack spacing={0.5}>
-                    <Typography variant="body1">{entry.displayName}</Typography>
+                    <UserIdentityCell
+                      displayName={entry.displayName}
+                      imageUrl={entry.imageUrl}
+                      typographyVariant="body1"
+                    />
                     <Typography variant="body2" color="text.secondary">
                       {entry.role}
                     </Typography>

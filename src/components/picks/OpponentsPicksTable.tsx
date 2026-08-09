@@ -9,6 +9,7 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 
 import { TeamLogo } from "@/components/picks/TeamLogo";
+import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import type { LeagueWeekPeerPickRow } from "@/lib/picks/get-league-week-peer-picks";
 
 type OpponentsPicksTableProps = {
@@ -46,7 +47,12 @@ export function OpponentsPicksTable({ rows }: OpponentsPicksTableProps) {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.membershipId}>
-            <TableCell>{row.displayName}</TableCell>
+            <TableCell>
+              <UserIdentityCell
+                displayName={row.displayName}
+                imageUrl={row.imageUrl}
+              />
+            </TableCell>
             <TableCell>
               <PickCell team={row.team} />
             </TableCell>

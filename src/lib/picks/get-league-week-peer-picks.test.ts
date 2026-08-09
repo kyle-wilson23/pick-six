@@ -66,9 +66,22 @@ describe("buildLeagueWeekPeerPickRows", () => {
   it("includes all members, sorts A–Z, uses email when name unset, null team when no pick", () => {
     const rows = buildLeagueWeekPeerPickRows(
       [
-        { id: "m-b", user: { name: "Bob Smith", email: "bob@example.com" } },
-        { id: "m-a", user: { name: "Alice Adams", email: "alice@example.com" } },
-        { id: "m-c", user: { name: null, email: "charlie@example.com" } },
+        {
+          id: "m-b",
+          user: {
+            name: "Bob Smith",
+            email: "bob@example.com",
+            image: "https://example.com/bob.jpg",
+          },
+        },
+        {
+          id: "m-a",
+          user: { name: "Alice Adams", email: "alice@example.com", image: null },
+        },
+        {
+          id: "m-c",
+          user: { name: null, email: "charlie@example.com", image: null },
+        },
       ],
       [
         {
@@ -83,6 +96,11 @@ describe("buildLeagueWeekPeerPickRows", () => {
       "Bob Smith",
       "charlie@example.com",
     ]);
+    expect(rows.map((r) => r.imageUrl)).toEqual([
+      null,
+      "https://example.com/bob.jpg",
+      null,
+    ]);
     expect(rows[0].team).toBeNull();
     expect(rows[1].team).toEqual({
       abbreviation: "KC",
@@ -96,7 +114,7 @@ describe("getLeagueWeekPeerPicks", () => {
   function makePrisma(args: {
     memberships: Array<{
       id: string;
-      user: { name: string | null; email: string };
+      user: { name: string | null; email: string; image: string | null };
     }>;
     picks: Array<{
       leagueMembershipId: string;
@@ -131,8 +149,18 @@ describe("getLeagueWeekPeerPicks", () => {
   it("returns sorted rows after the deadline", async () => {
     const prisma = makePrisma({
       memberships: [
-        { id: "m-2", user: { name: "Zoe", email: "z@example.com" } },
-        { id: "m-1", user: { name: "Ann", email: "a@example.com" } },
+        {
+          id: "m-2",
+          user: { name: "Zoe", email: "z@example.com", image: null },
+        },
+        {
+          id: "m-1",
+          user: {
+            name: "Ann",
+            email: "a@example.com",
+            image: "https://example.com/ann.jpg",
+          },
+        },
       ],
       picks: [
         {
@@ -155,11 +183,13 @@ describe("getLeagueWeekPeerPicks", () => {
       {
         membershipId: "m-1",
         displayName: "Ann",
+        imageUrl: "https://example.com/ann.jpg",
         team: { abbreviation: "BUF", name: "Buffalo Bills" },
       },
       {
         membershipId: "m-2",
         displayName: "Zoe",
+        imageUrl: null,
         team: null,
       },
     ]);

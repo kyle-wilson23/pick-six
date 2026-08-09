@@ -25,6 +25,7 @@ const fixtureStandings: StandingsEntry[] = [
   {
     membershipId: "m-you",
     displayName: "Alex Admin",
+    imageUrl: "https://example.com/alex.jpg",
     totalPoints: 12,
     wins: 6,
     losses: 2,
@@ -34,6 +35,7 @@ const fixtureStandings: StandingsEntry[] = [
   {
     membershipId: "m-peer",
     displayName: "Pat Player",
+    imageUrl: null,
     totalPoints: 10,
     wins: 5,
     losses: 3,

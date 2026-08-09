@@ -28,12 +28,17 @@ describe("mergeSubmissionStatusParticipants", () => {
       {
         id: "mem-1",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        user: { id: "user-1", name: "Alice", email: "alice@x.com" },
+        user: {
+          id: "user-1",
+          name: "Alice",
+          email: "alice@x.com",
+          image: "https://example.com/alice.jpg",
+        },
       },
       {
         id: "mem-2",
         createdAt: new Date("2026-01-02T00:00:00.000Z"),
-        user: { id: "user-2", name: null, email: "bob@x.com" },
+        user: { id: "user-2", name: null, email: "bob@x.com", image: null },
       },
     ];
     const picks = [
@@ -49,6 +54,7 @@ describe("mergeSubmissionStatusParticipants", () => {
       {
         membershipId: "mem-1",
         displayName: "Alice",
+        imageUrl: "https://example.com/alice.jpg",
         userId: "user-1",
         submittedPick: {
           teamName: "Buffalo Bills",
@@ -60,6 +66,7 @@ describe("mergeSubmissionStatusParticipants", () => {
       {
         membershipId: "mem-2",
         displayName: "bob@x.com",
+        imageUrl: null,
         userId: "user-2",
         submittedPick: null,
       },
@@ -71,12 +78,17 @@ describe("mergeSubmissionStatusParticipants", () => {
       {
         id: "mem-admin",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        user: { id: "u-admin", name: "Admin", email: "admin@x.com" },
+        user: { id: "u-admin", name: "Admin", email: "admin@x.com", image: null },
       },
       {
         id: "mem-member",
         createdAt: new Date("2026-01-02T00:00:00.000Z"),
-        user: { id: "u-member", name: "Member", email: "member@x.com" },
+        user: {
+          id: "u-member",
+          name: "Member",
+          email: "member@x.com",
+          image: null,
+        },
       },
     ];
     const picks = [

@@ -20,5 +20,7 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
     colorMode?: ColorMode;
+    /** Epoch ms of last DB sync for `picture` (avatar URL). */
+    pictureSyncedAt?: number;
   }
 }

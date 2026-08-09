@@ -113,17 +113,24 @@ const nextAuth = NextAuth({
           token.email = dbUser.email;
           token.picture = dbUser.image;
           token.colorMode = colorModeFromPrisma(dbUser.colorMode);
+          token.pictureSyncedAt = Date.now();
         }
-      } else if (
-        typeof token.id === "string" &&
-        token.picture === undefined
-      ) {
-        // One-time hydrate for JWTs issued before `picture` was wired.
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { image: true },
-        });
-        token.picture = dbUser?.image ?? null;
+      } else if (typeof token.id === "string" && user == null) {
+        // Re-sync avatar URL from DB periodically. Login sets picture once; a later
+        // upload would otherwise leave JWT picture stuck at null until re-login
+        // (one-time `picture === undefined` hydrate is not enough).
+        const lastSynced =
+          typeof token.pictureSyncedAt === "number" ? token.pictureSyncedAt : 0;
+        const stale =
+          token.picture === undefined || Date.now() - lastSynced > 60_000;
+        if (stale) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { image: true },
+          });
+          token.picture = dbUser?.image ?? null;
+          token.pictureSyncedAt = Date.now();
+        }
       }
       return token;
     },

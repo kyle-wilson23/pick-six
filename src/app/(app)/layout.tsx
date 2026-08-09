@@ -12,6 +12,7 @@ import { AppNavLeagueRootProvider } from "@/components/layout/AppNavLeagueContex
 import { LeagueNavShell } from "@/components/league/LeagueNavShell";
 import { auth } from "@/lib/auth";
 import { buildLoginRedirectWithCallback } from "@/lib/callback-url";
+import { prisma } from "@/lib/db";
 import { userDisplayName } from "@/lib/user-display-name";
 import { redirect } from "next/navigation";
 
@@ -30,11 +31,18 @@ export default async function AppShellLayout({
     ? userDisplayName({ name: session.user.name, email: session.user.email })
     : (session.user.name?.trim() || "User");
 
+  // Nav avatar must follow DB `User.image`, not a possibly-stale JWT `picture`
+  // (JWT is only refreshed on login or client `session.update()`).
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { image: true },
+  });
+
   return (
     <AppNavLeagueRootProvider>
       <LeagueNavShell
         userDisplayName={displayName}
-        userImageUrl={session.user.image ?? null}
+        userImageUrl={dbUser?.image ?? session.user.image ?? null}
       >
         {children}
       </LeagueNavShell>

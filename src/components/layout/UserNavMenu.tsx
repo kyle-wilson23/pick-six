@@ -27,12 +27,14 @@ export function UserNavMenu({
 }: UserNavMenuProps) {
   const menuId = useId();
   const { data: session, status } = useSession();
-  // Prefer live client session after Profile `update()`; keep SSR prop when session
-  // has not mapped `image` yet (`undefined`), but honor explicit `null` after remove.
+  // Optimistic: non-empty session URL after Profile `update()`. Otherwise trust the
+  // layout prop (DB-backed). Do not let a stale JWT `image: null` hide a real photo.
   const sessionImage =
-    status === "authenticated" ? session?.user?.image : undefined;
-  const resolvedImageUrl =
-    sessionImage !== undefined ? sessionImage : userImageUrl;
+    status === "authenticated" && typeof session?.user?.image === "string"
+      ? session.user.image.trim()
+      : "";
+  const propImage = userImageUrl?.trim() || "";
+  const resolvedImageUrl = sessionImage || propImage || null;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = anchorEl != null;
 

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { buildLoginRedirectWithCallback } from "@/lib/callback-url";
 import { colorModeFromPrisma } from "@/lib/color-mode";
 import { prisma } from "@/lib/db";
+import { userDisplayName } from "@/lib/user-display-name";
 import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
@@ -17,12 +18,21 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { email: true, firstName: true, lastName: true, colorMode: true },
+    select: {
+      email: true,
+      firstName: true,
+      lastName: true,
+      name: true,
+      image: true,
+      colorMode: true,
+    },
   });
 
   if (!user) {
     redirect(buildLoginRedirectWithCallback("/profile"));
   }
+
+  const displayName = userDisplayName({ name: user.name, email: user.email });
 
   return (
     <Stack
@@ -41,6 +51,8 @@ export default async function ProfilePage() {
         email={user.email}
         firstName={user.firstName ?? ""}
         lastName={user.lastName ?? ""}
+        displayName={displayName}
+        imageUrl={user.image}
         colorMode={colorModeFromPrisma(user.colorMode)}
       />
     </Stack>

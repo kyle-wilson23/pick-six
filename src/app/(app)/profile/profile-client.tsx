@@ -11,6 +11,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { ColorModeToggle } from "@/components/color-mode/ColorModeToggle";
 import { useColorMode } from "@/components/color-mode/color-mode-context";
+import { AvatarCropDialog } from "@/components/user/AvatarCropDialog";
+import { UserAvatar } from "@/components/user/UserAvatar";
+import {
+  AVATAR_ALLOWED_MIME_TYPES,
+  AVATAR_MAX_BYTES,
+  validateAvatarFile,
+} from "@/lib/avatar";
 import type { ColorMode } from "@/lib/color-mode";
 import { updateProfileBodySchema } from "@/lib/profile";
 import { USER_NAME_PART_MAX_LENGTH } from "@/lib/user-display-name";
@@ -19,6 +26,8 @@ type ProfileClientProps = {
   email: string;
   firstName: string;
   lastName: string;
+  displayName: string;
+  imageUrl: string | null;
   colorMode: ColorMode;
 };
 
@@ -26,12 +35,15 @@ export function ProfileClient({
   email,
   firstName,
   lastName,
+  displayName,
+  imageUrl: initialImageUrl,
   colorMode: initialColorMode,
 }: ProfileClientProps) {
   const router = useRouter();
   const { update } = useSession();
   const { mode, setMode } = useColorMode();
   const alertRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -44,6 +56,16 @@ export function ProfileClient({
   const [colorModeError, setColorModeError] = useState<string | null>(null);
   const colorModeRequestRef = useRef(0);
   const colorModeAlertRef = useRef<HTMLDivElement>(null);
+
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarPending, setAvatarPending] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const avatarAlertRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setImageUrl(initialImageUrl);
+  }, [initialImageUrl]);
 
   useEffect(() => {
     if (colorModePending) return;
@@ -62,8 +84,133 @@ export function ProfileClient({
     }
   }, [colorModeError]);
 
+  useEffect(() => {
+    if (avatarError) {
+      avatarAlertRef.current?.focus();
+    }
+  }, [avatarError]);
+
+  useEffect(() => {
+    return () => {
+      if (cropSrc) {
+        URL.revokeObjectURL(cropSrc);
+      }
+    };
+  }, [cropSrc]);
+
   function announceAlert() {
     setFocusNonce((n) => n + 1);
+  }
+
+  async function refreshSessionAndPage() {
+    try {
+      await update();
+    } catch {
+      /* DB already saved */
+    }
+    router.refresh();
+  }
+
+  function openFilePicker() {
+    setAvatarError(null);
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChosen(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    // Browsers sometimes omit `file.type`; size-check here and let the server sniff mime.
+    if (file.size <= 0) {
+      setAvatarError("Image file is empty.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError("Image must be 5MB or smaller.");
+      return;
+    }
+    if (file.type) {
+      const validated = validateAvatarFile({ mime: file.type, size: file.size });
+      if (!validated.ok) {
+        setAvatarError(validated.message);
+        return;
+      }
+    }
+
+    if (cropSrc) {
+      URL.revokeObjectURL(cropSrc);
+    }
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  async function uploadCroppedBlob(blob: Blob) {
+    setAvatarPending(true);
+    setAvatarError(null);
+    try {
+      const form = new FormData();
+      form.append(
+        "file",
+        new File([blob], "avatar.jpg", { type: "image/jpeg" }),
+      );
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        body: form,
+      });
+      let data: { imageUrl?: string; error?: { message?: string } } | null =
+        null;
+      try {
+        data = (await res.json()) as {
+          imageUrl?: string;
+          error?: { message?: string };
+        };
+      } catch {
+        data = null;
+      }
+      if (!res.ok) {
+        setAvatarError(data?.error?.message ?? "Could not upload photo. Try again.");
+        return;
+      }
+      if (typeof data?.imageUrl === "string" && data.imageUrl.length > 0) {
+        setImageUrl(data.imageUrl);
+      }
+      if (cropSrc) {
+        URL.revokeObjectURL(cropSrc);
+      }
+      setCropSrc(null);
+      await refreshSessionAndPage();
+    } catch {
+      setAvatarError("Could not upload photo. Try again.");
+    } finally {
+      setAvatarPending(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarPending(true);
+    setAvatarError(null);
+    try {
+      const res = await fetch("/api/profile/avatar", { method: "DELETE" });
+      if (!res.ok) {
+        let msg = "Could not remove photo. Try again.";
+        try {
+          const data = (await res.json()) as {
+            error?: { message?: string };
+          };
+          if (data?.error?.message) msg = data.error.message;
+        } catch {
+          /* keep generic */
+        }
+        setAvatarError(msg);
+        return;
+      }
+      setImageUrl(null);
+      await refreshSessionAndPage();
+    } catch {
+      setAvatarError("Could not remove photo. Try again.");
+    } finally {
+      setAvatarPending(false);
+    }
   }
 
   async function persistColorMode(next: ColorMode) {
@@ -173,11 +320,10 @@ export function ProfileClient({
       }
 
       saved = true;
-      // Trigger JWT refresh; identity claims are loaded from DB in auth jwt callback.
       try {
         await update();
       } catch {
-        /* DB already saved; layout refresh still helps RSC; next navigation reloads session */
+        /* DB already saved */
       }
       setSuccess(true);
       announceAlert();
@@ -197,14 +343,78 @@ export function ProfileClient({
     }
   }
 
+  const accept = AVATAR_ALLOWED_MIME_TYPES.join(",");
+
   return (
     <Stack spacing={3} sx={{ width: "100%" }}>
       <Typography variant="h4" component="h1">
         Profile
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Update your email and name. Your name appears in the nav and on league standings.
+        Update your photo, email, and name. Your name appears in the nav and on league standings.
       </Typography>
+
+      <Stack spacing={1.5}>
+        <Typography variant="subtitle1" component="h2">
+          Profile picture
+        </Typography>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <UserAvatar
+            displayName={displayName}
+            imageUrl={imageUrl}
+            size="profile"
+          />
+          <Stack spacing={1}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button
+                variant="outlined"
+                onClick={openFilePicker}
+                disabled={avatarPending}
+              >
+                {imageUrl ? "Change photo" : "Upload photo"}
+              </Button>
+              {imageUrl ? (
+                <Button
+                  color="inherit"
+                  onClick={() => void removeAvatar()}
+                  disabled={avatarPending}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              JPEG, PNG, or WebP up to 5MB. You’ll crop and zoom before saving.
+            </Typography>
+          </Stack>
+        </Stack>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={accept}
+          hidden
+          onChange={handleFileChosen}
+        />
+        {avatarError ? (
+          <Alert ref={avatarAlertRef} severity="error" tabIndex={-1} role="alert">
+            {avatarError}
+          </Alert>
+        ) : null}
+      </Stack>
+
+      {cropSrc ? (
+        <AvatarCropDialog
+          open
+          imageSrc={cropSrc}
+          confirming={avatarPending}
+          onCancel={() => {
+            if (avatarPending) return;
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
+          }}
+          onConfirm={(blob) => void uploadCroppedBlob(blob)}
+        />
+      ) : null}
 
       <Stack spacing={1}>
         <Typography variant="subtitle1" component="h2">

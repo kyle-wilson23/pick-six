@@ -2,6 +2,20 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: quick-dev split of spec-profile-picture-uploads.md (2026-08-09)
+
+Split to keep the core Profile upload + nav avatar shippable. Also tracked under Priority Items in local `PRIORITIES.md`.
+
+- **Profile picture thumbnails on in-app list surfaces** — Thread `imageUrl` beside `displayName` through standings, results/peer history, opponents’ picks, roster, and admin submission cards; render shared `UserAvatar` thumb left of username (initials when null).
+- **Profile picture thumbnails in Tuesday digest email standings** — Absolute Blob URLs as small thumbs left of names in `TuesdayDigestEmail` standings rows (+ digest data/preview wiring).
+
+## Deferred from: review of spec-profile-picture-uploads.md (2026-08-09)
+
+- **Concurrent avatar replace races** — Overlapping POSTs can leave intermediate Blob objects undeleted (last write wins on `User.image`). Acceptable for Hobby; add compare-and-swap / in-flight guard if abuse appears.
+- **EXIF orientation on crop** — Phone photos may crop/save rotated; no orientation normalization in the canvas path.
+- **Image decode / pixel bomb limits** — Server sniffs magic bytes and enforces 5MB but does not decode/re-encode with dimension caps (e.g. sharp).
+- **Avatar rate-limit pre-auth IP burn** — Same proxy pattern as other mutators; unauthenticated clients can consume the IP bucket before auth.
+
 ## Deferred from: review of spec-color-mode-toggle.md (2026-08-09)
 
 - **Root layout Prisma colorMode lookup on every request** — `resolveInitialColorMode` calls `auth()` + `user.findUnique` so DB wins over a stale JWT after login write-through. Future: prefer JWT `colorMode` when fresh and only hit DB on mismatch / post-update, or cache the preference without making the whole tree dynamic-heavy.

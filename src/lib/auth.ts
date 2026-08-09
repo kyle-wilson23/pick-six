@@ -96,22 +96,34 @@ const nextAuth = NextAuth({
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
+        token.picture = user.image ?? null;
         if (user.colorMode === "dark" || user.colorMode === "light") {
           token.colorMode = user.colorMode;
         }
       }
       // Profile (and other) client `update()` calls must not trust client-supplied
-      // identity claims — re-read from DB so forged session.update cannot change email/name.
+      // identity claims — re-read from DB so forged session.update cannot change email/name/image.
       if (trigger === "update" && typeof token.id === "string") {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
-          select: { name: true, email: true, colorMode: true },
+          select: { name: true, email: true, colorMode: true, image: true },
         });
         if (dbUser) {
           token.name = dbUser.name;
           token.email = dbUser.email;
+          token.picture = dbUser.image;
           token.colorMode = colorModeFromPrisma(dbUser.colorMode);
         }
+      } else if (
+        typeof token.id === "string" &&
+        token.picture === undefined
+      ) {
+        // One-time hydrate for JWTs issued before `picture` was wired.
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { image: true },
+        });
+        token.picture = dbUser?.image ?? null;
       }
       return token;
     },
@@ -123,6 +135,9 @@ const nextAuth = NextAuth({
         }
         if (typeof token.email === "string") {
           session.user.email = token.email;
+        }
+        if (typeof token.picture === "string" || token.picture === null) {
+          session.user.image = token.picture;
         }
         if (token.colorMode === "dark" || token.colorMode === "light") {
           session.user.colorMode = token.colorMode;

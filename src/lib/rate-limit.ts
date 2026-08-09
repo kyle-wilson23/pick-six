@@ -8,6 +8,7 @@
  *   dedicated bucket for `POST /api/auth/register` (within 5–8 band; separate from sign-in).
  * - **League delete** (FR61): 5 DELETEs / 15 minutes per namespace `league-delete` — stricter cap for
  *   irreversible destructive actions; enforced only on `DELETE /api/leagues/[leagueId]` (no subpath).
+ * - **Avatar** upload/remove: 20 / 15 minutes per namespace `avatar` — `POST`/`DELETE` `/api/profile/avatar`.
  *
  * **Production / multi-instance:** In-memory store is per instance only. For horizontal scale, use a
  * shared store (e.g. Upstash Redis + `@upstash/ratelimit`) and wire env vars; document until then.
@@ -26,6 +27,10 @@ const REGISTER_MAX_ATTEMPTS = 6;
 
 const LEAGUE_DELETE_WINDOW_MS = 15 * 60 * 1000;
 const LEAGUE_DELETE_MAX_ATTEMPTS = 5;
+
+const AVATAR_WINDOW_MS = 15 * 60 * 1000;
+/** Profile avatar upload/remove — 20 / 15 min per client. */
+const AVATAR_MAX_ATTEMPTS = 20;
 
 const buckets = new Map<string, number[]>();
 
@@ -83,5 +88,15 @@ export function checkLeagueDeleteRateLimit(clientKey: string): boolean {
     clientKey,
     LEAGUE_DELETE_MAX_ATTEMPTS,
     LEAGUE_DELETE_WINDOW_MS,
+  );
+}
+
+/** `POST` / `DELETE` `/api/profile/avatar` (proxy matcher). */
+export function checkAvatarRateLimit(clientKey: string): boolean {
+  return checkSlidingWindow(
+    "avatar",
+    clientKey,
+    AVATAR_MAX_ATTEMPTS,
+    AVATAR_WINDOW_MS,
   );
 }

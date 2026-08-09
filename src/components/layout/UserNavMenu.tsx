@@ -3,7 +3,6 @@
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import Avatar from "@mui/material/Avatar";
 import IconButton from "@mui/material/IconButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
@@ -15,21 +14,17 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useId, useState } from "react";
 
+import { UserAvatar } from "@/components/user/UserAvatar";
+
 type UserNavMenuProps = {
   userDisplayName: string;
+  userImageUrl?: string | null;
 };
 
-function userInitials(displayName: string): string {
-  const trimmed = displayName.trim();
-  if (!trimmed) return "?";
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
-  }
-  return trimmed.slice(0, 2).toUpperCase();
-}
-
-export function UserNavMenu({ userDisplayName }: UserNavMenuProps) {
+export function UserNavMenu({
+  userDisplayName,
+  userImageUrl = null,
+}: UserNavMenuProps) {
   const menuId = useId();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = anchorEl != null;
@@ -63,17 +58,11 @@ export function UserNavMenu({ userDisplayName }: UserNavMenuProps) {
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, width: "100%" }}>
-          <Avatar
-            sx={{
-              width: 32,
-              height: 32,
-              bgcolor: "primary.dark",
-              fontSize: "0.875rem",
-              flexShrink: 0,
-            }}
-          >
-            {userInitials(userDisplayName)}
-          </Avatar>
+          <UserAvatar
+            displayName={userDisplayName}
+            imageUrl={userImageUrl}
+            size="nav"
+          />
           <Typography
             variant="body2"
             noWrap

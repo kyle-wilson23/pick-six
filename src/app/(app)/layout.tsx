@@ -32,7 +32,12 @@ export default async function AppShellLayout({
 
   return (
     <AppNavLeagueRootProvider>
-      <LeagueNavShell userDisplayName={displayName}>{children}</LeagueNavShell>
+      <LeagueNavShell
+        userDisplayName={displayName}
+        userImageUrl={session.user.image ?? null}
+      >
+        {children}
+      </LeagueNavShell>
     </AppNavLeagueRootProvider>
   );
 }

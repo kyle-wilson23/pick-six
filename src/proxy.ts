@@ -3,7 +3,13 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { checkLeagueDeleteRateLimit, checkPasswordResetRateLimit, checkRegisterRateLimit, checkSignInRateLimit } from "@/lib/rate-limit";
+import {
+  checkAvatarRateLimit,
+  checkLeagueDeleteRateLimit,
+  checkPasswordResetRateLimit,
+  checkRegisterRateLimit,
+  checkSignInRateLimit,
+} from "@/lib/rate-limit";
 
 function rateLimitClientKey(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -43,6 +49,7 @@ const LEAGUE_PRE_SEASON_INIT_POST = /^\/api\/leagues\/[^/]+\/pre-season-init\/?$
 const LEAGUE_PICKS_POST = /^\/api\/leagues\/[^/]+\/picks\/?$/;
 /** `DELETE /api/leagues/[leagueId]` only — not `/api/leagues/x/invitations` or other subresources. */
 const LEAGUE_SINGLE_DELETE = /^\/api\/leagues\/[^/]+\/?$/;
+const PROFILE_AVATAR = /^\/api\/profile\/avatar\/?$/;
 
 function shouldRateLimitPost(pathname: string): boolean {
   if (RATE_LIMITED_POST_PATHS.has(pathname)) {
@@ -85,6 +92,18 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  if (
+    (request.method === "POST" || request.method === "DELETE") &&
+    PROFILE_AVATAR.test(pathname)
+  ) {
+    if (!checkAvatarRateLimit(rateLimitClientKey(request))) {
+      return NextResponse.json(
+        { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+        { status: 429 },
+      );
+    }
+  }
+
   if (request.method === "DELETE" && LEAGUE_SINGLE_DELETE.test(pathname)) {
     if (!checkLeagueDeleteRateLimit(rateLimitClientKey(request))) {
       return NextResponse.json(
@@ -107,6 +126,8 @@ export const config = {
     "/api/signup/invite/accept",
     "/api/leagues",
     "/api/leagues/:path*",
+    "/api/profile/avatar",
+    "/api/profile/avatar/",
     "/home",
     "/home/:path*",
     "/dashboard",

@@ -44,6 +44,7 @@ import {
 
 type LeagueNavShellProps = {
   userDisplayName: string;
+  userImageUrl?: string | null;
   children: ReactNode;
 };
 
@@ -77,7 +78,11 @@ function renderDesktopTab(
   );
 }
 
-export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProps) {
+export function LeagueNavShell({
+  userDisplayName,
+  userImageUrl = null,
+  children,
+}: LeagueNavShellProps) {
   const theme = useTheme();
   const pathname = usePathname();
   useClearAppNavLeagueWhenOutsideLeagueRoute();
@@ -198,7 +203,10 @@ export function LeagueNavShell({ userDisplayName, children }: LeagueNavShellProp
               </Tabs>
             </Box>
 
-            <UserNavMenu userDisplayName={userDisplayName} />
+            <UserNavMenu
+              userDisplayName={userDisplayName}
+              userImageUrl={userImageUrl}
+            />
           </Toolbar>
         </AppBar>
 

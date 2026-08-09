@@ -4,13 +4,13 @@ import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
+import { PasswordTextField } from "@/components/auth/PasswordTextField";
 import {
   SIGNUP_PASSWORD_POLICY_MESSAGE,
   signupPasswordFieldSchema,
@@ -143,9 +143,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           {error}
         </Alert>
       ) : null}
-      <TextField
+      <PasswordTextField
         name="password"
-        type="password"
         label="New password"
         autoComplete="new-password"
         required
@@ -160,9 +159,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           },
         }}
       />
-      <TextField
+      <PasswordTextField
         name="confirmPassword"
-        type="password"
         label="Confirm new password"
         autoComplete="new-password"
         required

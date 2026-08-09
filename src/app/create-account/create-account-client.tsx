@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { PasswordTextField } from "@/components/auth/PasswordTextField";
 import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { useColorMode } from "@/components/color-mode/color-mode-context";
 import { syncColorModeAfterAuth } from "@/lib/sync-color-mode";
@@ -323,9 +324,8 @@ export function CreateAccountClient() {
               },
             }}
           />
-          <TextField
+          <PasswordTextField
             name="password"
-            type="password"
             label="Password"
             autoComplete="new-password"
             required
@@ -340,9 +340,8 @@ export function CreateAccountClient() {
               },
             }}
           />
-          <TextField
+          <PasswordTextField
             name="confirmPassword"
-            type="password"
             label="Confirm password"
             autoComplete="new-password"
             required

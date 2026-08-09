@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
+import { PasswordTextField } from "@/components/auth/PasswordTextField";
 import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
 import { ColorModeToggle } from "@/components/color-mode/ColorModeToggle";
 import { useColorMode } from "@/components/color-mode/color-mode-context";
@@ -209,9 +210,8 @@ export function LoginClient() {
               },
             }}
           />
-          <TextField
+          <PasswordTextField
             name="password"
-            type="password"
             label="Password"
             autoComplete="current-password"
             required

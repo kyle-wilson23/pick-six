@@ -2,6 +2,10 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-show-hide-password-toggle.md (2026-08-09)
+
+- **Invite signup password field toggle** — `signup/[token]/signup-form.tsx` still uses a plain password `TextField`. Out of clarified scope (login / create-account / reset-password); reuse `PasswordTextField` when polishing invite signup UX.
+
 ## Deferred from: quick-dev split of spec-profile-picture-uploads.md (2026-08-09)
 
 Split to keep the core Profile upload + nav avatar shippable. Also tracked under Priority Items in local `PRIORITIES.md`.

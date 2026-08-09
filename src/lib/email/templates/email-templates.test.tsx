@@ -15,7 +15,14 @@ describe("email templates CTA + plaintext fallback", () => {
         leagueName: "Office League",
         weekNumber: 3,
         standings: [
-          { rank: 1, displayName: "Alex", totalPoints: 12, wins: 2, losses: 0 },
+          {
+            rank: 1,
+            displayName: "Alex",
+            imageUrl: null,
+            totalPoints: 12,
+            wins: 2,
+            losses: 0,
+          },
         ],
         jailedTeamName: "Eagles",
         jailedTeamAbbreviation: "PHI",
@@ -33,6 +40,68 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(html.indexOf("Make your picks")).toBeLessThan(
       html.indexOf("Note from your commissioner"),
     );
+  });
+
+  it("TuesdayDigestEmail standings show photo thumb or initials by imageUrl", async () => {
+    const photoUrl = "https://blob.example.test/avatars/alex.webp";
+    const html = await render(
+      createElement(TuesdayDigestEmail, {
+        leagueName: "Office League",
+        weekNumber: 3,
+        standings: [
+          {
+            rank: 1,
+            displayName: "Alex Rivera",
+            imageUrl: photoUrl,
+            totalPoints: 12,
+            wins: 2,
+            losses: 0,
+          },
+          {
+            rank: 2,
+            displayName: "Sam Lee",
+            imageUrl: null,
+            totalPoints: 10,
+            wins: 1,
+            losses: 1,
+          },
+          {
+            rank: 3,
+            displayName: "Pat",
+            imageUrl: "   ",
+            totalPoints: 8,
+            wins: 0,
+            losses: 2,
+          },
+          {
+            rank: 4,
+            displayName: "Jamie Cox",
+            imageUrl: "not-a-url",
+            totalPoints: 6,
+            wins: 0,
+            losses: 3,
+          },
+        ],
+        jailedTeamName: null,
+        jailedTeamAbbreviation: null,
+        picksUrl: "https://example.test/leagues/abc/picks",
+        adminNote: null,
+        isTestLeague: false,
+      }),
+    );
+
+    expect(html).toContain(`src="${photoUrl}"`);
+    expect(html).toContain(`alt="AR"`);
+    expect(html).toContain("width=\"28\"");
+    expect(html).toContain("height=\"28\"");
+    expect(html).toContain("Alex Rivera");
+    expect(html).toContain("Sam Lee");
+    expect(html).toContain("SL");
+    expect(html).toContain("PA");
+    expect(html).toContain("JC");
+    expect(html).not.toContain("not-a-url");
+    // Null/blank/non-http imageUrl must not emit an empty img src
+    expect(html).not.toMatch(/src=["']\s*["']/);
   });
 
   it("ReminderEmail wednesday/thursday keep labels + plaintext fallback", async () => {

@@ -150,3 +150,39 @@ export const tdRightStyle: CSSProperties = {
   ...tdStyle,
   textAlign: "right" as const,
 };
+
+/** Nested identity table inside the standings Name cell. */
+export const nameCellInnerTableStyle: CSSProperties = {
+  borderCollapse: "collapse" as const,
+};
+
+export const nameCellAvatarTdStyle: CSSProperties = {
+  padding: "0 8px 0 0",
+  verticalAlign: "middle" as const,
+  width: 28,
+};
+
+export const nameCellAvatarImgStyle: CSSProperties = {
+  borderRadius: "4px",
+  display: "block",
+  height: 28,
+  width: 28,
+};
+
+export const nameCellInitialsStyle: CSSProperties = {
+  backgroundColor: emailColors.border,
+  borderRadius: "4px",
+  color: emailColors.heading,
+  display: "block",
+  fontSize: "11px",
+  fontWeight: 700,
+  height: 28,
+  lineHeight: "28px",
+  textAlign: "center" as const,
+  width: 28,
+};
+
+export const nameCellTextTdStyle: CSSProperties = {
+  padding: 0,
+  verticalAlign: "middle" as const,
+};

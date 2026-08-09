@@ -1,10 +1,16 @@
-import { Heading, Section, Text } from "@react-email/components";
+import { Heading, Img, Section, Text } from "@react-email/components";
 
+import { userInitials } from "@/lib/avatar";
 import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
 
 import { EmailLayout, PrimaryCta } from "./EmailLayout";
 import {
   headingStyle,
+  nameCellAvatarImgStyle,
+  nameCellAvatarTdStyle,
+  nameCellInitialsStyle,
+  nameCellInnerTableStyle,
+  nameCellTextTdStyle,
   sectionStyle,
   subheadingStyle,
   tableStyle,
@@ -16,22 +22,60 @@ import {
   thStyle,
 } from "./email-styles";
 
+export type TuesdayDigestStandingRow = {
+  rank: number;
+  displayName: string;
+  imageUrl: string | null;
+  totalPoints: number;
+  wins: number;
+  losses: number;
+};
+
 export type TuesdayDigestEmailProps = {
   leagueName: string;
   weekNumber: number;
-  standings: Array<{
-    rank: number;
-    displayName: string;
-    totalPoints: number;
-    wins: number;
-    losses: number;
-  }>;
+  standings: TuesdayDigestStandingRow[];
   jailedTeamName: string | null;
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
   adminNote: string | null;
   isTestLeague?: boolean;
 };
+
+function StandingNameCell({
+  displayName,
+  imageUrl,
+}: {
+  displayName: string;
+  imageUrl: string | null;
+}) {
+  const trimmedUrl = imageUrl?.trim() ?? "";
+  const hasPhoto = /^https?:\/\//i.test(trimmedUrl);
+  const initials = userInitials(displayName);
+
+  return (
+    <table cellPadding={0} cellSpacing={0} role="presentation" style={nameCellInnerTableStyle}>
+      <tbody>
+        <tr>
+          <td style={nameCellAvatarTdStyle}>
+            {hasPhoto ? (
+              <Img
+                src={trimmedUrl}
+                width={28}
+                height={28}
+                alt={initials}
+                style={nameCellAvatarImgStyle}
+              />
+            ) : (
+              <span style={nameCellInitialsStyle}>{initials}</span>
+            )}
+          </td>
+          <td style={nameCellTextTdStyle}>{displayName}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
 
 export function TuesdayDigestEmail({
   leagueName,
@@ -76,7 +120,12 @@ export function TuesdayDigestEmail({
               {standings.map((entry, index) => (
                 <tr key={`${entry.rank}-${entry.displayName}-${index}`}>
                   <td style={tdStyle}>{entry.rank}</td>
-                  <td style={tdStyle}>{entry.displayName}</td>
+                  <td style={tdStyle}>
+                    <StandingNameCell
+                      displayName={entry.displayName}
+                      imageUrl={entry.imageUrl}
+                    />
+                  </td>
                   <td align="right" style={tdRightStyle}>
                     {entry.totalPoints}
                   </td>

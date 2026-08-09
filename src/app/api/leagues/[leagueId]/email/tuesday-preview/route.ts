@@ -83,6 +83,7 @@ export async function GET(
         standings: data.standings.map((s) => ({
           rank: s.rank,
           displayName: s.displayName,
+          imageUrl: s.imageUrl,
           totalPoints: s.totalPoints,
           wins: s.wins,
           losses: s.losses,

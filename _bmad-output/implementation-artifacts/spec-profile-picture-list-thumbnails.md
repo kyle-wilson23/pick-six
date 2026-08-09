@@ -143,7 +143,7 @@ context:
   [`page.tsx:101`](../../src/app/(app)/leagues/[leagueId]/page.tsx#L101)
 
 - Admin cards + overflow-safe row
-  [`AdminSubmissionCard.tsx:63`](../../src/components/admin/AdminSubmissionCard.tsx#L63)
+  [`AdminSubmissionCard.tsx:64`](../../src/components/admin/AdminSubmissionCard.tsx#L64)
 
 **Tests**
 

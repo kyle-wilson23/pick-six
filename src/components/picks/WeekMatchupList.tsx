@@ -1,6 +1,8 @@
 "use client";
 
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import {
@@ -17,6 +19,10 @@ import {
   getCountdownVariant,
   isPickWindowClosedByDeadline,
 } from "@/lib/picks/countdown";
+import {
+  isPickDraftDirty,
+  type PickSelection,
+} from "@/lib/picks/pick-draft-dirty";
 import type {
   CurrentPickJson,
   PicksWeekMatchupJson,
@@ -28,11 +34,15 @@ import { PickStatusBanner } from "./PickStatusBanner";
 
 type ApiError = { error?: { code?: string; message?: string } };
 
-type LocalSelection = { teamId: string; antiJailedBonus: boolean };
-
 type StatusMessage =
   | { kind: "info"; text: string }
   | { kind: "error"; text: string };
+
+function toSelection(pick: CurrentPickJson | null): PickSelection | null {
+  return pick
+    ? { teamId: pick.teamId, antiJailedBonus: pick.antiJailedBonus }
+    : null;
+}
 
 export type WeekMatchupListProps = {
   weekLabel: number;
@@ -61,11 +71,9 @@ export function WeekMatchupList({
   currentPick = null,
   seasonPickedTeams = [],
 }: WeekMatchupListProps) {
-  const [selection, setSelection] = useState<LocalSelection | null>(() =>
-    currentPick
-      ? { teamId: currentPick.teamId, antiJailedBonus: currentPick.antiJailedBonus }
-      : null,
-  );
+  const initial = toSelection(currentPick);
+  const [draft, setDraft] = useState<PickSelection | null>(() => initial);
+  const [saved, setSaved] = useState<PickSelection | null>(() => initial);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [isLocked, setIsLocked] = useState<boolean>(() =>
@@ -73,6 +81,7 @@ export function WeekMatchupList({
   );
 
   const radiogroupRef = useRef<HTMLDivElement | null>(null);
+  const submitLockRef = useRef(false);
 
   // Keep `isLocked` honest as the page sits open across the deadline. We piggyback on the same
   // tick cadence the countdown uses (1s ≤ 1h, else 30s); a worst-case ~30s lag before lock is fine
@@ -133,10 +142,12 @@ export function WeekMatchupList({
   }, [matchups]);
 
   const interactive = !isPreview;
+  const dirty = isPickDraftDirty(draft, saved);
+  const showSubmitButton = interactive && !isLocked;
 
   const handleTeamSelect = useCallback(
-    async (teamId: string, ev: SelectionEvent) => {
-      if (!interactive) return;
+    (teamId: string, ev: SelectionEvent) => {
+      if (!interactive || isLocked) return;
       if (ev.kind === "select" && submitting) return;
       if (ev.kind === "blocked") {
         const teamName = teamNameById[teamId] ?? "this team";
@@ -160,40 +171,59 @@ export function WeekMatchupList({
         return;
       }
 
-      const previous = selection;
-      const optimistic: LocalSelection = { teamId, antiJailedBonus: ev.antiJailedBonus };
-      setSelection(optimistic);
+      setDraft({ teamId, antiJailedBonus: ev.antiJailedBonus });
       setStatusMessage(null);
-      setSubmitting(true);
-      try {
-        const res = await fetch(`/api/leagues/${leagueId}/picks`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teamId, nflWeekNumber: weekNumber, antiJailedBonus: ev.antiJailedBonus }),
-        });
-        if (!res.ok) {
-          const data: unknown = await res.json().catch(() => null);
-          const msg =
-            data && typeof data === "object" && "error" in data
-              ? (data as ApiError).error?.message
-              : null;
-          setSelection(previous);
-          setStatusMessage({ kind: "error", text: msg ?? "Could not save pick. Please try again." });
-          return;
-        }
-        const teamName = teamNameById[teamId] ?? "your team";
-        const points = ev.antiJailedBonus ? "2 points" : "1 point";
-        setStatusMessage({ kind: "info", text: `Pick saved: ${teamName}, ${points}` });
-      } catch {
-        setSelection(previous);
-        setStatusMessage({ kind: "error", text: "Network error — pick was not saved." });
-      } finally {
-        setSubmitting(false);
-      }
     },
-    [interactive, submitting, leagueId, weekNumber, selection, teamNameById],
+    [interactive, isLocked, submitting, teamNameById],
   );
+
+  const handleSubmitPick = useCallback(async () => {
+    if (!interactive || isLocked || submitting || !dirty || draft == null) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+
+    setSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/picks`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId: draft.teamId,
+          nflWeekNumber: weekNumber,
+          antiJailedBonus: draft.antiJailedBonus,
+        }),
+      });
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => null);
+        const msg =
+          data && typeof data === "object" && "error" in data
+            ? (data as ApiError).error?.message
+            : null;
+        setStatusMessage({ kind: "error", text: msg ?? "Could not save pick. Please try again." });
+        return;
+      }
+      setSaved(draft);
+      const teamName = teamNameById[draft.teamId] ?? "your team";
+      const points = draft.antiJailedBonus ? "2 points" : "1 point";
+      setStatusMessage({ kind: "info", text: `Pick saved: ${teamName}, ${points}` });
+    } catch {
+      setStatusMessage({ kind: "error", text: "Network error — pick was not saved." });
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
+  }, [
+    interactive,
+    isLocked,
+    submitting,
+    dirty,
+    draft,
+    leagueId,
+    weekNumber,
+    teamNameById,
+  ]);
 
   // Arrow-key navigation across the radiogroup (skipping disabled cards).
   const handleRadiogroupKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
@@ -219,12 +249,26 @@ export function WeekMatchupList({
   }, [interactive]);
 
   const bannerTeamName =
-    selection != null ? teamNameById[selection.teamId] ?? null : null;
+    saved != null ? teamNameById[saved.teamId] ?? null : null;
   const bannerTeamAbbrev =
-    selection != null ? teamAbbrevById[selection.teamId] ?? null : null;
+    saved != null ? teamAbbrevById[saved.teamId] ?? null : null;
+
+  const draftTeamName =
+    draft != null ? teamNameById[draft.teamId] ?? "team" : null;
+  const submitLabel =
+    draftTeamName != null ? `Submit Pick: ${draftTeamName}` : "Submit Pick";
 
   return (
-    <Stack spacing={2} sx={{ width: "100%" }}>
+    <Stack
+      spacing={2}
+      sx={{
+        width: "100%",
+        // Clear the fixed submit control so the last matchup rows stay reachable.
+        pb: showSubmitButton
+          ? { xs: "calc(56px + env(safe-area-inset-bottom, 0px) + 72px)", md: 10 }
+          : 0,
+      }}
+    >
       <Typography variant="h6" component="h2">
         Week {weekLabel} Matchups
       </Typography>
@@ -233,7 +277,7 @@ export function WeekMatchupList({
         <PickStatusBanner
           teamName={bannerTeamName}
           teamAbbreviation={bannerTeamAbbrev}
-          antiJailedBonus={selection?.antiJailedBonus ?? false}
+          antiJailedBonus={saved?.antiJailedBonus ?? false}
           isLocked={isLocked}
           weekNumber={weekLabel}
         />
@@ -274,7 +318,7 @@ export function WeekMatchupList({
           aria-label={interactive ? `Pick a team for Week ${weekLabel}` : undefined}
           aria-busy={submitting || undefined}
           onKeyDown={interactive ? handleRadiogroupKeyDown : undefined}
-            sx={{
+          sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
             gap: { xs: 1.5, md: 2 },
@@ -286,7 +330,7 @@ export function WeekMatchupList({
               matchup={m}
               jailedTeamId={jailedTeamId}
               onTeamSelect={interactive ? handleTeamSelect : undefined}
-              selectedTeamId={selection?.teamId ?? null}
+              selectedTeamId={draft?.teamId ?? null}
               pickedTeamIds={pickedTeamIdsSet}
               pickedWeekByTeamId={pickedWeekByTeamId}
               isLocked={isLocked}
@@ -296,6 +340,36 @@ export function WeekMatchupList({
           ))}
         </Box>
       )}
+
+      {showSubmitButton ? (
+        <Button
+          type="button"
+          variant={dirty ? "contained" : "outlined"}
+          color="primary"
+          disabled={!dirty || submitting}
+          onClick={() => {
+            void handleSubmitPick();
+          }}
+          startIcon={
+            submitting ? (
+              <CircularProgress size={16} thickness={5} color="inherit" aria-hidden />
+            ) : undefined
+          }
+          aria-busy={submitting || undefined}
+          sx={{
+            position: "fixed",
+            right: 16,
+            bottom: {
+              xs: "calc(56px + env(safe-area-inset-bottom, 0px) + 16px)",
+              md: 24,
+            },
+            zIndex: (t) => t.zIndex.tooltip,
+            boxShadow: dirty ? 4 : 1,
+          }}
+        >
+          {submitLabel}
+        </Button>
+      ) : null}
     </Stack>
   );
 }

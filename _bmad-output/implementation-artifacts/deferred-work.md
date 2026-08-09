@@ -2,6 +2,12 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: review of spec-floating-pick-submit-button.md (2026-08-09)
+
+- **`currentPick` / week prop sync into draft+saved** — `WeekMatchupList` still initializes local state once (same as pre-FAB `selection`). Soft client updates without remount could leave draft/saved stale; week navigation usually remounts via RSC. Add a reset effect if client-side week switching without remount appears.
+- **`isLocked` never clears once set** — Deadline ticker only sets locked `true`; pre-existing. Harmless for normal Thursday lock; revisit if sim/admin can reopen a week in-session.
+- **Component tests for FAB wire-up** — Spec covers pure `isPickDraftDirty`; no RTL coverage for select-then-confirm. Add if regressions show up in the picks client flow.
+
 ## Deferred from: review of spec-show-hide-password-toggle.md (2026-08-09)
 
 - **Invite signup password field toggle** — `signup/[token]/signup-form.tsx` still uses a plain password `TextField`. Out of clarified scope (login / create-account / reset-password); reuse `PasswordTextField` when polishing invite signup UX.

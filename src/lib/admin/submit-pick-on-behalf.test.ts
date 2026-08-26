@@ -201,6 +201,14 @@ describe("submitPickOnBehalf", () => {
 
   it("allows anti-jailed path (opponent of jailed team) → 201", async () => {
     setupHappyPath();
+    mockPickUpsert.mockResolvedValue({
+      id: "pick-1",
+      teamId: "team-opponent",
+      nflWeekNumber: 1,
+      antiJailedBonus: true,
+      createdAt: new Date("2026-09-10T12:00:00.000Z"),
+      updatedAt: new Date("2026-09-10T12:00:00.000Z"),
+    });
 
     const result = await submitPickOnBehalf(createTx() as never, {
       ...baseArgs,
@@ -209,6 +217,14 @@ describe("submitPickOnBehalf", () => {
     });
 
     expect(result).toMatchObject({ type: "ok", status: 201 });
+    expect(mockPickUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          teamId: "team-opponent",
+          antiJailedBonus: true,
+        }),
+      }),
+    );
     expect(mockAuditLogCreate).toHaveBeenCalledOnce();
     expect(mockAuditLogCreate).toHaveBeenCalledWith({
       data: {
@@ -221,6 +237,60 @@ describe("submitPickOnBehalf", () => {
         beforeAntiJailed: null,
         afterAntiJailed: true,
       },
+    });
+  });
+
+  it("derives antiJailedBonus true when client sends false for jailed opponent", async () => {
+    setupHappyPath();
+    mockPickUpsert.mockResolvedValue({
+      id: "pick-1",
+      teamId: "team-opponent",
+      nflWeekNumber: 1,
+      antiJailedBonus: true,
+      createdAt: new Date("2026-09-10T12:00:00.000Z"),
+      updatedAt: new Date("2026-09-10T12:00:00.000Z"),
+    });
+
+    const result = await submitPickOnBehalf(createTx() as never, {
+      ...baseArgs,
+      teamId: "team-opponent",
+      antiJailedBonus: false,
+    });
+
+    expect(result).toMatchObject({
+      type: "ok",
+      status: 201,
+      body: { pick: { antiJailedBonus: true } },
+    });
+    expect(mockPickUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ antiJailedBonus: true }),
+        update: expect.objectContaining({ antiJailedBonus: true }),
+      }),
+    );
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ afterAntiJailed: true }),
+    });
+  });
+
+  it("derives antiJailedBonus false when client sends true for a non-opponent", async () => {
+    setupHappyPath();
+
+    const result = await submitPickOnBehalf(createTx() as never, {
+      ...baseArgs,
+      teamId: "team-home",
+      antiJailedBonus: true,
+    });
+
+    expect(result).toMatchObject({ type: "ok", status: 201 });
+    expect(mockPickUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ antiJailedBonus: false }),
+        update: expect.objectContaining({ antiJailedBonus: false }),
+      }),
+    );
+    expect(mockAuditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ afterAntiJailed: false }),
     });
   });
 

@@ -41,6 +41,19 @@ export function getOpponentOfJailedInWeek(
   return { ok: false };
 }
 
+/**
+ * Anti-jailed bonus is always on when picking the jailed team's opponent — never opt-in.
+ * Write paths should derive this and ignore any client-supplied flag.
+ */
+export function deriveAntiJailedBonus(
+  teamId: string,
+  jailedTeamId: string,
+  games: NflGameTeamPair[],
+): boolean {
+  const opponent = getOpponentOfJailedInWeek(jailedTeamId, games);
+  return opponent.ok && teamId === opponent.opponentTeamId;
+}
+
 export type JailedAndLineupInput = {
   teamId: string;
   jailedTeamId: string;
@@ -57,6 +70,7 @@ export const ANTI_JAILED_UNAVAILABLE_MESSAGE =
  * - If `antiJailedBonus` is true, also requires the jailed team to have an opponent in `games`
  *   and `teamId` must be that opponent. Returns `JAILED_NOT_IN_WEEK_GAMES` if no opponent is
  *   found (data anomaly — jailed team absent from schedule after computation ran).
+ * - Write paths should pass `deriveAntiJailedBonus(...)` — never trust a client-supplied flag alone.
  */
 export function validateJailedLineupAndBonus(input: JailedAndLineupInput): { ok: true } | { ok: false; error: PickDomainError } {
   const { teamId, jailedTeamId, antiJailedBonus, games } = input;

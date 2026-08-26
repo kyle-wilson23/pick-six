@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ANTI_JAILED_UNAVAILABLE_MESSAGE,
+  deriveAntiJailedBonus,
   getOpponentOfJailedInWeek,
   teamPlaysInWeek,
   validateDuplicateTeamAcrossSeason,
@@ -37,6 +38,23 @@ describe("getOpponentOfJailedInWeek", () => {
   });
 });
 
+describe("deriveAntiJailedBonus", () => {
+  it("is true only when teamId is the jailed opponent", () => {
+    expect(deriveAntiJailedBonus("a1", "h1", GAMES)).toBe(true);
+    expect(deriveAntiJailedBonus("h2", "a2", GAMES)).toBe(true);
+  });
+
+  it("is false for any other team in the week", () => {
+    expect(deriveAntiJailedBonus("h1", "h1", GAMES)).toBe(false);
+    expect(deriveAntiJailedBonus("a2", "h1", GAMES)).toBe(false);
+    expect(deriveAntiJailedBonus("h2", "h1", GAMES)).toBe(false);
+  });
+
+  it("is false when jailed team has no game", () => {
+    expect(deriveAntiJailedBonus("a1", JAILED_TEAM_ON_BYE_ID, GAMES)).toBe(false);
+  });
+});
+
 describe("validateJailedLineupAndBonus", () => {
   it("rejects a direct jailed pick", () => {
     const r = validateJailedLineupAndBonus({
@@ -68,7 +86,7 @@ describe("validateJailedLineupAndBonus", () => {
     expect(r).toMatchObject({ ok: false, error: { code: "ANTI_JAILED_BONUS_INVALID" } });
   });
 
-  it("allows picking the opponent with antiJailedBonus false (normal 1-pt underdog)", () => {
+  it("still accepts opponent + false (write paths derive true before validate)", () => {
     const r = validateJailedLineupAndBonus({
       teamId: "a1",
       jailedTeamId: "h1",

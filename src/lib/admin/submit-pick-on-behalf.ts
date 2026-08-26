@@ -1,6 +1,10 @@
 import type { Prisma } from "@prisma/client";
 
-import { validateDuplicateTeamAcrossSeason, validateJailedLineupAndBonus } from "@/lib/domain/picks";
+import {
+  deriveAntiJailedBonus,
+  validateDuplicateTeamAcrossSeason,
+  validateJailedLineupAndBonus,
+} from "@/lib/domain/picks";
 import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/league/first-competition-week";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
@@ -41,10 +45,11 @@ export async function submitPickOnBehalf(
     targetMembershipId: string;
     teamId: string;
     nflWeekNumber: number;
-    antiJailedBonus: boolean;
+    /** Ignored — bonus is derived from teamId vs jailed opponent. Kept for call-site compat. */
+    antiJailedBonus?: boolean;
   },
 ): Promise<SubmitPickOnBehalfErr | SubmitPickOnBehalfOk> {
-  const { leagueId, adminMembershipId, targetMembershipId, teamId, nflWeekNumber, antiJailedBonus } = args;
+  const { leagueId, adminMembershipId, targetMembershipId, teamId, nflWeekNumber } = args;
 
   const season = await resolveCurrentSeasonForLeague(tx.season, leagueId);
   if (!season) {
@@ -123,6 +128,8 @@ export async function submitPickOnBehalf(
       kickoffAt: g.kickoffAt,
     });
   }
+
+  const antiJailedBonus = deriveAntiJailedBonus(teamId, jailedTeamId, gamesWithKickoff);
 
   const lineup = validateJailedLineupAndBonus({
     teamId,

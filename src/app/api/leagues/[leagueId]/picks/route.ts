@@ -14,7 +14,11 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
-import { validateDuplicateTeamAcrossSeason, validateJailedLineupAndBonus } from "@/lib/domain/picks";
+import {
+  deriveAntiJailedBonus,
+  validateDuplicateTeamAcrossSeason,
+  validateJailedLineupAndBonus,
+} from "@/lib/domain/picks";
 import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/league/first-competition-week";
 import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
@@ -177,7 +181,8 @@ export async function POST(
     );
   }
 
-  const { teamId, nflWeekNumber, antiJailedBonus } = parsed.data;
+  // Client may send antiJailedBonus; write path re-derives from team + jailed schedule.
+  const { teamId, nflWeekNumber } = parsed.data;
 
   const forbidden = assertCookieSessionMutationOrigin(request);
   if (forbidden) {
@@ -238,7 +243,6 @@ export async function POST(
         leagueMembershipId: membership.id,
         teamId,
         nflWeekNumber,
-        antiJailedBonus,
       });
     });
   } catch (e) {
@@ -300,10 +304,9 @@ async function runPickMutation(
     leagueMembershipId: string;
     teamId: string;
     nflWeekNumber: number;
-    antiJailedBonus: boolean;
   },
 ): Promise<RouteErr | RouteOk> {
-  const { leagueId, leagueMembershipId, teamId, nflWeekNumber, antiJailedBonus } = args;
+  const { leagueId, leagueMembershipId, teamId, nflWeekNumber } = args;
   const now = new Date();
 
   const season = await resolveCurrentSeasonForLeague(tx.season, leagueId);
@@ -380,6 +383,8 @@ async function runPickMutation(
   if (deadlineBlock) {
     return err(deadlineBlock.status, deadlineBlock.code, deadlineBlock.message);
   }
+
+  const antiJailedBonus = deriveAntiJailedBonus(teamId, jailedTeamId, gamesWithKickoff);
 
   const lineup = validateJailedLineupAndBonus({
     teamId,

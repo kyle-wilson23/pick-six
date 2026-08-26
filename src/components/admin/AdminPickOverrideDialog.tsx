@@ -4,13 +4,11 @@ import { useCallback, useState } from "react";
 
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
@@ -58,7 +56,6 @@ export function AdminPickOverrideDialog({
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
     currentPick?.teamId ?? null,
   );
-  const [antiJailed, setAntiJailed] = useState(currentPick?.antiJailedBonus ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,24 +68,21 @@ export function AdminPickOverrideDialog({
     return opp.ok ? opp.opponentTeamId : null;
   })();
 
-  const effectiveAntiJailed = antiJailedOpponentId != null && antiJailed;
-
   const handleTeamSelect = useCallback(
     (teamId: string) => {
       if (priorPickTeamIds.includes(teamId)) return;
       setSelectedTeamId(teamId);
-      if (teamId !== antiJailedOpponentId) {
-        setAntiJailed(false);
-      }
       setError(null);
     },
-    [priorPickTeamIds, antiJailedOpponentId],
+    [priorPickTeamIds],
   );
 
   const handleSubmit = useCallback(async () => {
     if (!selectedTeamId) return;
     setLoading(true);
     setError(null);
+    const antiJailedBonus =
+      antiJailedOpponentId != null && selectedTeamId === antiJailedOpponentId;
     try {
       const res = await fetch(`/api/leagues/${leagueId}/admin/picks`, {
         method: "POST",
@@ -97,7 +91,7 @@ export function AdminPickOverrideDialog({
           targetMembershipId,
           teamId: selectedTeamId,
           nflWeekNumber: weekNumber,
-          antiJailedBonus: effectiveAntiJailed,
+          antiJailedBonus,
         }),
       });
       if (res.ok) {
@@ -115,7 +109,7 @@ export function AdminPickOverrideDialog({
     leagueId,
     targetMembershipId,
     weekNumber,
-    effectiveAntiJailed,
+    antiJailedOpponentId,
     onSuccess,
   ]);
 
@@ -125,6 +119,7 @@ export function AdminPickOverrideDialog({
     const isJailed = team.teamId === jailedTeamId;
     const isPriorPick = priorPickTeamIds.includes(team.teamId);
     const isSelected = selectedTeamId === team.teamId;
+    const isAntiJailedOpponent = team.teamId === antiJailedOpponentId;
 
     return (
       <Stack key={team.teamId} direction="row" spacing={0.5} alignItems="center">
@@ -148,6 +143,19 @@ export function AdminPickOverrideDialog({
               bgcolor: (t) => `${t.palette.warning.main}26`,
               color: (t) => t.palette.warning.main,
               fontWeight: 600,
+            }}
+          />
+        )}
+        {isAntiJailedOpponent && (
+          <Chip
+            label="2 PTS"
+            size="small"
+            aria-label="2-point anti-jailed pick"
+            sx={{
+              cursor: "default",
+              fontWeight: 700,
+              bgcolor: (t) => t.palette.accent.gold,
+              color: (t) => t.palette.getContrastText(t.palette.accent.gold),
             }}
           />
         )}
@@ -191,15 +199,9 @@ export function AdminPickOverrideDialog({
           </Stack>
 
           {selectedTeamId === antiJailedOpponentId && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={antiJailed}
-                  onChange={(e) => setAntiJailed(e.target.checked)}
-                />
-              }
-              label="Anti-jailed bonus (+2 pts)"
-            />
+            <Typography variant="body2" color="text.secondary">
+              Opponent of the jailed team — always a 2-point anti-jailed pick.
+            </Typography>
           )}
 
           {error != null && <Alert severity="error">{error}</Alert>}

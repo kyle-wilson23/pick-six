@@ -157,11 +157,7 @@ export function MatchupCard(props: MatchupCardProps) {
     kickDisplay = "—";
   }
 
-  function handleTeamActivate(
-    teamId: string,
-    state: MatchupSideState,
-    opts: { antiJailedBonus: boolean } = { antiJailedBonus: false },
-  ) {
+  function handleTeamActivate(teamId: string, state: MatchupSideState) {
     if (!interactive || isSubmitting) return;
     if (state === "jailed") {
       onTeamSelect?.(teamId, { kind: "blocked", reason: "JAILED_TEAM_PICK" });
@@ -180,38 +176,18 @@ export function MatchupCard(props: MatchupCardProps) {
       onTeamSelect?.(teamId, { kind: "blocked", reason: "LOCKED" });
       return;
     }
-    onTeamSelect?.(teamId, { kind: "select", antiJailedBonus: opts.antiJailedBonus });
+    const antiJailedBonus =
+      antiJailedOpponentTeamId != null && teamId === antiJailedOpponentTeamId;
+    onTeamSelect?.(teamId, { kind: "select", antiJailedBonus });
   }
 
-  function renderAntiJailedBonusChip(
-    team: { id: string; abbreviation: string; name: string },
-    state: MatchupSideState,
-  ) {
+  /** Read-only status: opponent of jailed is always worth 2 if they win. */
+  function renderAntiJailedBonusChip() {
     return (
       <Chip
         size="small"
         label="2 PTS"
-        onClick={
-          interactive
-            ? (e) => {
-                e.stopPropagation();
-                handleTeamActivate(team.id, state, { antiJailedBonus: true });
-              }
-            : undefined
-        }
-        onKeyDown={
-          interactive
-            ? (e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleTeamActivate(team.id, state, { antiJailedBonus: true });
-                }
-              }
-            : undefined
-        }
-        tabIndex={interactive ? 0 : -1}
-        aria-label={`Pick ${team.name} for 2-point anti-jailed bonus`}
+        aria-label="2-point anti-jailed pick if this matchup's non-jailed team wins"
         sx={{
           flexShrink: 0,
           height: { xs: 28, sm: 32 },
@@ -219,47 +195,21 @@ export function MatchupCard(props: MatchupCardProps) {
           minWidth: 44,
           fontWeight: 700,
           letterSpacing: 0.5,
+          cursor: "default",
           bgcolor: (t) => t.palette.accent.gold,
           color: (t) => t.palette.getContrastText(t.palette.accent.gold),
           "& .MuiChip-label": {
             px: { xs: 1, sm: 1.25 },
             py: 0,
           },
-          "&:hover": {
-            bgcolor: (t) => t.palette.accent.goldDark,
-          },
-          cursor: interactive ? "pointer" : "default",
         }}
       />
     );
   }
 
-  const antiJailedBonusSide = useMemo(() => {
-    if (isLocked || isSubmitting || antiJailedOpponentTeamId == null) {
-      return null;
-    }
-    if (homeTeam.id === antiJailedOpponentTeamId) {
-      if (homeState === "jailed" || homeState === "alreadyPicked" || homeState === "locked") {
-        return null;
-      }
-      return { team: homeTeam, state: homeState };
-    }
-    if (awayTeam.id === antiJailedOpponentTeamId) {
-      if (awayState === "jailed" || awayState === "alreadyPicked" || awayState === "locked") {
-        return null;
-      }
-      return { team: awayTeam, state: awayState };
-    }
-    return null;
-  }, [
-    antiJailedOpponentTeamId,
-    awayState,
-    awayTeam,
-    homeState,
-    homeTeam,
-    isLocked,
-    isSubmitting,
-  ]);
+  const showAntiJailedBonusChip =
+    antiJailedOpponentTeamId != null &&
+    (homeTeam.id === antiJailedOpponentTeamId || awayTeam.id === antiJailedOpponentTeamId);
 
   function renderTeamSide(args: {
     team: { id: string; abbreviation: string; name: string };
@@ -406,9 +356,7 @@ export function MatchupCard(props: MatchupCardProps) {
             justifyContent="flex-end"
             sx={{ maxWidth: "100%", flexShrink: 0 }}
           >
-            {antiJailedBonusSide
-              ? renderAntiJailedBonusChip(antiJailedBonusSide.team, antiJailedBonusSide.state)
-              : null}
+            {showAntiJailedBonusChip ? renderAntiJailedBonusChip() : null}
             {weather ? (
               shouldShowRetractableWeatherChrome(weather, stadiumRoof) ? (
                 <Tooltip title="Retractable roof — may be open or closed on game day">

@@ -185,9 +185,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            Standings update on <strong>Tuesday</strong> after Monday Night
-            Football is processed. Until that Tuesday update, other
-            participants&apos; picks stay hidden.
+            After the weekly pick deadline, other participants&apos; picks become
+            visible on the Picks page (Opponents tab) so you can follow along
+            during the weekend. Standings and scored results update on{' '}
+            <strong>Tuesday</strong> after Monday Night Football is processed.
           </Typography>
         </section>
       </Stack>

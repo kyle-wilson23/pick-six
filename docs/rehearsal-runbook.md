@@ -94,7 +94,7 @@ When the pointer is on the **last** configured week, status reads *"Simulation c
 | 4 | **Admin** | Click **"Simulate results for Week {n}"** | Finalizes **this league’s** sim games and scores its picks when the sim week is fully final (`POST /api/leagues/[leagueId]/simulation/apply-results`). Success: *"Simulated results for Week {week} — {finalized} games finalized, {scored} picks scored."* |
 | 5 | **Admin** | Click **"Advance to Week {next}"** → confirm dialog | Moves the rehearsal clock forward. Dialog: *"Advance to Week {next}?"* / *"This moves the rehearsal clock from Week X to Week Y. It does not create games or scores — only the week pointer changes."* Click **"Confirm"**. Skip this step on the final week (button disabled). |
 
-After advancing, return to step 1 for the next week. Participants can check **standings** and **pick history** after simulated results — peer picks stay hidden until the Tuesday reveal cycle (Epic 5).
+After advancing, return to step 1 for the next week. Participants can check **standings** and **pick history** after simulated results — Opponents unlock after the week deadline; Results/peer history wait until the week is finalized (Epic 5).
 
 **Admin override (optional during rehearsal):** On `/leagues/{leagueId}/admin`, use the pick-submission tools to submit or change a pick on behalf of a participant, including post-deadline. Overrides appear in the audit log (Epic 4).
 
@@ -208,7 +208,7 @@ This table is a **sign-off aid only** — a rehearsal is not blocked on filling 
 |---------|----------------|--------------|------|------|-------|
 | **Pick submission** | Participant views matchups (odds/spread/weather), submits a pick, sees jailed-team messaging if applicable | Epic 3 | | | |
 | **Reminder emails** | Wed/Thu reminder reaches an outstanding participant; submitted participants excluded | Story 6.3 (rehearsal buttons: Story 8.5) | | | |
-| **Standings / reveal** | After simulated results, standings update and personal history reflects the week; peer picks hidden until reveal | Epic 5 | | | |
+| **Standings / reveal** | After simulated results, standings update and personal history reflects the week; Opponents unlock post-deadline, Results/peer history after finalize | Epic 5 | | | |
 | **Admin override** | Admin submits/changes a pick on behalf of a participant (incl. post-deadline); entry in audit log | Epic 4 | | | |
 | **Weekly email cycle** | Tuesday digest (or suppressed equivalent) reflects correct simulated week and content | Story 8.5 AC1 | | | |
 | **Test league labeling** | Banner and **"Test"** chip appear as expected. In **`send`** mode, also verify **`[TEST]`** email subject; in **`suppress`** mode, verify the admin would-send alert instead (no inbox mail) | Story 8.1 | | | |

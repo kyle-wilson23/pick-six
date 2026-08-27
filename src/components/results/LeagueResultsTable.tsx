@@ -1,5 +1,6 @@
 "use client";
 
+import CheckCircle from "@mui/icons-material/CheckCircle";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -86,11 +87,23 @@ function AntiJailedChip() {
 }
 
 function TeamCell({ entry }: { entry: PeerPickEntry }) {
+  const { teamAbbreviation, teamName } = entry;
+  if (teamAbbreviation == null || teamName == null || teamAbbreviation === "" || teamName === "") {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+        <CheckCircle aria-label="Pick submitted" color="success" fontSize="small" />
+        <Typography variant="body2" color="text.secondary">
+          Submitted
+        </Typography>
+      </Stack>
+    );
+  }
+
   return (
     <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
       <TeamLogo
-        abbreviation={entry.teamAbbreviation}
-        teamName={entry.teamName}
+        abbreviation={teamAbbreviation}
+        teamName={teamName}
         size="sm"
       />
       <Stack spacing={0.25} alignItems="flex-start" sx={{ minWidth: 0 }}>

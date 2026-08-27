@@ -52,7 +52,7 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   let season: Awaited<ReturnType<typeof resolveCurrentSeasonForLeague>>;
   try {
     [payload, overrideData, auditEntries, season] = await Promise.all([
-      buildSubmissionStatus({ leagueId }),
+      buildSubmissionStatus({ leagueId, viewerUserId: session.user.id }),
       buildAdminOverrideData({ leagueId }),
       getAuditLog({ leagueId }),
       resolveCurrentSeasonForLeague(prisma.season, leagueId),

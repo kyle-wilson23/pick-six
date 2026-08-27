@@ -1,3 +1,5 @@
+import type { AdminSubmittedPick } from "@/lib/admin/submitted-pick";
+import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
@@ -8,17 +10,19 @@ import {
 } from "@/lib/nfl/resolve-picks-week";
 import { userDisplayName } from "@/lib/user-display-name";
 
+export type {
+  AdminSubmittedPick,
+  AdminSubmittedPickRedacted,
+  AdminSubmittedPickVisible,
+} from "@/lib/admin/submitted-pick";
+export { isAdminSubmittedPickVisible } from "@/lib/admin/submitted-pick";
+
 export type AdminSubmissionStatusParticipant = {
   membershipId: string;
   displayName: string;
   imageUrl: string | null;
   userId: string;
-  submittedPick: {
-    teamName: string;
-    teamAbbreviation: string;
-    antiJailedBonus: boolean;
-    updatedAt: string;
-  } | null;
+  submittedPick: AdminSubmittedPick | null;
 };
 
 export type AdminSubmissionStatusPayload = {
@@ -39,9 +43,24 @@ type PickRow = {
   team: { name: string; abbreviation: string };
 };
 
+function toSubmittedPick(pick: PickRow, revealTeam: boolean): AdminSubmittedPick {
+  if (revealTeam) {
+    return {
+      teamName: pick.team.name,
+      teamAbbreviation: pick.team.abbreviation,
+      antiJailedBonus: pick.antiJailedBonus,
+      updatedAt: pick.updatedAt.toISOString(),
+    };
+  }
+  return { updatedAt: pick.updatedAt.toISOString() };
+}
+
 export function mergeSubmissionStatusParticipants(
   memberships: MembershipRow[],
   picks: PickRow[],
+  options: { revealTeamIdentity: boolean; viewerUserId?: string } = {
+    revealTeamIdentity: false,
+  },
 ): AdminSubmissionStatusParticipant[] {
   const picksByMembershipId = new Map<string, PickRow>();
   for (const pick of picks) {
@@ -50,19 +69,14 @@ export function mergeSubmissionStatusParticipants(
 
   return memberships.map((membership) => {
     const pick = picksByMembershipId.get(membership.id) ?? null;
+    const revealTeam =
+      options.revealTeamIdentity || membership.user.id === options.viewerUserId;
     return {
       membershipId: membership.id,
       displayName: userDisplayName(membership.user),
       imageUrl: membership.user.image,
       userId: membership.user.id,
-      submittedPick: pick
-        ? {
-            teamName: pick.team.name,
-            teamAbbreviation: pick.team.abbreviation,
-            antiJailedBonus: pick.antiJailedBonus,
-            updatedAt: pick.updatedAt.toISOString(),
-          }
-        : null,
+      submittedPick: pick ? toSubmittedPick(pick, revealTeam) : null,
     };
   });
 }
@@ -84,7 +98,7 @@ function canResolveActiveWeek(args: {
 }
 
 export async function buildSubmissionStatus(
-  args: { leagueId: string },
+  args: { leagueId: string; viewerUserId?: string },
   now: Date = new Date(),
 ): Promise<AdminSubmissionStatusPayload> {
   const { leagueId } = args;
@@ -156,8 +170,17 @@ export async function buildSubmissionStatus(
     }),
   ]);
 
+  const weekGames = minimalGames.filter((g) => g.weekNumber === weekNumber);
+  const pickWindowClosed = isNflWeekPickWindowClosedByDeadline({
+    at: now,
+    games: weekGames,
+  });
+
   return {
     weekNumber,
-    participants: mergeSubmissionStatusParticipants(memberships, picks),
+    participants: mergeSubmissionStatusParticipants(memberships, picks, {
+      revealTeamIdentity: pickWindowClosed,
+      viewerUserId: args.viewerUserId,
+    }),
   };
 }

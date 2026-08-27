@@ -1,3 +1,4 @@
+import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
@@ -31,6 +32,8 @@ export type AdminOverrideData = {
   jailedTeamId: string;
   games: GameTeamPair[];
   allSeasonPicks: ParticipantSeasonPick[];
+  /** False when the active week's window is still open or the deadline is indeterminate. */
+  pickWindowClosed: boolean;
 };
 
 function canResolveActiveWeek(args: {
@@ -125,6 +128,18 @@ export async function buildAdminOverrideData(
     },
   });
 
+  const pickWindowClosedByWeek = new Map<number, boolean>();
+  function isWeekPickWindowClosed(nflWeekNumber: number): boolean {
+    const cached = pickWindowClosedByWeek.get(nflWeekNumber);
+    if (cached !== undefined) return cached;
+    const closed = isNflWeekPickWindowClosedByDeadline({
+      at: now,
+      games: minimalGames.filter((g) => g.weekNumber === nflWeekNumber),
+    });
+    pickWindowClosedByWeek.set(nflWeekNumber, closed);
+    return closed;
+  }
+
   return {
     weekNumber,
     jailedTeamId,
@@ -136,10 +151,13 @@ export async function buildAdminOverrideData(
       awayTeamName: g.awayTeam.name,
       awayTeamAbbreviation: g.awayTeam.abbreviation,
     })),
-    allSeasonPicks: allSeasonPicks.map((p) => ({
-      membershipId: p.leagueMembershipId,
-      nflWeekNumber: p.nflWeekNumber,
-      teamId: p.teamId,
-    })),
+    allSeasonPicks: allSeasonPicks
+      .filter((p) => isWeekPickWindowClosed(p.nflWeekNumber))
+      .map((p) => ({
+        membershipId: p.leagueMembershipId,
+        nflWeekNumber: p.nflWeekNumber,
+        teamId: p.teamId,
+      })),
+    pickWindowClosed: isWeekPickWindowClosed(weekNumber),
   };
 }

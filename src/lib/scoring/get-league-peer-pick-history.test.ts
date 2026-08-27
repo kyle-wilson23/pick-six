@@ -2,6 +2,8 @@ import { LeagueMembershipRole, PickOutcome } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 
+import { computePickDeadlineUtc } from "@/lib/domain/pick-deadline";
+
 import { getLeaguePeerPickHistory } from "./get-league-peer-pick-history";
 
 const LEAGUE_ID = "league-1";
@@ -43,7 +45,7 @@ function makePrisma({
   picks = [],
 }: {
   season?: { id: string } | null;
-  games?: Array<{ weekNumber: number; status: string }>;
+  games?: Array<{ weekNumber: number; status: string; kickoffAt?: Date }>;
   picks?: ReturnType<typeof makePick>[];
 } = {}) {
   return {
@@ -61,7 +63,7 @@ function makePrisma({
           weekNumber: g.weekNumber,
           homeTeamId: "h",
           awayTeamId: "a",
-          kickoffAt: new Date("2026-09-14T17:00:00.000Z"),
+          kickoffAt: g.kickoffAt ?? new Date("2026-09-14T17:00:00.000Z"),
           status: g.status,
           homeScore: null,
           awayScore: null,
@@ -309,5 +311,108 @@ describe("getLeaguePeerPickHistory", () => {
     });
     expect(adminResult.weeks).toHaveLength(1);
     expect(adminResult.weeks[0].isRevealed).toBe(false);
+  });
+
+  it("redacts other members' team identity for admin callers while the window is open", async () => {
+    const kickoff = new Date("2026-09-14T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() - 1);
+    const prisma = makePrisma({
+      games: [{ weekNumber: 5, status: "SCHEDULED", kickoffAt: kickoff }],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-admin",
+          displayName: "Admin",
+          team: { abbreviation: "KC", name: "Kansas City Chiefs" },
+        }),
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-peer",
+          displayName: "Peer",
+          team: { abbreviation: "BUF", name: "Buffalo Bills" },
+          antiJailedBonus: true,
+          outcome: PickOutcome.WIN,
+          pointsEarned: 2,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.ADMIN,
+      callerMembershipId: "mem-admin",
+      now,
+    });
+
+    expect(result.weeks).toHaveLength(1);
+    const byId = Object.fromEntries(result.weeks[0].entries.map((e) => [e.membershipId, e]));
+    expect(byId["mem-admin"]).toMatchObject({
+      teamAbbreviation: "KC",
+      teamName: "Kansas City Chiefs",
+    });
+    expect(byId["mem-peer"]).toMatchObject({
+      teamAbbreviation: null,
+      teamName: null,
+      antiJailedBonus: false,
+      outcome: "PENDING",
+      pointsEarned: null,
+    });
+  });
+
+  it("reveals admin peer teams after the deadline even when the week is not finalized", async () => {
+    const kickoff = new Date("2026-09-14T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() + 1);
+    const prisma = makePrisma({
+      games: [{ weekNumber: 5, status: "SCHEDULED", kickoffAt: kickoff }],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-peer",
+          displayName: "Peer",
+          team: { abbreviation: "BUF", name: "Buffalo Bills" },
+          antiJailedBonus: true,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.ADMIN,
+      callerMembershipId: "mem-admin",
+      now,
+    });
+
+    expect(result.weeks[0]?.entries[0]).toMatchObject({
+      teamAbbreviation: "BUF",
+      teamName: "Buffalo Bills",
+      antiJailedBonus: true,
+    });
+  });
+
+  it("does not include unfinalized weeks for non-admin callers even after the deadline", async () => {
+    const kickoff = new Date("2026-09-14T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() + 1);
+    const prisma = makePrisma({
+      games: [{ weekNumber: 5, status: "SCHEDULED", kickoffAt: kickoff }],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-1",
+          displayName: "Alice",
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+      callerMembershipId: "mem-1",
+      now,
+    });
+
+    expect(result.weeks).toHaveLength(0);
   });
 });

@@ -7,8 +7,9 @@ import Stack from "@mui/material/Stack";
 
 import { AdminPickOverrideDialog } from "@/components/admin/AdminPickOverrideDialog";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
-import type { AdminSubmissionStatusParticipant } from "@/lib/admin/build-submission-status";
 import type { AdminOverrideData } from "@/lib/admin/build-admin-override-data";
+import type { AdminSubmissionStatusParticipant } from "@/lib/admin/build-submission-status";
+import { isAdminSubmittedPickVisible } from "@/lib/admin/submitted-pick";
 
 export type AdminDashboardClientProps = {
   leagueId: string;
@@ -42,28 +43,31 @@ export function AdminDashboardClient({
   }, [router]);
 
   function openOverride(participant: AdminSubmissionStatusParticipant) {
-    const weekPick = overrideData.allSeasonPicks.find(
-      (p) => p.membershipId === participant.membershipId && p.nflWeekNumber === weekNumber,
-    );
-
     let currentPick: OverrideTarget["currentPick"] = null;
-    if (weekPick) {
-      // Prefer submittedPick for team name (same query cycle). If the two parallel data
-      // sources disagree at a week boundary, fall back to the games roster.
-      const teamName =
-        participant.submittedPick?.teamName ??
-        overrideData.games
-          .flatMap((g) => [
-            { id: g.homeTeamId, name: g.homeTeamName },
-            { id: g.awayTeamId, name: g.awayTeamName },
-          ])
-          .find((t) => t.id === weekPick.teamId)?.name ??
-        weekPick.teamId;
-      currentPick = {
-        teamId: weekPick.teamId,
-        teamName,
-        antiJailedBonus: participant.submittedPick?.antiJailedBonus ?? false,
-      };
+    if (overrideData.pickWindowClosed) {
+      const weekPick = overrideData.allSeasonPicks.find(
+        (p) => p.membershipId === participant.membershipId && p.nflWeekNumber === weekNumber,
+      );
+
+      if (weekPick) {
+        const visiblePick = isAdminSubmittedPickVisible(participant.submittedPick)
+          ? participant.submittedPick
+          : null;
+        const teamName =
+          visiblePick?.teamName ??
+          overrideData.games
+            .flatMap((g) => [
+              { id: g.homeTeamId, name: g.homeTeamName },
+              { id: g.awayTeamId, name: g.awayTeamName },
+            ])
+            .find((t) => t.id === weekPick.teamId)?.name ??
+          weekPick.teamId;
+        currentPick = {
+          teamId: weekPick.teamId,
+          teamName,
+          antiJailedBonus: visiblePick?.antiJailedBonus ?? false,
+        };
+      }
     }
 
     setOverrideTarget({
@@ -107,6 +111,7 @@ export function AdminDashboardClient({
           targetMembershipId={overrideTarget.membershipId}
           displayName={overrideTarget.displayName}
           currentPick={overrideTarget.currentPick}
+          pickWindowClosed={overrideData.pickWindowClosed}
           weekGames={overrideData.games}
           jailedTeamId={overrideData.jailedTeamId}
           priorPickTeamIds={priorPickTeamIds}

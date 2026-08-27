@@ -26,6 +26,7 @@ export type AdminPickOverrideDialogProps = {
   targetMembershipId: string;
   displayName: string;
   currentPick: { teamId: string; teamName: string; antiJailedBonus: boolean } | null;
+  pickWindowClosed: boolean;
   weekGames: GameTeamPair[];
   jailedTeamId: string;
   priorPickTeamIds: string[];
@@ -46,6 +47,7 @@ export function AdminPickOverrideDialog({
   targetMembershipId,
   displayName,
   currentPick,
+  pickWindowClosed,
   weekGames,
   jailedTeamId,
   priorPickTeamIds,
@@ -54,7 +56,7 @@ export function AdminPickOverrideDialog({
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
-    currentPick?.teamId ?? null,
+    pickWindowClosed ? (currentPick?.teamId ?? null) : null,
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,11 +176,13 @@ export function AdminPickOverrideDialog({
       <DialogTitle>Override pick for {displayName}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary">
-            {currentPick
-              ? `Current pick: ${currentPick.teamName}${currentPick.antiJailedBonus ? " (+2 anti-jailed)" : ""}`
-              : "No current pick yet"}
-          </Typography>
+          {pickWindowClosed ? (
+            <Typography variant="body2" color="text.secondary">
+              {currentPick
+                ? `Current pick: ${currentPick.teamName}${currentPick.antiJailedBonus ? " (+2 anti-jailed)" : ""}`
+                : "No current pick yet"}
+            </Typography>
+          ) : null}
 
           <Stack spacing={1}>
             <Typography variant="subtitle2">Select team</Typography>

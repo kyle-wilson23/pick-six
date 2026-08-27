@@ -1,5 +1,6 @@
 "use client";
 
+import CheckCircle from "@mui/icons-material/CheckCircle";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
@@ -7,15 +8,15 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
 import { UserIdentityCell } from "@/components/user/UserIdentityCell";
+import {
+  isAdminSubmittedPickVisible,
+  type AdminSubmittedPick,
+} from "@/lib/admin/submitted-pick";
 
 export type AdminSubmissionCardProps = {
   displayName: string;
   imageUrl?: string | null;
-  submittedPick: {
-    teamName: string;
-    antiJailedBonus: boolean;
-    updatedAt: string;
-  } | null;
+  submittedPick: AdminSubmittedPick | null;
   onOverride?: () => void;
 };
 
@@ -26,11 +27,13 @@ function formatSubmittedTimestamp(isoUtc: string): string {
   return isNaN(d.getTime()) ? isoUtc : d.toLocaleString();
 }
 
-function buildDetailLine(
-  submittedPick: AdminSubmissionCardProps["submittedPick"],
-): string {
+function buildDetailLine(submittedPick: AdminSubmittedPick | null): string {
   if (!submittedPick) {
     return "No pick submitted yet";
+  }
+
+  if (!isAdminSubmittedPickVisible(submittedPick)) {
+    return `Submitted ${formatSubmittedTimestamp(submittedPick.updatedAt)}`;
   }
 
   const teamLabel = submittedPick.antiJailedBonus
@@ -47,6 +50,7 @@ export function AdminSubmissionCard({
   onOverride,
 }: AdminSubmissionCardProps) {
   const isSubmitted = submittedPick != null;
+  const teamVisible = isAdminSubmittedPickVisible(submittedPick);
   const statusLabel = isSubmitted ? "SUBMITTED" : "PENDING";
   const paletteKey = isSubmitted ? "success" : "warning";
 
@@ -68,16 +72,20 @@ export function AdminSubmissionCard({
               typographyVariant="body1"
             />
           </Stack>
-          <Chip
-            label={statusLabel}
-            size="small"
-            sx={{
-              flexShrink: 0,
-              bgcolor: (t) => `${t.palette[paletteKey].main}26`,
-              color: (t) => t.palette[paletteKey].main,
-              fontWeight: 600,
-            }}
-          />
+          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
+            {isSubmitted && !teamVisible ? (
+              <CheckCircle aria-label="Pick submitted" color="success" fontSize="small" />
+            ) : null}
+            <Chip
+              label={statusLabel}
+              size="small"
+              sx={{
+                bgcolor: (t) => `${t.palette[paletteKey].main}26`,
+                color: (t) => t.palette[paletteKey].main,
+                fontWeight: 600,
+              }}
+            />
+          </Stack>
         </Stack>
         <Typography variant="body2" color="text.secondary">
           {buildDetailLine(submittedPick)}

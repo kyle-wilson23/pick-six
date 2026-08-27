@@ -687,7 +687,7 @@ All league participants are technically comfortable individuals capable of using
 
 - Participant picks remain hidden from other participants until Tuesday standings reveal
 - No real-time pick submission counts or leaderboard during the week
-- Admin can view all picks at any time through admin dashboard
+- Admin can see who submitted anytime; which team only after that week’s pick deadline
 - Complete transparency after Tuesday reveal (all picks visible to all participants)
 
 **Future Stretch Goal:**
@@ -1095,7 +1095,7 @@ Long-term vision for broader platform availability:
 - **FR46:** Participants can view their personal pick history (all weeks, teams selected, outcomes)
 - **FR47:** Participants can view all participants' picks after Tuesday standings reveal (full transparency)
 - **FR48:** Participant picks remain hidden from other participants until Tuesday standings reveal
-- **FR49:** League admins can view all participant picks at any time (real-time visibility)
+- **FR49:** League admins can see who submitted anytime; which team only after that week’s pick deadline
 
 ### Jailed Team & Rule Automation
 

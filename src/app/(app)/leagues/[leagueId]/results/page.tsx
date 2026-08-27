@@ -33,6 +33,7 @@ export default async function LeagueResultsPage({ params }: PageProps) {
     leagueId,
     nflSeasonYear,
     callerRole: membership.role,
+    callerMembershipId: membership.id,
   });
 
   return (

@@ -31,7 +31,7 @@ Pin versions in `package.json` at implementation time; do not invent version num
 
 3. **League rules and deadlines are server-authoritative.** Compare deadlines using **UTC** in storage and **America/New_York** (or documented league TZ) for business rules — never the user’s local machine timezone on the server. `POST /api/leagues/[leagueId]/picks` is deadline-enforced on the server (Epic 3, Story 3.5).
 
-4. **Pick visibility (FR48–FR49).** Participants must not see other participants’ picks until the Tuesday standings reveal; **admins** can see all. Enforce in **queries and server-rendered data**, not only in the UI.
+4. **Pick visibility (FR48–FR49).** Participants must not see other participants’ picks until the Tuesday standings reveal; **admins** see who submitted anytime and which team only after that week’s pick deadline. Enforce in **queries and server-rendered data**, not only in the UI.
 
 5. **Admin overrides and jailed/random tie-breaks are audited.** Mutations that change picks or scores log to the audit trail (see PRD).
 

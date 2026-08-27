@@ -2,7 +2,9 @@ import "server-only";
 
 import { PickOutcome, type PrismaClient } from "@prisma/client";
 
+import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { teamNameForExport } from "@/lib/export/team-name-for-export";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
 
 const REGULAR_SEASON_WEEKS = 18;
@@ -56,9 +58,11 @@ export async function buildLeagueExportData(
     leagueId: string;
     nflSeasonYear: number;
     exportedAtIso?: string;
+    now?: Date;
   },
 ): Promise<LeagueExportData> {
   const exportedAtIso = opts.exportedAtIso ?? new Date().toISOString();
+  const now = opts.now ?? new Date();
   const emptyJailedByWeek = Array.from({ length: REGULAR_SEASON_WEEKS }, (_, index) => ({
     weekNumber: index + 1,
     exportTeamLabel: "",
@@ -113,7 +117,7 @@ export async function buildLeagueExportData(
         },
       });
 
-  const [memberships, picks, jailedRows] = await Promise.all([
+  const [memberships, picks, jailedRows, games] = await Promise.all([
     prisma.leagueMembership.findMany({
       where: { leagueId: opts.leagueId },
       select: {
@@ -134,7 +138,24 @@ export async function buildLeagueExportData(
       },
     }),
     jailedRowsPromise,
+    resolveGamesForLeague(prisma, {
+      leagueId: opts.leagueId,
+      nflSeasonYear: opts.nflSeasonYear,
+      isTestLeague,
+    }),
   ]);
+
+  const pickWindowClosedByWeek = new Map<number, boolean>();
+  for (const game of games) {
+    if (pickWindowClosedByWeek.has(game.weekNumber)) continue;
+    pickWindowClosedByWeek.set(
+      game.weekNumber,
+      isNflWeekPickWindowClosedByDeadline({
+        at: now,
+        games: games.filter((g) => g.weekNumber === game.weekNumber),
+      }),
+    );
+  }
 
   const picksByMembership = new Map<string, typeof picks>();
   for (const pick of picks) {
@@ -151,9 +172,12 @@ export async function buildLeagueExportData(
     >();
 
     for (const pick of memberPicks) {
+      const windowClosed = pickWindowClosedByWeek.get(pick.nflWeekNumber) === true;
       picksByWeek.set(pick.nflWeekNumber, {
-        exportTeamLabel: teamNameForExport(pick.team.abbreviation, pick.team.name),
-        antiJailedBonus: pick.antiJailedBonus,
+        exportTeamLabel: windowClosed
+          ? teamNameForExport(pick.team.abbreviation, pick.team.name)
+          : "Submitted",
+        antiJailedBonus: windowClosed ? pick.antiJailedBonus : false,
         outcome: mapPickOutcome(pick.outcome),
         pointsEarned: pick.outcome == null ? null : (pick.pointsEarned ?? 0),
       });

@@ -45,7 +45,10 @@ export async function GET(
   }
 
   try {
-    const payload = await buildSubmissionStatus({ leagueId });
+    const payload = await buildSubmissionStatus({
+      leagueId,
+      viewerUserId: session.user.id,
+    });
     return NextResponse.json(payload);
   } catch (e) {
     console.error("GET /api/leagues/[leagueId]/admin/submission-status failed", e);

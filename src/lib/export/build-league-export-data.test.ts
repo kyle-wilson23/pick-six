@@ -2,6 +2,8 @@ import { PickOutcome } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 
+import { computePickDeadlineUtc } from "@/lib/domain/pick-deadline";
+
 import { buildLeagueExportData } from "./build-league-export-data";
 
 const LEAGUE_ID = "league-1";
@@ -34,6 +36,7 @@ function makePrisma({
   memberships = [],
   picks = [],
   jailedRows = [],
+  games = [],
 }: {
   season?: { id: string } | null;
   memberships?: Array<{ id: string; email: string }>;
@@ -42,6 +45,7 @@ function makePrisma({
     weekNumber: number;
     jailedTeam: { abbreviation: string; name: string };
   }>;
+  games?: Array<{ weekNumber: number; kickoffAt: Date }>;
 } = {}) {
   return {
     season: {
@@ -65,6 +69,25 @@ function makePrisma({
       findMany: vi.fn().mockResolvedValue(jailedRows),
     },
     leagueWeekJailedTeam: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    nflGame: {
+      findMany: vi.fn().mockResolvedValue(
+        games.map((g) => ({
+          id: `g-${g.weekNumber}`,
+          nflSeasonYear: SEASON_YEAR,
+          weekNumber: g.weekNumber,
+          homeTeamId: "h",
+          awayTeamId: "a",
+          kickoffAt: g.kickoffAt,
+          status: "SCHEDULED",
+          homeScore: null,
+          awayScore: null,
+          finalizedAt: null,
+        })),
+      ),
+    },
+    leagueSimGame: {
       findMany: vi.fn().mockResolvedValue([]),
     },
   } as unknown as PrismaClient;
@@ -132,7 +155,9 @@ describe("buildLeagueExportData", () => {
     expect(result.jailedByWeek).toEqual([]);
   });
 
-  it("maps picks with exportTeamLabel from teamNameForExport", async () => {
+  it("maps picks with exportTeamLabel from teamNameForExport after the window closes", async () => {
+    const kickoff = new Date("2026-09-20T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() + 1);
     const prisma = makePrisma({
       memberships: [{ id: "mem-a", email: "alice@example.com" }],
       picks: [
@@ -142,12 +167,14 @@ describe("buildLeagueExportData", () => {
           team: { abbreviation: "TB", name: "Tampa Bay Buccaneers" },
         }),
       ],
+      games: [{ weekNumber: 3, kickoffAt: kickoff }],
     });
 
     const result = await buildLeagueExportData(prisma, {
       leagueId: LEAGUE_ID,
       nflSeasonYear: SEASON_YEAR,
       exportedAtIso: EXPORTED_AT,
+      now,
     });
 
     expect(result.participants[0]?.picksByWeek.get(3)).toMatchObject({
@@ -155,6 +182,35 @@ describe("buildLeagueExportData", () => {
       outcome: "PENDING",
       pointsEarned: null,
     });
+  });
+
+  it("writes Submitted instead of a team label while the week window is open", async () => {
+    const kickoff = new Date("2026-09-20T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() - 1);
+    const prisma = makePrisma({
+      memberships: [
+        { id: "mem-a", email: "alice@example.com" },
+        { id: "mem-b", email: "bob@example.com" },
+      ],
+      picks: [
+        makePick({
+          leagueMembershipId: "mem-a",
+          nflWeekNumber: 3,
+          team: { abbreviation: "TB", name: "Tampa Bay Buccaneers" },
+        }),
+      ],
+      games: [{ weekNumber: 3, kickoffAt: kickoff }],
+    });
+
+    const result = await buildLeagueExportData(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      exportedAtIso: EXPORTED_AT,
+      now,
+    });
+
+    expect(result.participants[0]?.picksByWeek.get(3)?.exportTeamLabel).toBe("Submitted");
+    expect(result.participants[1]?.picksByWeek.get(3)).toBeUndefined();
   });
 
   it("sums scored picks only and excludes pending picks from total", async () => {

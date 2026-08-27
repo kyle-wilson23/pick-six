@@ -1405,7 +1405,8 @@ MUI provides comprehensive coverage for standard UI patterns, themed with Pick S
 **Anatomy:**
 - Participant name (left)
 - Status chip (right): "SUBMITTED" (green) or "PENDING" (amber)
-- Detail line: "Picked: {Team} - Submitted {timestamp}" or "No pick submitted yet"
+- When submitted and the team is hidden (pre-deadline): CheckCircle (`aria-label="Pick submitted"`) next to the chip
+- Detail line: "Picked: {Team} - Submitted {timestamp}" (post-deadline), "Submitted {timestamp}" / "Pick submitted" without a team (pre-deadline), or "No pick submitted yet"
 
 **Visual Treatment:**
 - Background: `background.paper`
@@ -1416,7 +1417,8 @@ MUI provides comprehensive coverage for standard UI patterns, themed with Pick S
 
 | State | Status Chip | Detail Text |
 |-------|------------|-------------|
-| Submitted | Green chip (`success.main` at 15%, green text) | Team name + submission timestamp |
+| Submitted (pre-deadline) | Green chip (`success.main` at 15%, green text) + CheckCircle | Timestamp only (no team) |
+| Submitted (post-deadline) | Green chip (`success.main` at 15%, green text) | Team name + submission timestamp |
 | Pending | Amber chip (`warning.main` at 15%, amber text) | "No pick submitted yet" |
 
 **Responsive Behavior:**

@@ -1,5 +1,6 @@
 import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
+import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import { isWeekFullyFinalized } from "@/lib/scoring/finalize-nfl-week";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
@@ -9,8 +10,10 @@ export type PeerPickEntry = {
   membershipId: string;
   displayName: string;
   imageUrl: string | null;
-  teamAbbreviation: string;
-  teamName: string;
+  /** Null when an admin views an open-window week (team identity redacted). */
+  teamAbbreviation: string | null;
+  /** Null when an admin views an open-window week (team identity redacted). */
+  teamName: string | null;
   antiJailedBonus: boolean;
   outcome: PickHistoryOutcome;
   pointsEarned: number | null;
@@ -34,8 +37,11 @@ export async function getLeaguePeerPickHistory(
     leagueId: string;
     nflSeasonYear: number;
     callerRole: LeagueMembershipRole;
+    callerMembershipId?: string;
+    now?: Date;
   },
 ): Promise<LeaguePeerPickHistory> {
+  const now = opts.now ?? new Date();
   const [season, league] = await Promise.all([
     prisma.season.findUnique({
       where: {
@@ -61,7 +67,7 @@ export async function getLeaguePeerPickHistory(
 
   const isAdmin = opts.callerRole === LeagueMembershipRole.ADMIN;
 
-  const gamesByWeek = new Map<number, Array<{ status: (typeof allGames)[number]["status"] }>>();
+  const gamesByWeek = new Map<number, typeof allGames>();
   for (const g of allGames) {
     const list = gamesByWeek.get(g.weekNumber) ?? [];
     list.push(g);
@@ -96,16 +102,24 @@ export async function getLeaguePeerPickHistory(
     const isRevealed = revealedWeeks.has(wk);
     if (!isAdmin && !isRevealed) continue;
 
+    const weekGames = gamesByWeek.get(wk) ?? [];
+    const pickWindowClosed = isNflWeekPickWindowClosedByDeadline({
+      at: now,
+      games: weekGames,
+    });
+    const isOwnPick = p.leagueMembership.id === opts.callerMembershipId;
+    const redactTeam = isAdmin && !pickWindowClosed && !isOwnPick;
+
     const entries = weekMap.get(wk) ?? [];
     entries.push({
       membershipId: p.leagueMembership.id,
       displayName: userDisplayName(p.leagueMembership.user),
       imageUrl: p.leagueMembership.user.image,
-      teamAbbreviation: p.team.abbreviation,
-      teamName: p.team.name,
-      antiJailedBonus: p.antiJailedBonus,
-      outcome: p.outcome ?? "PENDING",
-      pointsEarned: p.outcome == null ? null : (p.pointsEarned ?? 0),
+      teamAbbreviation: redactTeam ? null : p.team.abbreviation,
+      teamName: redactTeam ? null : p.team.name,
+      antiJailedBonus: redactTeam ? false : p.antiJailedBonus,
+      outcome: redactTeam ? "PENDING" : (p.outcome ?? "PENDING"),
+      pointsEarned: redactTeam || p.outcome == null ? null : (p.pointsEarned ?? 0),
     });
     weekMap.set(wk, entries);
   }

@@ -30,7 +30,7 @@ The PRD defines **61 functional requirements (FR1–FR61)** grouped into eight c
 - **Pick submission & management (FR14–FR27):** Weekly matchups with moneyline and spread, season pick history, jailed-team and duplicate-team UX, single pick per week, anti-jailed 2-point path, unlimited changes before deadline, countdown, server-side deadline enforcement, real-time validation.
 - **Admin operations & overrides (FR28–FR34):** Submission status dashboard, submit/modify on behalf of users (including post-deadline), same validation rules, audit trail and visibility, jailed-team verification with tie-breaker transparency.
 - **Email notifications (FR35–FR40):** Tuesday 6:00 PM league email, Wed/Thu reminders for missing picks, deep links, personalization by pick status.
-- **Scoring, results & leaderboard (FR41–FR49):** Post-game processing, 1- vs 2-point scoring, Tuesday updates after MNF, standings and history, pick privacy until Tuesday reveal, admin always-on visibility.
+- **Scoring, results & leaderboard (FR41–FR49):** Post-game processing, 1- vs 2-point scoring, Tuesday updates after MNF, standings and history, pick privacy until Tuesday reveal, admins see who submitted anytime and which team after that week’s pick deadline.
 - **Jailed team & rules (FR50–FR54):** Automated jailed identification, odds then spread then seeded random tie-break, no duplicate teams, anti-jailed bonus.
 - **Data export & season (FR55–FR60):** Admin CSV export of full league snapshot, 18-week season, weekly orchestration. (**FR61** is grouped under league management above.)
 
@@ -343,7 +343,7 @@ Interactive prompts typically cover TypeScript, ESLint, Tailwind CSS, `src/` dir
 - Use **camelCase** JSON and **snake_case** DB columns via Prisma field mapping if needed (`@map`).
 - Put **secret keys and cron endpoints** only in server code or env—never `NEXT_PUBLIC_` except truly public values.
 - Use **Stack** (MUI) for flex layouts unless a single `Box` is clearly sufficient—per project UI convention.
-- Enforce **pick visibility** in server queries (participants see own pick anytime; others only after Tuesday reveal per FR48–FR49).
+- Enforce **pick visibility** in server queries (participants see own pick anytime; others only after Tuesday reveal per FR48; admins see who submitted anytime and which team after that week’s pick deadline per FR49).
 
 **Pattern enforcement:**
 

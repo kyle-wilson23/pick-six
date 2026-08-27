@@ -142,6 +142,7 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
         weekNumber={payload.weekNumber}
         leagueId={leagueId}
         matchups={payload.matchups}
+        teamsOnBye={payload.teamsOnBye}
         pickDeadlineUtc={payload.pickDeadlineUtc}
         jailedTeamId={payload.jailedTeamId}
         isPreview={payload.isPreview}

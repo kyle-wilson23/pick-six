@@ -26,11 +26,13 @@ import {
 import type {
   CurrentPickJson,
   PicksWeekMatchupJson,
+  PicksWeekTeamJson,
   SeasonPickedTeamJson,
 } from "@/lib/picks/picks-week-view-types";
 
 import { MatchupCard, type SelectionEvent } from "./MatchupCard";
 import { PickStatusBanner } from "./PickStatusBanner";
+import { TeamsOnByeSection } from "./TeamsOnByeSection";
 
 type ApiError = { error?: { code?: string; message?: string } };
 
@@ -50,6 +52,8 @@ export type WeekMatchupListProps = {
   weekNumber: number;
   leagueId: string;
   matchups: PicksWeekMatchupJson[];
+  /** Clubs not in this week's games; empty hides the bye section. */
+  teamsOnBye: PicksWeekTeamJson[];
   pickDeadlineUtc?: string | null;
   jailedTeamId?: string | null;
   /** When true, render non-interactive (e.g. preview / off-season). */
@@ -65,6 +69,7 @@ export function WeekMatchupList({
   weekNumber,
   leagueId,
   matchups,
+  teamsOnBye,
   pickDeadlineUtc = null,
   jailedTeamId = null,
   isPreview = false,
@@ -270,6 +275,7 @@ export function WeekMatchupList({
           : 0,
       }}
     >
+      {matchups.length > 0 ? <TeamsOnByeSection teams={teamsOnBye} /> : null}
       <Typography variant="h6" component="h2">
         Week {weekLabel} Matchups
       </Typography>

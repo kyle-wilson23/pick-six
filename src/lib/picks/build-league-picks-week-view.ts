@@ -28,6 +28,7 @@ import {
 import type { MinimalNflGameForPicksWeek, MinimalSeasonForPicksWeek } from "@/lib/nfl/resolve-picks-week";
 import { mapCurrentPick, mapSeasonPickedTeams } from "@/lib/picks/map-current-pick";
 import type { PicksWeekMatchupJson, PicksWeekViewPayload } from "@/lib/picks/picks-week-view-types";
+import { teamsOnBye } from "@/lib/picks/teams-on-bye";
 
 type Err = { ok: false; status: number; code: string; message: string };
 type Ok = { ok: true; payload: PicksWeekViewPayload };
@@ -199,7 +200,7 @@ export async function buildLeaguePicksWeekView(
 
   // Story 3.7 — caller's own pick context. Always filtered by `leagueMembershipId`; never returns
   // other participants' pick data (NFR17 / project-context #4).
-  const [currentPickRow, otherWeekPickRows] = await Promise.all([
+  const [currentPickRow, otherWeekPickRows, catalogTeams] = await Promise.all([
     db.pick.findUnique({
       where: {
         leagueMembershipId_seasonId_nflWeekNumber: {
@@ -219,15 +220,20 @@ export async function buildLeaguePicksWeekView(
       select: { teamId: true, nflWeekNumber: true },
       orderBy: { nflWeekNumber: "asc" },
     }),
+    db.team.findMany({
+      select: { id: true, abbreviation: true, name: true },
+    }),
   ]);
 
   const firstKickoff = getFirstKickoffUtc(gamesForWeek);
   const pickDeadlineUtc =
     firstKickoff != null ? computePickDeadlineUtc(firstKickoff).toISOString() : null;
 
-  const matchups: PicksWeekMatchupJson[] = gamesForWeek
-    .filter((g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null)
-    .map((g) => {
+  const gamesWithKickoff = gamesForWeek.filter(
+    (g): g is typeof g & { kickoffAt: Date } => g.kickoffAt != null,
+  );
+
+  const matchups: PicksWeekMatchupJson[] = gamesWithKickoff.map((g) => {
     const line = oddsLines.get(g.id);
     const homeAbbrev = g.homeTeam.abbreviation.toUpperCase();
     const stadiumRoof = getStadiumRoof(g.homeTeam.abbreviation);
@@ -260,6 +266,7 @@ export async function buildLeaguePicksWeekView(
       pickDeadlineUtc,
       jailedTeamId: jailedTeamId,
       matchups,
+      teamsOnBye: teamsOnBye(catalogTeams, gamesWithKickoff),
       currentPick: mapCurrentPick(currentPickRow),
       seasonPickedTeams: mapSeasonPickedTeams(otherWeekPickRows),
     },

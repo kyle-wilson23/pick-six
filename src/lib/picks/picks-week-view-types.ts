@@ -35,12 +35,20 @@ export type SeasonPickedTeamJson = {
   weekNumber: number;
 };
 
+export type PicksWeekTeamJson = {
+  id: string;
+  abbreviation: string;
+  name: string;
+};
+
 export type PicksWeekViewPayload = {
   weekNumber: number;
   isPreview: boolean;
   pickDeadlineUtc: string | null;
   jailedTeamId: string | null;
   matchups: PicksWeekMatchupJson[];
+  /** Clubs not in this week's resolved games; empty when the section should be hidden. */
+  teamsOnBye: PicksWeekTeamJson[];
   /** Story 3.7 — caller's saved pick for the **current** target week, or `null` if none. */
   currentPick: CurrentPickJson | null;
   /** Story 3.7 — caller's saved picks across **other** weeks of the same season (own data only). */

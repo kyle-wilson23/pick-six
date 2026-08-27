@@ -2,7 +2,7 @@ import "server-only";
 
 import { PickOutcome, type PrismaClient } from "@prisma/client";
 
-import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
+import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { teamNameForExport } from "@/lib/export/team-name-for-export";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
@@ -76,7 +76,7 @@ export async function buildLeagueExportData(
           nflSeasonYear: opts.nflSeasonYear,
         },
       },
-      select: { id: true },
+      select: { id: true, simulatedCurrentWeek: true },
     }),
     prisma.league.findUnique({
       where: { id: opts.leagueId },
@@ -150,9 +150,12 @@ export async function buildLeagueExportData(
     if (pickWindowClosedByWeek.has(game.weekNumber)) continue;
     pickWindowClosedByWeek.set(
       game.weekNumber,
-      isNflWeekPickWindowClosedByDeadline({
+      isLeagueWeekPickWindowClosed({
         at: now,
+        weekNumber: game.weekNumber,
         games: games.filter((g) => g.weekNumber === game.weekNumber),
+        isTestLeague,
+        simulatedCurrentWeek: season.simulatedCurrentWeek,
       }),
     );
   }

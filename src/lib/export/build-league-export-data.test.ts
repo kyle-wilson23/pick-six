@@ -33,12 +33,14 @@ function makePick(overrides: {
 
 function makePrisma({
   season = { id: SEASON_ID },
+  isTestLeague = false,
   memberships = [],
   picks = [],
   jailedRows = [],
   games = [],
 }: {
-  season?: { id: string } | null;
+  season?: { id: string; simulatedCurrentWeek?: number | null } | null;
+  isTestLeague?: boolean;
   memberships?: Array<{ id: string; email: string }>;
   picks?: ReturnType<typeof makePick>[];
   jailedRows?: Array<{
@@ -47,12 +49,24 @@ function makePrisma({
   }>;
   games?: Array<{ weekNumber: number; kickoffAt: Date }>;
 } = {}) {
+  const mappedGames = games.map((g) => ({
+    id: `g-${g.weekNumber}`,
+    nflSeasonYear: SEASON_YEAR,
+    weekNumber: g.weekNumber,
+    homeTeamId: "h",
+    awayTeamId: "a",
+    kickoffAt: g.kickoffAt,
+    status: "SCHEDULED",
+    homeScore: null,
+    awayScore: null,
+    finalizedAt: null,
+  }));
   return {
     season: {
       findUnique: vi.fn().mockResolvedValue(season),
     },
     league: {
-      findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }),
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague }),
     },
     leagueMembership: {
       findMany: vi.fn().mockResolvedValue(
@@ -66,29 +80,16 @@ function makePrisma({
       findMany: vi.fn().mockResolvedValue(picks),
     },
     nflWeekJailedTeam: {
-      findMany: vi.fn().mockResolvedValue(jailedRows),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? [] : jailedRows),
     },
     leagueWeekJailedTeam: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? jailedRows : []),
     },
     nflGame: {
-      findMany: vi.fn().mockResolvedValue(
-        games.map((g) => ({
-          id: `g-${g.weekNumber}`,
-          nflSeasonYear: SEASON_YEAR,
-          weekNumber: g.weekNumber,
-          homeTeamId: "h",
-          awayTeamId: "a",
-          kickoffAt: g.kickoffAt,
-          status: "SCHEDULED",
-          homeScore: null,
-          awayScore: null,
-          finalizedAt: null,
-        })),
-      ),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? [] : mappedGames),
     },
     leagueSimGame: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? mappedGames : []),
     },
   } as unknown as PrismaClient;
 }
@@ -241,5 +242,39 @@ describe("buildLeagueExportData", () => {
     });
 
     expect(result.participants[0]?.totalPoints).toBe(1);
+  });
+
+  it("test league: prior weeks export the team even when copied kickoffs are still in the future", async () => {
+    const prisma = makePrisma({
+      isTestLeague: true,
+      season: { id: SEASON_ID, simulatedCurrentWeek: 2 },
+      memberships: [{ id: "mem-a", email: "alice@example.com" }],
+      picks: [
+        makePick({
+          leagueMembershipId: "mem-a",
+          nflWeekNumber: 1,
+          team: { abbreviation: "TB", name: "Tampa Bay Buccaneers" },
+        }),
+        makePick({
+          leagueMembershipId: "mem-a",
+          nflWeekNumber: 2,
+          team: { abbreviation: "KC", name: "Kansas City Chiefs" },
+        }),
+      ],
+      games: [
+        { weekNumber: 1, kickoffAt: new Date("2026-09-11T20:00:00.000Z") },
+        { weekNumber: 2, kickoffAt: new Date("2026-09-18T20:00:00.000Z") },
+      ],
+    });
+
+    const result = await buildLeagueExportData(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      exportedAtIso: EXPORTED_AT,
+      now: new Date("2026-08-26T16:00:00.000Z"),
+    });
+
+    expect(result.participants[0]?.picksByWeek.get(1)?.exportTeamLabel).toBe("Bucs");
+    expect(result.participants[0]?.picksByWeek.get(2)?.exportTeamLabel).toBe("Submitted");
   });
 });

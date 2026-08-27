@@ -1,5 +1,5 @@
 import type { AdminSubmittedPick } from "@/lib/admin/submitted-pick";
-import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
+import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
@@ -171,9 +171,12 @@ export async function buildSubmissionStatus(
   ]);
 
   const weekGames = minimalGames.filter((g) => g.weekNumber === weekNumber);
-  const pickWindowClosed = isNflWeekPickWindowClosedByDeadline({
+  const pickWindowClosed = isLeagueWeekPickWindowClosed({
     at: now,
+    weekNumber,
     games: weekGames,
+    isTestLeague,
+    simulatedCurrentWeek: season.simulatedCurrentWeek,
   });
 
   return {

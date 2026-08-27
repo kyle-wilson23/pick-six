@@ -90,3 +90,26 @@ export function isNflWeekPickWindowClosedByDeadline(args: {
   const deadline = computePickDeadlineUtc(first);
   return args.at.getTime() > deadline.getTime();
 }
+
+/**
+ * Admin/export reveal gate. Live leagues use the kickoff deadline.
+ * Test leagues copy real NFL `kickoffAt` onto sim games, so wall-clock is often
+ * still before those deadlines after the sim pointer has moved on — treat any
+ * week before `simulatedCurrentWeek` as closed.
+ */
+export function isLeagueWeekPickWindowClosed(args: {
+  at: Date;
+  weekNumber: number;
+  games: { kickoffAt: Date | null }[];
+  isTestLeague: boolean;
+  simulatedCurrentWeek?: number | null;
+}): boolean {
+  if (
+    args.isTestLeague &&
+    args.simulatedCurrentWeek != null &&
+    args.weekNumber < args.simulatedCurrentWeek
+  ) {
+    return true;
+  }
+  return isNflWeekPickWindowClosedByDeadline({ at: args.at, games: args.games });
+}

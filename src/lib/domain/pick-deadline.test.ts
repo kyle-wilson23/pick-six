@@ -9,6 +9,7 @@ import {
   computePickDeadlineUtc,
   getFirstKickoffUtc,
   isNflWeekPickWindowClosedByDeadline,
+  isLeagueWeekPickWindowClosed,
   lockByFirstGameUtc,
   lockByThursdayDefaultUtc,
 } from "./pick-deadline";
@@ -99,5 +100,47 @@ describe("isNflWeekPickWindowClosedByDeadline", () => {
     expect(isNflWeekPickWindowClosedByDeadline({ at: new Date(deadline.getTime() + 1), games })).toBe(
       true,
     );
+  });
+});
+
+describe("isLeagueWeekPickWindowClosed", () => {
+  const futureKickoff = new Date("2026-09-11T20:00:00.000Z");
+  const nowBeforeKickoff = new Date("2026-08-26T16:00:00.000Z");
+  const games = [{ kickoffAt: futureKickoff }];
+
+  it("keeps a test-league current week locked when kickoffs are still in the future", () => {
+    expect(
+      isLeagueWeekPickWindowClosed({
+        at: nowBeforeKickoff,
+        weekNumber: 2,
+        games,
+        isTestLeague: true,
+        simulatedCurrentWeek: 2,
+      }),
+    ).toBe(false);
+  });
+
+  it("closes prior test-league weeks once the sim pointer has advanced", () => {
+    expect(
+      isLeagueWeekPickWindowClosed({
+        at: nowBeforeKickoff,
+        weekNumber: 1,
+        games,
+        isTestLeague: true,
+        simulatedCurrentWeek: 2,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not use the sim pointer for live leagues", () => {
+    expect(
+      isLeagueWeekPickWindowClosed({
+        at: nowBeforeKickoff,
+        weekNumber: 1,
+        games,
+        isTestLeague: false,
+        simulatedCurrentWeek: 2,
+      }),
+    ).toBe(false);
   });
 });

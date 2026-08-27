@@ -1,6 +1,6 @@
 import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
-import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
+import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import { isWeekFullyFinalized } from "@/lib/scoring/finalize-nfl-week";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
@@ -50,7 +50,7 @@ export async function getLeaguePeerPickHistory(
           nflSeasonYear: opts.nflSeasonYear,
         },
       },
-      select: { id: true },
+      select: { id: true, simulatedCurrentWeek: true },
     }),
     prisma.league.findUnique({
       where: { id: opts.leagueId },
@@ -103,9 +103,12 @@ export async function getLeaguePeerPickHistory(
     if (!isAdmin && !isRevealed) continue;
 
     const weekGames = gamesByWeek.get(wk) ?? [];
-    const pickWindowClosed = isNflWeekPickWindowClosedByDeadline({
+    const pickWindowClosed = isLeagueWeekPickWindowClosed({
       at: now,
+      weekNumber: wk,
       games: weekGames,
+      isTestLeague: league?.isTestLeague ?? false,
+      simulatedCurrentWeek: season.simulatedCurrentWeek,
     });
     const isOwnPick = p.leagueMembership.id === opts.callerMembershipId;
     const redactTeam = isAdmin && !pickWindowClosed && !isOwnPick;

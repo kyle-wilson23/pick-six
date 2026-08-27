@@ -41,38 +41,39 @@ function makePick(overrides: {
 
 function makePrisma({
   season = { id: SEASON_ID },
+  isTestLeague = false,
   games = [],
   picks = [],
 }: {
-  season?: { id: string } | null;
+  season?: { id: string; simulatedCurrentWeek?: number | null } | null;
+  isTestLeague?: boolean;
   games?: Array<{ weekNumber: number; status: string; kickoffAt?: Date }>;
   picks?: ReturnType<typeof makePick>[];
 } = {}) {
+  const mappedGames = games.map((g) => ({
+    id: `g-${g.weekNumber}`,
+    nflSeasonYear: SEASON_YEAR,
+    weekNumber: g.weekNumber,
+    homeTeamId: "h",
+    awayTeamId: "a",
+    kickoffAt: g.kickoffAt ?? new Date("2026-09-14T17:00:00.000Z"),
+    status: g.status,
+    homeScore: null,
+    awayScore: null,
+    finalizedAt: null,
+  }));
   return {
     season: {
       findUnique: vi.fn().mockResolvedValue(season),
     },
     league: {
-      findUnique: vi.fn().mockResolvedValue({ isTestLeague: false }),
+      findUnique: vi.fn().mockResolvedValue({ isTestLeague }),
     },
     nflGame: {
-      findMany: vi.fn().mockResolvedValue(
-        games.map((g) => ({
-          id: `g-${g.weekNumber}`,
-          nflSeasonYear: SEASON_YEAR,
-          weekNumber: g.weekNumber,
-          homeTeamId: "h",
-          awayTeamId: "a",
-          kickoffAt: g.kickoffAt ?? new Date("2026-09-14T17:00:00.000Z"),
-          status: g.status,
-          homeScore: null,
-          awayScore: null,
-          finalizedAt: null,
-        })),
-      ),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? [] : mappedGames),
     },
     leagueSimGame: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockResolvedValue(isTestLeague ? mappedGames : []),
     },
     pick: {
       findMany: vi.fn().mockResolvedValue(picks),
@@ -414,5 +415,55 @@ describe("getLeaguePeerPickHistory", () => {
     });
 
     expect(result.weeks).toHaveLength(0);
+  });
+
+  it("reveals prior test-league weeks to admins after sim advance even when kickoffs are still in the future", async () => {
+    const futureKickoff = new Date("2026-09-11T20:00:00.000Z");
+    const now = new Date("2026-08-26T16:00:00.000Z");
+    const prisma = makePrisma({
+      isTestLeague: true,
+      season: { id: SEASON_ID, simulatedCurrentWeek: 2 },
+      games: [
+        { weekNumber: 1, status: "FINAL", kickoffAt: futureKickoff },
+        { weekNumber: 2, status: "SCHEDULED", kickoffAt: new Date("2026-09-18T20:00:00.000Z") },
+      ],
+      picks: [
+        makePick({
+          nflWeekNumber: 1,
+          membershipId: "mem-peer",
+          displayName: "Peer",
+          team: { abbreviation: "BUF", name: "Buffalo Bills" },
+          outcome: PickOutcome.WIN,
+          pointsEarned: 1,
+        }),
+        makePick({
+          nflWeekNumber: 2,
+          membershipId: "mem-peer",
+          displayName: "Peer",
+          team: { abbreviation: "KC", name: "Kansas City Chiefs" },
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.ADMIN,
+      callerMembershipId: "mem-admin",
+      now,
+    });
+
+    const byWeek = Object.fromEntries(result.weeks.map((w) => [w.weekNumber, w]));
+    expect(byWeek[1]?.entries[0]).toMatchObject({
+      teamAbbreviation: "BUF",
+      teamName: "Buffalo Bills",
+      outcome: "WIN",
+      pointsEarned: 1,
+    });
+    expect(byWeek[2]?.entries[0]).toMatchObject({
+      teamAbbreviation: null,
+      teamName: null,
+      outcome: "PENDING",
+    });
   });
 });

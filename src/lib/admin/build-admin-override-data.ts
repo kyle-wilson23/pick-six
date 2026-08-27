@@ -1,4 +1,4 @@
-import { isNflWeekPickWindowClosedByDeadline } from "@/lib/domain/pick-deadline";
+import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { prisma as prismaSingleton } from "@/lib/db";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
@@ -132,9 +132,12 @@ export async function buildAdminOverrideData(
   function isWeekPickWindowClosed(nflWeekNumber: number): boolean {
     const cached = pickWindowClosedByWeek.get(nflWeekNumber);
     if (cached !== undefined) return cached;
-    const closed = isNflWeekPickWindowClosedByDeadline({
+    const closed = isLeagueWeekPickWindowClosed({
       at: now,
+      weekNumber: nflWeekNumber,
       games: minimalGames.filter((g) => g.weekNumber === nflWeekNumber),
+      isTestLeague,
+      simulatedCurrentWeek: season.simulatedCurrentWeek,
     });
     pickWindowClosedByWeek.set(nflWeekNumber, closed);
     return closed;

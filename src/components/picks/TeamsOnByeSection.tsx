@@ -27,17 +27,26 @@ export function TeamsOnByeSection({ teams }: TeamsOnByeSectionProps) {
       spacing={1.5}
       role="region"
       aria-labelledby={headingId}
+      sx={{ pb: 2 }}
     >
       <Typography id={headingId} variant="h6" component="h2">
         Teams on Bye
       </Typography>
       <Stack
         component="ul"
-        direction="row"
-        flexWrap="wrap"
         useFlexGap
         spacing={1.5}
-        sx={{ listStyle: "none", m: 0, p: 0 }}
+        sx={{
+          display: "grid",
+          // Two columns on small screens so long names wrap instead of overflowing.
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr) minmax(0, 1fr)",
+            md: "repeat(3, minmax(0, 1fr))",
+          },
+          listStyle: "none",
+          m: 0,
+          p: 0,
+        }}
       >
         {teams.map((team) => (
           <Stack
@@ -46,13 +55,16 @@ export function TeamsOnByeSection({ teams }: TeamsOnByeSectionProps) {
             direction="row"
             spacing={1}
             alignItems="center"
+            sx={{ minWidth: 0 }}
           >
             <TeamLogo
               abbreviation={team.abbreviation}
               teamName={team.name}
               size="sm"
             />
-            <Typography variant="body2">{team.name}</Typography>
+            <Typography variant="body2" sx={{ minWidth: 0 }}>
+              {team.name}
+            </Typography>
           </Stack>
         ))}
       </Stack>

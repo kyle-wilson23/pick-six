@@ -128,6 +128,7 @@ export async function buildAdminOverrideData(
     },
   });
 
+  const simulatedCurrentWeek = season.simulatedCurrentWeek;
   const pickWindowClosedByWeek = new Map<number, boolean>();
   function isWeekPickWindowClosed(nflWeekNumber: number): boolean {
     const cached = pickWindowClosedByWeek.get(nflWeekNumber);
@@ -137,7 +138,7 @@ export async function buildAdminOverrideData(
       weekNumber: nflWeekNumber,
       games: minimalGames.filter((g) => g.weekNumber === nflWeekNumber),
       isTestLeague,
-      simulatedCurrentWeek: season.simulatedCurrentWeek,
+      simulatedCurrentWeek,
     });
     pickWindowClosedByWeek.set(nflWeekNumber, closed);
     return closed;

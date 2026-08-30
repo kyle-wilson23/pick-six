@@ -3,6 +3,7 @@
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import IconButton from "@mui/material/IconButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
@@ -19,11 +20,13 @@ import { UserAvatar } from "@/components/user/UserAvatar";
 type UserNavMenuProps = {
   userDisplayName: string;
   userImageUrl?: string | null;
+  onReportProblem: () => void;
 };
 
 export function UserNavMenu({
   userDisplayName,
   userImageUrl = null,
+  onReportProblem,
 }: UserNavMenuProps) {
   const menuId = useId();
   const { data: session, status } = useSession();
@@ -118,6 +121,17 @@ export function UserNavMenu({
             <PersonOutlineIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onReportProblem();
+          }}
+        >
+          <ListItemIcon>
+            <ReportProblemOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Report a problem</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>

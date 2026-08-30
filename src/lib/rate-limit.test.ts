@@ -4,6 +4,7 @@ import {
   checkLeagueDeleteRateLimit,
   checkPasswordResetRateLimit,
   checkRegisterRateLimit,
+  checkReportsRateLimit,
   checkSignInRateLimit,
 } from "@/lib/rate-limit";
 
@@ -56,6 +57,24 @@ describe("checkRegisterRateLimit", () => {
     const key = `shared-register-${Math.random()}`;
     for (let i = 0; i < 6; i++) {
       expect(checkRegisterRateLimit(key)).toBe(true);
+    }
+    expect(checkSignInRateLimit(key)).toBe(true);
+  });
+});
+
+describe("checkReportsRateLimit", () => {
+  it("allows 10 requests per client key then blocks within the window", () => {
+    const key = `reports-${Math.random()}`;
+    for (let i = 0; i < 10; i++) {
+      expect(checkReportsRateLimit(key)).toBe(true);
+    }
+    expect(checkReportsRateLimit(key)).toBe(false);
+  });
+
+  it("does not share bucket with sign-in namespace", () => {
+    const key = `shared-reports-${Math.random()}`;
+    for (let i = 0; i < 10; i++) {
+      expect(checkReportsRateLimit(key)).toBe(true);
     }
     expect(checkSignInRateLimit(key)).toBe(true);
   });

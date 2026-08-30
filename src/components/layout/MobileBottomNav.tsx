@@ -10,6 +10,7 @@ import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SportsFootballIcon from "@mui/icons-material/SportsFootball";
 import Box from "@mui/material/Box";
@@ -49,6 +50,7 @@ type MobileBottomNavProps = {
   leagueId: string | null;
   leagueActiveTab: string | false;
   isAdmin: boolean;
+  onReportProblem: () => void;
 };
 
 export function MobileBottomNav({
@@ -56,6 +58,7 @@ export function MobileBottomNav({
   leagueId,
   leagueActiveTab,
   isAdmin,
+  onReportProblem,
 }: MobileBottomNavProps) {
   const theme = useTheme();
   const pathname = usePathname();
@@ -199,6 +202,17 @@ export function MobileBottomNav({
             <PersonOutlineIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            onReportProblem();
+          }}
+        >
+          <ListItemIcon>
+            <ReportProblemOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Report a problem</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>

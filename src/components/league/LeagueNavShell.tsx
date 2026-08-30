@@ -21,9 +21,11 @@ import { useTheme } from "@mui/material/styles";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactElement, ReactNode } from "react";
+import { useState } from "react";
 
 import { SkipLink } from "@/components/a11y/SkipLink";
 import { AppBrandLogo } from "@/components/brand/AppBrandLogo";
+import { ReportProblemDialog } from "@/components/feedback/ReportProblemDialog";
 import {
   useAppNavLeague,
   useClearAppNavLeagueWhenOutsideLeagueRoute,
@@ -32,6 +34,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { NavigationLoadingIndicator } from "@/components/layout/NavigationLoadingIndicator";
 import { ScrollToTopOnNavigate } from "@/components/layout/ScrollToTopOnNavigate";
 import { UserNavMenu } from "@/components/layout/UserNavMenu";
+import { VisitTrailTracker } from "@/components/layout/VisitTrailTracker";
 import { TestLeagueChip } from "@/components/league/TestLeagueChip";
 import {
   buildLeagueTabHref,
@@ -117,6 +120,7 @@ export function LeagueNavShell({
   const renderedTabKeys = new Set(["home", ...leagueTabs.map((tab) => tab.key)]);
   const tabsValue =
     typeof activeTab === "string" && renderedTabKeys.has(activeTab) ? activeTab : false;
+  const [reportOpen, setReportOpen] = useState(false);
 
   const homeTab = {
     key: "home",
@@ -206,6 +210,7 @@ export function LeagueNavShell({
             <UserNavMenu
               userDisplayName={userDisplayName}
               userImageUrl={userImageUrl}
+              onReportProblem={() => setReportOpen(true)}
             />
           </Toolbar>
         </AppBar>
@@ -258,8 +263,11 @@ export function LeagueNavShell({
           leagueId={leagueId}
           leagueActiveTab={leagueActiveTab}
           isAdmin={isAdmin}
+          onReportProblem={() => setReportOpen(true)}
         />
       </Portal>
+      <VisitTrailTracker />
+      <ReportProblemDialog open={reportOpen} onClose={() => setReportOpen(false)} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
   checkLeagueDeleteRateLimit,
   checkPasswordResetRateLimit,
   checkRegisterRateLimit,
+  checkReportsRateLimit,
   checkSignInRateLimit,
 } from "@/lib/rate-limit";
 
@@ -50,6 +51,7 @@ const LEAGUE_PICKS_POST = /^\/api\/leagues\/[^/]+\/picks\/?$/;
 /** `DELETE /api/leagues/[leagueId]` only — not `/api/leagues/x/invitations` or other subresources. */
 const LEAGUE_SINGLE_DELETE = /^\/api\/leagues\/[^/]+\/?$/;
 const PROFILE_AVATAR = /^\/api\/profile\/avatar\/?$/;
+const REPORTS_POST = /^\/api\/reports\/?$/;
 
 function shouldRateLimitPost(pathname: string): boolean {
   if (RATE_LIMITED_POST_PATHS.has(pathname)) {
@@ -104,6 +106,15 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  if (request.method === "POST" && REPORTS_POST.test(pathname)) {
+    if (!checkReportsRateLimit(rateLimitClientKey(request))) {
+      return NextResponse.json(
+        { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+        { status: 429 },
+      );
+    }
+  }
+
   if (request.method === "DELETE" && LEAGUE_SINGLE_DELETE.test(pathname)) {
     if (!checkLeagueDeleteRateLimit(rateLimitClientKey(request))) {
       return NextResponse.json(
@@ -128,6 +139,8 @@ export const config = {
     "/api/leagues/:path*",
     "/api/profile/avatar",
     "/api/profile/avatar/",
+    "/api/reports",
+    "/api/reports/",
     "/home",
     "/home/:path*",
     "/dashboard",

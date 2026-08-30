@@ -33,6 +33,9 @@ Set in Vercel → **Settings → Environment Variables → Production**. Vercel 
 | `RESEND_WEBHOOK_SECRET` | Webhook signature verification | Resend → Webhooks |
 | `CRON_SECRET` | Cron route auth (`Authorization: Bearer …`) | `openssl rand -hex 32` — **no trailing newlines** |
 | `ODDS_API_KEY` | NFL schedule sync, results sync, odds snapshots | [The Odds API](https://the-odds-api.com/) |
+| `GITHUB_TOKEN` | Create user-report GitHub issues (`issues:write`) | GitHub → Settings → Developer settings → PAT |
+| `GITHUB_REPORTS_REPO` | `owner/repo` for report issues (public is acceptable) | Existing reports repo |
+| `REPORTS_OPERATOR_EMAIL` | Kyle’s inbox when GitHub is down (fallback mail) | Your operator email |
 
 If an older deploy still has `API_SPORTS_KEY` / `API_SPORTS_HOST` in Vercel, remove them — the app no longer reads those variables.
 

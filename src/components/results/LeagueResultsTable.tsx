@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
@@ -24,6 +25,13 @@ type LeagueResultsTableProps = {
 };
 
 const tabularNums = { fontVariantNumeric: "tabular-nums" } as const;
+
+const ellipsisCellSx = {
+  maxWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} as const;
 
 const resultMeta = {
   WIN: { label: "WIN", key: "success" as const },
@@ -76,6 +84,7 @@ function AntiJailedChip() {
       sx={{
         fontWeight: 700,
         letterSpacing: 0.5,
+        flexShrink: 0,
         bgcolor: (t) => t.palette.accent.gold,
         color: (t) => t.palette.getContrastText(t.palette.accent.gold),
         "&:hover": {
@@ -86,13 +95,31 @@ function AntiJailedChip() {
   );
 }
 
+function hasTeamIdentity(entry: PeerPickEntry): boolean {
+  return (
+    entry.teamAbbreviation != null &&
+    entry.teamName != null &&
+    entry.teamAbbreviation !== "" &&
+    entry.teamName !== ""
+  );
+}
+
+function teamCellTitle(entry: PeerPickEntry): string | undefined {
+  if (!hasTeamIdentity(entry)) return undefined;
+  const { teamAbbreviation, teamName } = entry;
+  if (teamAbbreviation && teamName && teamAbbreviation !== teamName) {
+    return `${teamAbbreviation} ${teamName}`;
+  }
+  return teamName ?? teamAbbreviation ?? undefined;
+}
+
 function TeamCell({ entry }: { entry: PeerPickEntry }) {
   const { teamAbbreviation, teamName } = entry;
-  if (teamAbbreviation == null || teamName == null || teamAbbreviation === "" || teamName === "") {
+  if (!hasTeamIdentity(entry)) {
     return (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
         <CheckCircle aria-label="Pick submitted" color="success" fontSize="small" />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" noWrap>
           Submitted
         </Typography>
       </Stack>
@@ -106,14 +133,19 @@ function TeamCell({ entry }: { entry: PeerPickEntry }) {
         teamName={teamName}
         size="sm"
       />
-      <Stack spacing={0.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-        <Stack direction="row" spacing={0.75} alignItems="center">
+      <Stack spacing={0.25} alignItems="flex-start" sx={{ minWidth: 0, overflow: "hidden" }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0, maxWidth: "100%" }}>
           <Typography variant="body2" fontWeight={600} noWrap>
             {entry.teamAbbreviation}
           </Typography>
           {entry.antiJailedBonus ? <AntiJailedChip /> : null}
         </Stack>
-        <Typography variant="body2" color="text.secondary" noWrap>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          noWrap
+          sx={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
           {entry.teamName}
         </Typography>
       </Stack>
@@ -143,65 +175,73 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
             ) : null}
           </Stack>
 
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: "100%" }}>Participant</TableCell>
-                <TableCell>Team</TableCell>
-                <TableCell>Result</TableCell>
-                <TableCell align="right" sx={tabularNums}>
-                  Pts
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {week.entries.map((entry) => {
-                const isCurrentUser = entry.membershipId === currentMembershipId;
+          <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
+            <Table
+              size="small"
+              aria-label={`League results week ${week.weekNumber}`}
+              sx={{ tableLayout: "fixed", width: "100%" }}
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>Participant</TableCell>
+                  <TableCell sx={{ width: "38%" }}>Team</TableCell>
+                  <TableCell sx={{ width: 96, minWidth: 96, px: 1, whiteSpace: "nowrap" }}>
+                    Result
+                  </TableCell>
+                  <TableCell align="right" sx={{ width: 44, minWidth: 44, px: 1, ...tabularNums }}>
+                    Pts
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {week.entries.map((entry) => {
+                  const isCurrentUser = entry.membershipId === currentMembershipId;
 
-                return (
-                  <TableRow
-                    key={entry.membershipId}
-                    sx={
-                      isCurrentUser
-                        ? { bgcolor: (t) => `${t.palette.primary.main}14` }
-                        : undefined
-                    }
-                  >
-                    <TableCell>
-                      <UserIdentityCell
-                        displayName={entry.displayName}
-                        imageUrl={entry.imageUrl}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TeamCell entry={entry} />
-                    </TableCell>
-                    <TableCell>
-                      <ResultCell outcome={entry.outcome} />
-                    </TableCell>
-                    <TableCell align="right">
-                      {entry.pointsEarned == null ? (
-                        <Typography variant="body2" color="text.secondary" sx={tabularNums}>
-                          —
-                        </Typography>
-                      ) : (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            ...tabularNums,
-                            color: "primary.main",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {entry.pointsEarned}
-                        </Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow
+                      key={entry.membershipId}
+                      sx={
+                        isCurrentUser
+                          ? { bgcolor: (t) => `${t.palette.primary.main}14` }
+                          : undefined
+                      }
+                    >
+                      <TableCell title={entry.displayName} sx={ellipsisCellSx}>
+                        <UserIdentityCell
+                          displayName={entry.displayName}
+                          imageUrl={entry.imageUrl}
+                        />
+                      </TableCell>
+                      <TableCell title={teamCellTitle(entry)} sx={ellipsisCellSx}>
+                        <TeamCell entry={entry} />
+                      </TableCell>
+                      <TableCell sx={{ width: 96, minWidth: 96, px: 1, whiteSpace: "nowrap" }}>
+                        <ResultCell outcome={entry.outcome} />
+                      </TableCell>
+                      <TableCell align="right" sx={{ width: 44, minWidth: 44, px: 1 }}>
+                        {entry.pointsEarned == null ? (
+                          <Typography variant="body2" color="text.secondary" sx={tabularNums}>
+                            —
+                          </Typography>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              ...tabularNums,
+                              color: "primary.main",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {entry.pointsEarned}
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Stack>
       ))}
     </Stack>

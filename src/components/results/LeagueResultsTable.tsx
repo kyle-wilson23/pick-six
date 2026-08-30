@@ -95,7 +95,12 @@ function AntiJailedChip() {
   );
 }
 
-function hasTeamIdentity(entry: PeerPickEntry): boolean {
+type RevealedTeamEntry = PeerPickEntry & {
+  teamAbbreviation: string;
+  teamName: string;
+};
+
+function hasTeamIdentity(entry: PeerPickEntry): entry is RevealedTeamEntry {
   return (
     entry.teamAbbreviation != null &&
     entry.teamName != null &&
@@ -107,14 +112,13 @@ function hasTeamIdentity(entry: PeerPickEntry): boolean {
 function teamCellTitle(entry: PeerPickEntry): string | undefined {
   if (!hasTeamIdentity(entry)) return undefined;
   const { teamAbbreviation, teamName } = entry;
-  if (teamAbbreviation && teamName && teamAbbreviation !== teamName) {
+  if (teamAbbreviation !== teamName) {
     return `${teamAbbreviation} ${teamName}`;
   }
-  return teamName ?? teamAbbreviation ?? undefined;
+  return teamName;
 }
 
 function TeamCell({ entry }: { entry: PeerPickEntry }) {
-  const { teamAbbreviation, teamName } = entry;
   if (!hasTeamIdentity(entry)) {
     return (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
@@ -125,6 +129,8 @@ function TeamCell({ entry }: { entry: PeerPickEntry }) {
       </Stack>
     );
   }
+
+  const { teamAbbreviation, teamName } = entry;
 
   return (
     <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>

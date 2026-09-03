@@ -15,6 +15,7 @@
     "db:studio": "node scripts/prisma-env.cjs studio",
     "db:seed": "node prisma/seed.cjs",
     "db:seed:teams": "node scripts/seed-nfl-teams-only.cjs",
+    "db:clear-stale-jailed": "node scripts/clear-stale-global-jailed.cjs",
     "postinstall": "node scripts/prisma-env.cjs generate"
   },
   "prisma": {

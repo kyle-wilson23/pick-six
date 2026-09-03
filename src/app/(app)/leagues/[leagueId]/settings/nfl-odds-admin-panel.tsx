@@ -110,6 +110,51 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
     }
   }
 
+  async function recomputeJailed() {
+    setLoading(true);
+    setSnapshotMessage(null);
+    try {
+      const y = Number.parseInt(year, 10);
+      const w = Number.parseInt(week, 10);
+      const res = await fetch("/api/admin/nfl/week-jailed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nflSeasonYear: y, weekNumber: w }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" && data !== null && "error" in data
+            ? (data as ApiErr).error?.message ?? "Jailed recompute failed"
+            : "Jailed recompute failed";
+        setSnapshotMessage(msg);
+        return;
+      }
+      const team =
+        typeof data === "object" &&
+        data !== null &&
+        "jailedTeam" in data &&
+        typeof (data as { jailedTeam: unknown }).jailedTeam === "object" &&
+        (data as { jailedTeam: unknown }).jailedTeam !== null
+          ? (data as { jailedTeam: { name?: string; abbreviation?: string } }).jailedTeam
+          : null;
+      const resolvedBy =
+        typeof data === "object" && data !== null && "resolvedBy" in data
+          ? String((data as { resolvedBy: unknown }).resolvedBy)
+          : null;
+      const label =
+        team?.name && team.abbreviation
+          ? `${team.name} (${team.abbreviation})`
+          : team?.name ?? "unknown team";
+      setSnapshotMessage(
+        `Jailed team recomputed: ${label}${resolvedBy ? ` by ${resolvedBy}` : ""}.`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function syncScheduleFromOdds() {
     setLoading(true);
     setSnapshotMessage(null);
@@ -213,7 +258,10 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
         NFL schedule, results, and odds lines are global (same for every league).{" "}
         <strong>Sync schedule (Odds)</strong> loads the full regular season from The Odds API events feed.{" "}
         <strong>Sync results (Odds)</strong> finalizes recently completed games (provider lookback max{" "}
-        <strong>3 days</strong> — run soon after the week ends). Odds lines come from snapshot or manual save.
+        <strong>3 days</strong> — run soon after the week ends). Odds lines come from snapshot or manual
+        save. <strong>Recompute jailed</strong> overwrites the global jailed team for that week (every
+        real league) from the latest snapshot lines — not the live picks-page overlay. Run a snapshot
+        first if lines are missing or stale. Recompute is blocked after the pick deadline.
         Your league&apos;s first competition week
         {firstCompetitionWeek !== null ? (
           <>
@@ -251,6 +299,9 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
         </Button>
         <Button variant="contained" onClick={() => void runSnapshot()} disabled={loading}>
           Run snapshot (API)
+        </Button>
+        <Button variant="outlined" onClick={() => void recomputeJailed()} disabled={loading}>
+          Recompute jailed
         </Button>
       </Stack>
       {snapshotMessage ? (

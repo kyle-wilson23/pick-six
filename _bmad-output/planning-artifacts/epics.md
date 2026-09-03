@@ -47,7 +47,8 @@ FR22: Participants can see confirmation of their submitted pick including team n
 FR23: Participants can see clear countdown to weekly pick deadline
 FR24: Participants receive real-time validation preventing selection of previously picked teams
 FR25: Participants receive real-time validation preventing direct selection of jailed team (unless picking against)
-FR26: The system enforces pick deadline (Thursday ~8:10 PM EST or 5 minutes before first game, whichever earlier)
+FR26: The system enforces a pick deadline of 5 minutes before the first scheduled kickoff of that NFL week; not tied to any weekday (2026 Weeks 1 and 12 open Wednesday, Week 18 opens Sunday)
+FR26a: The system opens the pick window at Tuesday 00:00 ET of the week's game week — except the league's first competition week, which opens 7 days before its first kickoff — and only once the league is marked ready for the season
 FR27: Participants cannot submit or modify picks after the weekly deadline has passed
 FR28: League admins can view real-time pick submission status for all participants (submitted vs. not submitted)
 FR29: League admins can submit picks on behalf of any participant at any time
@@ -58,8 +59,8 @@ FR33: League admins can view audit trail of all admin override actions for trans
 FR34: League admins can verify weekly jailed team calculation and see tie-breaker logic applied if needed
 FR35: The system sends automated Tuesday 6:00 PM reminder emails to all league participants
 FR36: Tuesday reminder emails include current standings, jailed team identification, and pick submission link
-FR37: The system sends mid-week reminder emails (Wednesday evening) to participants who haven't submitted picks
-FR38: The system sends final deadline reminder emails (Thursday, 1 hour before deadline) to participants who haven't submitted picks
+FR37: The system sends a mid-week reminder email to participants who haven't submitted picks, anchored ~48h before that week's computed deadline
+FR38: The system sends a final reminder email to participants who haven't submitted picks, within the last 12 hours before that week's computed deadline; never weekday-anchored, never after lock
 FR39: All reminder emails include direct authentication links to pick submission interface
 FR40: Email content is personalized based on participant status (pick submitted vs. outstanding)
 FR41: The system automatically processes game results after games complete
@@ -565,6 +566,10 @@ So that lock times are fair and precise (**FR26**, **FR27**, **NFR24**).
 **When** current time is past deadline (5 minutes before first game, Eastern)
 **Then** API rejects new pick or change (**FR27**)
 **And** no early lockout before defined instant (**NFR24** false positives)
+**And** the deadline is **exactly `firstKickoff − 5 minutes`** with **no weekday anchor** — the Thursday 8:10 PM ET rule is removed entirely (**FR26**)
+**And** weeks opening on a **Wednesday** (2026 Weeks 1 and 12) or with **no Thursday game at all** (2026 Week 18) lock relative to their own first game; the prior rule locked them 6 days, 6 days, and 2.7 days early respectively — all **NFR24** early-lockout violations (see `sprint-change-proposal-2026-09-02.md`)
+**And** the 15 Thursday-opener weeks compute **byte-identical** deadlines to the prior rule (Thu 20:10 ET), so the change is provably scoped to the three broken weeks
+**And** the invariant `windowOpen < deadline < firstKickoff` holds for **every** week of the season (**FR26a**)
 
 ---
 
@@ -582,6 +587,10 @@ So that I can decide without leaving the app (**FR14**, **FR15**, UX weather).
 **And** weather/home team displays when API available; fails soft if quota exceeded
 **And** UI meets responsive parity (UX)
 **And** **Off-season / before the league’s pick window:** signed-in users can still open a **Week 1 preview** (or equivalent route) that **fetches and displays** current **Week 1** moneyline, spread, and **weather** for each matchup—same integrations as in-season—so APIs can be smoke-tested **before September**; if pick submission is not yet allowed, the UI clearly indicates **preview / not pickable yet** (or hides pick actions) while still showing live data
+**And** the week renders as **read-only preview** until the **FR26a** window-open instant: Tuesday 00:00 ET of that week’s game week, or `firstKickoff − 7 days` for the league’s **first** competition week
+**And** preview is evaluated **per viewed week**, so a future week stays preview even after the season has started (regression: after the first kickoff every week became interactive and submits failed with `JAILED_NOT_COMPUTED`)
+**And** picks remain locked regardless of the open instant until an admin has marked the league **ready for the season** (`preSeasonInitializedAt`, Story 2.3)
+**And** the preview boundary must **not** be the first kickoff — the deadline always precedes kickoff, so a kickoff-gated open can never be reachable (see `sprint-change-proposal-2026-09-02.md`)
 
 ---
 
@@ -866,8 +875,14 @@ So that I do not miss the week (**FR37**, **FR38**, **FR40**).
 **Acceptance Criteria:**
 
 **Given** participants without a pick for the open week
-**When** Wednesday evening and 1 hour before deadline jobs run
+**When** the reminder ticks run
 **Then** only outstanding users receive reminders (**FR37**, **FR38**, **FR40**)
+**And** reminder slots are **deadline-anchored for every week**, not weekday-anchored: slot 1 fires on the first tick at or after `deadline − 48h`, slot 2 on the first tick at or after `deadline − 12h`
+**And** the anchor is the **deadline**, not the kickoff: on a Sunday-first week `firstKickoff − 6h` resolves to Sunday morning, and fixed Wed/Thu windows fall **after** Week 12’s Wed 19:55 ET lock — under the old cadence 2026 Weeks 12 and 18 would have sent **zero** reminders
+**And** no digest or reminder is ever sent when its evaluated send instant is **after** that week’s computed deadline (applies to **all** weeks, including the Tuesday digest)
+**And** gating lives in a pure, unit-tested `shouldSendWeeklyReminder` helper rather than inline in the cron route (send when target passed, deadline not passed, and slot not yet sent — idempotent across repeated ticks via the existing `*ReminderSentAt` columns, reinterpreted as slot 1 / slot 2)
+**And** the schedule uses **two distinct daily crons** — tick A `0 11 * * *` (07:00 EDT / 06:00 EST) and tick B `0 20 * * *` (16:00 EDT / 15:00 EST) — which is legal on the confirmed **Vercel Hobby** plan because it limits interval *per job*, not job count (100/project; sub-daily expressions fail at deploy; ±59 min precision; UTC only)
+**And** all 18 weeks receive **both** slots with at least ~4 hours of margin before lock, absorbing the ±59 min drift
 
 ---
 

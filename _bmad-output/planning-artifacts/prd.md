@@ -465,7 +465,7 @@ The five user journeys reveal distinct capability areas required for Pick Six to
 **From Journey 4 (Jessica's Rescue - Inconsistent Participant):**
 
 - Mid-week reminder email system (Wednesday evening) for participants who haven't submitted picks
-- Final deadline reminder email (Thursday, 1 hour before deadline)
+- Final deadline reminder email (deadline-anchored, within the last 12 hours before lock)
 - Prominent pick status banner/indicator visible immediately upon login
 - Clear visual confirmation of submitted pick (team name, point value)
 - Direct links from all emails to authenticated pick submission interface
@@ -487,7 +487,7 @@ The five user journeys reveal distinct capability areas required for Pick Six to
 - Email delivery infrastructure with personalized content generation
 - NFL odds API integration for real-time moneyline data
 - NFL schedule and game result data integration
-- Deadline enforcement system (Thursday ~8:10 PM EST or 5 minutes before first game)
+- Deadline enforcement system (5 minutes before the first scheduled kickoff of the week)
 - Database for participant profiles, pick history, point totals, team selections
 - Real-time data synchronization across all user interfaces
 - Responsive design supporting desktop and mobile browsers
@@ -801,7 +801,7 @@ The MVP supports all five identified user journeys:
 
 - Automated Tuesday 6:00 PM reminder email with current standings, jailed team, and pick submission link
 - Mid-week reminder email (Wednesday evening) for participants who haven't submitted picks
-- Final deadline reminder email (Thursday, 1 hour before deadline) for outstanding picks
+- Final deadline reminder email (deadline-anchored, within the last 12 hours before lock) for outstanding picks
 - All emails include direct authentication links to pick submission interface
 - Personalized email content based on participant status
 
@@ -822,7 +822,7 @@ The MVP supports all five identified user journeys:
 - Standard scoring: 1 point per correct pick
 - No duplicate team selections allowed throughout season
 - 18-week regular season support
-- Pick deadline: Thursday ~8:10 PM EST or 5 minutes before first game of week (whichever is earlier)
+- Pick deadline: 5 minutes before the first scheduled kickoff of the week (no weekday anchor)
 
 **Technical Infrastructure:**
 
@@ -1063,7 +1063,8 @@ Long-term vision for broader platform availability:
 - **FR23:** Participants can see clear countdown to weekly pick deadline
 - **FR24:** Participants receive real-time validation preventing selection of previously picked teams
 - **FR25:** Participants receive real-time validation preventing direct selection of jailed team (unless picking against)
-- **FR26:** The system enforces pick deadline (Thursday ~8:10 PM EST or 5 minutes before first game, whichever earlier)
+- **FR26:** The system enforces a pick deadline of **5 minutes before the first scheduled kickoff of that NFL week**, computed in UTC from the real schedule. The deadline is not tied to any weekday: weeks opening Wednesday (2026 Weeks 1 and 12) or Sunday (2026 Week 18) lock relative to their own first game. No pick may be created or modified once any game of that week has started.
+- **FR26a:** The system opens the pick window for a league week only when the league is marked ready for the season, schedule data exists, and the week is within the league's competition window. The open instant is Tuesday 00:00 ET of that week's game week, except for the league's **first** competition week, which opens 7 days before that week's first kickoff. Before the open instant the week renders as read-only preview; the window must always open strictly before the FR26 deadline.
 - **FR27:** Participants cannot submit or modify picks after the weekly deadline has passed
 
 ### Admin Operations & Overrides
@@ -1080,8 +1081,8 @@ Long-term vision for broader platform availability:
 
 - **FR35:** The system sends automated Tuesday 6:00 PM reminder emails to all league participants
 - **FR36:** Tuesday reminder emails include current standings, jailed team identification, and pick submission link
-- **FR37:** The system sends mid-week reminder emails (Wednesday evening) to participants who haven't submitted picks
-- **FR38:** The system sends final deadline reminder emails (Thursday, 1 hour before deadline) to participants who haven't submitted picks
+- **FR37:** The system sends a mid-week reminder email to participants who haven't submitted picks, anchored to that week's computed deadline (approximately 48 hours before lock)
+- **FR38:** The system sends a final reminder email to participants who haven't submitted picks, anchored to that week's computed deadline (within the last 12 hours before lock). Reminders are never tied to a fixed weekday, and no reminder is sent after the deadline has passed.
 - **FR39:** All reminder emails include direct authentication links to pick submission interface
 - **FR40:** Email content is personalized based on participant status (pick submitted vs. outstanding)
 
@@ -1244,7 +1245,7 @@ _The numbered FRs/NFRs above remain the contractual requirement set. The followi
 | Theme | Summary | Epics reference |
 |-------|---------|-------------------|
 | **First NFL week at league creation** | Admin sets **first competition week** (1–18); weeks before it are out of scope for picks/scoring for that league. | Epic 2 — Story 2.7 |
-| **Pre-season Week 1 preview** | Off-season / pre-kickoff: fetch and display **Week 1** odds and weather where APIs allow; clear “preview / not pickable” when picks are not open. | Epic 3 — Stories 3.1–3.2, 3.6 |
+| **Pre-season Week 1 preview** | Off-season / pre-kickoff: fetch and display **Week 1** odds and weather where APIs allow; clear “preview / not pickable” **until the FR26a window-open instant (first competition week: kickoff − 7 days)**. | Epic 3 — Stories 3.1–3.2, 3.6 |
 | **Team logos** | Real NFL team images for `TeamLogo` (assets or provider); licensing; fallback to abbreviation. | Epic 3 — Story 3.8 |
 | **Rehearsal / test leagues** | League-level test flag; simulated weeks, fixture odds, admin-driven advancement; optional email policy; **delete league** cleanup. | Epic 8 |
 | **Pre-season polish & launch hardening** | League-scoped scoring isolation; domain-provider decision; forgot-password; Epic 7 measurement/drill carryovers; UI polish. Production env/Resend/`from`/smoke = **post-epic-9**. | Epic 9 |

@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-08-03' # post-epic-9-production-smoke-test → done
+last_updated: '2026-09-02' # correct-course: Week 1 pick window never opens → pre-week-1 blockers added
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -153,3 +153,17 @@ development_status:
   post-epic-9-vercel-production-env-and-cron: done # (1) First *.vercel.app deploy dry run + env/migrate/cron smoke; (2) custom domain + AUTH_URL + apex/www cookies; CRON_SECRET; redeploy after env — canonical https://www.nflpickem.cc
   post-epic-9-resend-domain-and-from-address: done # After web DNS; verify sending domain (SPF/DKIM); RESEND_FROM; optional DMARC — send.nflpickem.cc Verified; webhook live
   post-epic-9-production-smoke-test: done # After web + email live; real inbox: invite + Tuesday digest + reminders; Resend dashboard; rows 1–10 Pass on www.nflpickem.cc; row 11 cron curl skipped
+
+  # Pre-Week-1 — BLOCKING production defect (correct-course 2026-09-02)
+  # Source of truth: _bmad-output/planning-artifacts/sprint-change-proposal-2026-09-02.md
+  # Week 1 picks can never be submitted: preview opens at first kickoff (always AFTER the deadline),
+  # and the Wed 2026-09-09 opener made the Thursday anchor resolve to Thu 2026-09-03 (6-day early lockout).
+  # Rev 2: the Thursday anchor is removed entirely — it also breaks Wk 12 (Thanksgiving, Wed 11-25 opener,
+  # locks Thu 11-19 = 6 days early) and Wk 18 (no Thursday game, locks 2.7 days early). 15 of 18 weeks unchanged.
+  # HARD DEADLINE: ship before Wed 2026-09-09 20:10 ET; ideally before Tue 2026-09-08 07:00 ET (slot-1 reminder).
+  # Execute in order — 1 is lowest risk, 2 has the widest blast radius (picks UI + email activation share the helper).
+  pre-week-1-kickoff-anchored-deadline: backlog # Rule B: deadline = firstKickoff − 5min, NO weekday anchor. DELETE lockByThursdayDefaultUtc + THURSDAY_LOCK_HOUR/MINUTE + 4 obsolete tests. Assert 15 Thursday-opener weeks byte-identical; Wk 1/12/18 move later only (FR26, NFR24)
+  pre-week-1-pick-window-open-rule: backlog # Rule A: FR26a window-open (Tue 00:00 ET of game week; first competition week = firstKickoff − 7d); per-week preview; RETAIN preSeasonInitializedAt gate. Replaces the buggy "false when in-window after earliest competition kickoff" test
+  pre-week-1-deadline-anchored-reminders: backlog # Rule C: ALL weeks deadline-anchored — slot 1 = first tick ≥ deadline−48h, slot 2 = first tick ≥ deadline−12h; universal never-send-past-deadline guard incl. Tuesday digest; extract shouldSendWeeklyReminder; TWO daily ticks 0 11 * * * + 0 20 * * * (Hobby limits interval per job, not job count). Old fixed Wed/Thu windows sent ZERO reminders for Wk 12 and 18 (FR37, FR38)
+  pre-week-1-user-facing-deadline-copy: backlog # rules/page.tsx: drop "typically Thursday around 8:10 PM Eastern" → "Picks lock 5 minutes before the first kickoff of the NFL week."; same for league-rules.ts doc-comment table (FR7)
+  pre-week-1-production-preflight: backlog # Kyle: mark real league ready for season; verify Week 1 jailed team computed + 16 games of odds; confirm both cron ticks deploy + appear in Vercel dashboard; confirm countdown reads Wed 2026-09-09 20:10 ET; rules page no longer says Thursday

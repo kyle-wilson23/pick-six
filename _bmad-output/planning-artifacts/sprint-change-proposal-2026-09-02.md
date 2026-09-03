@@ -122,7 +122,9 @@ Code surfaces requiring change:
 - `src/lib/cron/*`, reminder routes, `vercel.json` — deadline-anchored slots on a two-tick daily schedule
 - Colocated tests for all of the above (per `.cursor/rules/post-change-testing.mdc`)
 
-**No database migration required.** `LeagueWeekEmailConfig` already carries `sentAt`, `wednesdayReminderSentAt`, and `thursdayReminderSentAt`; the two reminder columns are reinterpreted as "slot 1 / slot 2" rather than literal weekdays.
+**No database migration required.** `LeagueWeekEmailConfig` already carries `sentAt`, `wednesdayReminderSentAt`, and `thursdayReminderSentAt`; the two reminder columns are reinterpreted as "slot 1 / slot 2" rather than literal weekdays. Rules A and B are pure-function changes with no persisted state at all.
+
+Because the reinterpretation is semantic rather than structural, **existing rows carry their old meaning forward** — any Week 1 timestamp written during rehearsal will suppress the corresponding real send. This is a one-time data-hygiene task, not a migration; see Production pre-flight.
 
 **Deployment constraint (confirmed 2026-09-02):** the project is on **Vercel Hobby** — **100 cron jobs per project** (the per-team cap of 2 was lifted Jan 2026, so job count is not a constraint), **once-per-day minimum interval** with sub-daily expressions **failing at deploy time**, **±59 minute** precision, **UTC-only** expressions. Multiple *distinct* daily jobs are legal, which is what Rule C exploits.
 
@@ -293,6 +295,8 @@ Add the `pre-week-1-*` blocking group covering the deadline rule, window-open ru
 - [ ] Deploy carrying the new crons **succeeds** and both ticks appear in the Vercel dashboard.
 - [ ] Picks page shows a countdown to **Wed Sep 9 20:10 ET**, not the preview banner.
 - [ ] Rules page no longer mentions Thursday.
+- [ ] **Clear stale Week 1 send timestamps.** `Willy League New` (non-test) has a 2026 Week 1 `LeagueWeekEmailConfig` with `sentAt`, `wednesdayReminderSentAt`, and `thursdayReminderSentAt` all set on 2026-07-06 from rehearsal sends. Because those columns are the idempotency keys, the real Week 1 digest and **both** reminders will be silently skipped for that league. Null all three before Tue Sep 8. No other non-test league is affected.
+- [ ] **Remove the stale Week 1 pick.** `Willy League` (non-test) holds a `DAL` Week 1 pick created 2026-05-31 by `dev@example.com`. It would score as a live pick. Delete it, or confirm the league is not in real play.
 
 ### Success criteria
 

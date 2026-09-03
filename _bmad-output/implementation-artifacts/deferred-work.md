@@ -2,6 +2,11 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: spec-pre-week-1-deadline-anchored-reminders.md (2026-09-03)
+
+- **`get-weekly-email-status.ts` still infers reminder status from fixed Wed/Thu Eastern windows** — Rule C moved automated sends onto deadline-anchored daily ticks, but the admin "Email automation status" card still labels rows Wednesday/Thursday reminder and uses `isInEasternWindow` to decide pending vs missed. Cosmetic only; `wednesdayReminderSentAt` / `thursdayReminderSentAt` stamps remain correct. Relabel and re-gate when the admin card is next touched.
+- **Empty-outstanding ticks keep calling `sendReminder`** — stamps are written only when `sent > 0` so a nobody-outstanding slot 1 can fall through to slot 2. After slot 1 is due, daily ticks therefore re-enter `sendReminder` (no Resend, `sentAt` stays null) until a send succeeds or the deadline passes. Harmless extra work/logs; tighten if cron duration becomes an issue.
+
 ## Deferred from: review of spec-floating-pick-submit-button.md (2026-08-09)
 
 - **`currentPick` / week prop sync into draft+saved** — `WeekMatchupList` still initializes local state once (same as pre-FAB `selection`). Soft client updates without remount could leave draft/saved stale; week navigation usually remounts via RSC. Add a reset effect if client-side week switching without remount appears.

@@ -11,6 +11,7 @@ import { assertCronRequest } from "@/lib/cron/assert-cron-request";
 import { cronJobHttpStatus } from "@/lib/cron/cron-job-http-status";
 import { isInEasternWindow } from "@/lib/cron/eastern-window";
 import { getActiveLeagueIds } from "@/lib/cron/get-active-league-ids";
+import { isPastPickDeadline } from "@/lib/cron/should-send-weekly-reminder";
 import { prisma } from "@/lib/db";
 import { EMAIL_CIRCUIT_OPEN_CODE, createEmailCircuitBreaker } from "@/lib/email/circuit-breaker";
 import {
@@ -32,7 +33,9 @@ export async function POST(request: NextRequest) {
     return authError;
   }
 
-  if (!isInEasternWindow(new Date(), 2, 17, 21)) {
+  const now = new Date();
+
+  if (!isInEasternWindow(now, 2, 17, 21)) {
     logEvent({
       level: "info",
       domain: "cron",
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
   let skippedAlreadySent = 0;
   let skippedNoWeek = 0;
   let skippedPreview = 0;
+  let skippedPastDeadline = 0;
   let failed = 0;
 
   // Shared across the whole invocation so a Resend outage aborts every
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const data = await getTuesdayDigestData({ leagueId });
+      const data = await getTuesdayDigestData({ leagueId }, now);
 
       if (data.isPreviewWeek) {
         skippedPreview++;
@@ -104,6 +108,26 @@ export async function POST(request: NextRequest) {
           leagueId,
           message: "tuesday-email: skipped — competition week not started (preview)",
           context: { weekNumber: data.weekNumber, nflSeasonYear: data.nflSeasonYear },
+        });
+        continue;
+      }
+
+      if (isPastPickDeadline(data.pickDeadlineUtc, now)) {
+        skippedPastDeadline++;
+        processed++;
+        logEvent({
+          level: "info",
+          domain: "cron",
+          route: ROUTE,
+          action: "past_deadline_skip",
+          code: "CRON_PAST_DEADLINE",
+          leagueId,
+          message: "tuesday-email: skipped — pick deadline has passed",
+          context: {
+            weekNumber: data.weekNumber,
+            nflSeasonYear: data.nflSeasonYear,
+            pickDeadlineUtc: data.pickDeadlineUtc?.toISOString() ?? null,
+          },
         });
         continue;
       }
@@ -161,6 +185,7 @@ export async function POST(request: NextRequest) {
     skippedAlreadySent,
     skippedNoWeek,
     skippedPreview,
+    skippedPastDeadline,
     failed,
   };
 

@@ -1,5 +1,8 @@
 /**
- * POST `/api/leagues/[leagueId]/email/thursday-reminder` — send Thursday pick reminders (Story 6.3).
+ * POST `/api/leagues/[leagueId]/email/thursday-reminder` — send the final (slot 2) pick reminder.
+ *
+ * URL is historical; this is the `deadline − 12h` reminder, not a Thursday-only send.
+ * Admin manual send is not gated on the deadline (submit-on-behalf remains the post-deadline valve).
  *
  * - **CSRF / same-origin:** `assertCookieSessionMutationOrigin` before `auth()` (NFR15).
  */
@@ -76,7 +79,7 @@ export async function POST(
         {
           error: {
             code: "ALREADY_SENT",
-            message: "Thursday reminder already sent for this week",
+            message: "Final reminder already sent for this week",
           },
         },
         { status: 409 },
@@ -85,7 +88,7 @@ export async function POST(
 
     const result = await sendReminder({
       leagueId,
-      reminderType: "thursday",
+      slot: 2,
       preloadedData: data,
     });
 

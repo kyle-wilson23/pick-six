@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { computePickDeadlineUtc, getFirstKickoffUtc } from "@/lib/domain/pick-deadline";
 import { getAppBaseUrl } from "@/lib/email/app-base-url";
 import {
   LeagueNotFoundError,
@@ -23,6 +24,8 @@ export type ReminderData = {
   weekNumber: number;
   /** True when competition has not started (picks preview). Cron skips; admin may still send. */
   isPreviewWeek: boolean;
+  /** FR26 lock instant for `weekNumber`, or `null` when that week has no schedule data. */
+  pickDeadlineUtc: Date | null;
   jailedTeamName: string | null;
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
@@ -114,6 +117,11 @@ export async function getReminderData(
     now,
   });
 
+  const firstKickoff = getFirstKickoffUtc(
+    gamesForResolve.filter((g) => g.weekNumber === weekNumber),
+  );
+  const pickDeadlineUtc = firstKickoff == null ? null : computePickDeadlineUtc(firstKickoff);
+
   const [jailedRow, memberships, picks] = await Promise.all([
     getJailedWithTeamForLeagueWeek(prisma, {
       leagueId,
@@ -155,6 +163,7 @@ export async function getReminderData(
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     isPreviewWeek,
+    pickDeadlineUtc,
     jailedTeamName: jailedRow?.jailedTeam.name ?? null,
     jailedTeamAbbreviation: jailedRow?.jailedTeam.abbreviation ?? null,
     picksUrl,

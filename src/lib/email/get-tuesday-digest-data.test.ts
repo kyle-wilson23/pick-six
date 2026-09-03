@@ -91,6 +91,7 @@ describe("getTuesdayDigestData", () => {
     expect(result.jailedTeamAbbreviation).toBe("NYJ");
     expect(result.weekNumber).toBe(3);
     expect(result.picksUrl).toBe(`http://localhost:3000/leagues/${LEAGUE_ID}/picks`);
+    expect(result.pickDeadlineUtc).toEqual(new Date("2026-09-14T23:55:00.000Z"));
   });
 
   it("returns null jailed team fields when not computed for the week", async () => {

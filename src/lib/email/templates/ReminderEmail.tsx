@@ -1,6 +1,8 @@
 import { Heading, Section, Text } from "@react-email/components";
+import { formatInTimeZone } from "date-fns-tz";
 
 import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
 
 import { EmailLayout, PrimaryCta } from "./EmailLayout";
 import {
@@ -18,7 +20,10 @@ export type ReminderEmailProps = {
   jailedTeamName: string | null;
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
-  reminderType: "wednesday" | "thursday";
+  /** 1 = heads-up (~48h out), 2 = last call (~12h out). Deadline-anchored, not weekday-anchored. */
+  slot: 1 | 2;
+  /** FR26 lock instant; omitted when the week has no schedule data to anchor on. */
+  pickDeadlineUtc?: Date | null;
   isTestLeague?: boolean;
 };
 
@@ -29,7 +34,8 @@ export function ReminderEmail({
   jailedTeamName,
   jailedTeamAbbreviation,
   picksUrl,
-  reminderType,
+  slot,
+  pickDeadlineUtc = null,
   isTestLeague = false,
 }: ReminderEmailProps) {
   const jailedLabel =
@@ -37,18 +43,34 @@ export function ReminderEmail({
       ? `${jailedTeamName} (${jailedTeamAbbreviation})`
       : "Not yet announced for this week";
 
+  // Weeks lock on whatever day their first game falls on, so the copy states the real lock instant
+  // rather than naming a weekday.
+  const lockLabel =
+    pickDeadlineUtc == null
+      ? null
+      : formatInTimeZone(
+          pickDeadlineUtc,
+          LEAGUE_BUSINESS_TIMEZONE,
+          "EEEE, MMMM d 'at' h:mm a 'ET'",
+        );
+
   const bodyCopy =
-    reminderType === "wednesday"
-      ? "Friendly reminder — you haven't submitted your pick for this week yet. Don't forget to lock in your choice before Thursday's deadline."
-      : "Final reminder — the pick deadline is in about one hour. Submit your pick now so you don't miss this week.";
+    slot === 1
+      ? `Friendly reminder — you haven't submitted your pick for this week yet. ${
+          lockLabel != null
+            ? `Picks lock ${lockLabel}.`
+            : "Lock in your choice before this week's deadline."
+        }`
+      : `Last call — ${
+          lockLabel != null ? `picks lock ${lockLabel}` : "picks lock soon"
+        }. Submit your pick now so you don't miss this week.`;
 
   const previewText =
-    reminderType === "wednesday"
+    slot === 1
       ? `You haven't submitted your Week ${weekNumber} pick yet — don't forget!`
-      : `Pick deadline in 1 hour — submit your Week ${weekNumber} pick now`;
+      : `Last call — submit your Week ${weekNumber} pick before it locks`;
 
-  const ctaLabel =
-    reminderType === "thursday" ? "Submit your pick now" : "Make your picks";
+  const ctaLabel = slot === 2 ? "Submit your pick now" : "Make your picks";
 
   return (
     <EmailLayout preview={previewText}>

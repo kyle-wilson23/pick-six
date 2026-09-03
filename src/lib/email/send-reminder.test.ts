@@ -46,6 +46,7 @@ const PRELOADED_DATA = {
   nflSeasonYear: 2026,
   weekNumber: 1,
   isPreviewWeek: false,
+  pickDeadlineUtc: new Date("2026-09-10T00:10:00.000Z"),
   jailedTeamName: null,
   jailedTeamAbbreviation: null,
   picksUrl: "http://localhost:3000/leagues/league-test/picks",
@@ -71,7 +72,7 @@ describe("sendReminder", () => {
 
     const result = await sendReminder({
       leagueId: LEAGUE_ID,
-      reminderType: "wednesday",
+      slot: 1,
       preloadedData: PRELOADED_DATA,
     });
 
@@ -98,7 +99,7 @@ describe("sendReminder", () => {
 
     const result = await sendReminder({
       leagueId: LEAGUE_ID,
-      reminderType: "wednesday",
+      slot: 1,
       preloadedData: { ...PRELOADED_DATA, outstandingMembers: [] },
     });
 
@@ -118,7 +119,7 @@ describe("sendReminder", () => {
 
     const result = await sendReminder({
       leagueId: LEAGUE_ID,
-      reminderType: "wednesday",
+      slot: 1,
       preloadedData: PRELOADED_DATA,
     });
 
@@ -137,7 +138,7 @@ describe("sendReminder", () => {
 
     const result = await sendReminder({
       leagueId: LEAGUE_ID,
-      reminderType: "wednesday",
+      slot: 1,
       preloadedData: { ...PRELOADED_DATA, isTestLeague: false },
     });
 
@@ -148,5 +149,28 @@ describe("sendReminder", () => {
       suppressed: false,
       wouldSendCount: 0,
     });
+  });
+
+  it("slot 2 stamps thursdayReminderSentAt and keeps the historical Resend idempotency key", async () => {
+    mockGetTestLeagueEmailMode.mockReturnValue("send");
+
+    await sendReminder({
+      leagueId: LEAGUE_ID,
+      slot: 2,
+      preloadedData: PRELOADED_DATA,
+    });
+
+    expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ thursdayReminderSentAt: expect.any(Date) }),
+        update: { thursdayReminderSentAt: expect.any(Date) },
+      }),
+    );
+    expect(mockResendSend).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        idempotencyKey: `thursday-reminder:${LEAGUE_ID}:1:mem-1`,
+      }),
+    );
   });
 });

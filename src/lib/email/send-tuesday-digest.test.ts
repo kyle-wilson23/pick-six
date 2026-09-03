@@ -55,6 +55,7 @@ const PRELOADED_DATA = {
   nflSeasonYear: 2026,
   weekNumber: 1,
   isPreviewWeek: false,
+  pickDeadlineUtc: new Date("2026-09-10T00:10:00.000Z"),
   standings: [],
   jailedTeamName: null,
   jailedTeamAbbreviation: null,

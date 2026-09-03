@@ -104,10 +104,11 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(html).not.toMatch(/src=["']\s*["']/);
   });
 
-  it("ReminderEmail wednesday/thursday keep labels + plaintext fallback", async () => {
+  it("ReminderEmail slot 1 / slot 2 keep labels + plaintext fallback and name the lock time", async () => {
     const picksUrl = "https://example.test/leagues/abc/picks";
+    const pickDeadlineUtc = new Date("2026-09-10T00:10:00.000Z");
 
-    const wed = await render(
+    const slot1 = await render(
       createElement(ReminderEmail, {
         leagueName: "Office League",
         weekNumber: 3,
@@ -115,14 +116,18 @@ describe("email templates CTA + plaintext fallback", () => {
         jailedTeamName: "Eagles",
         jailedTeamAbbreviation: "PHI",
         picksUrl,
-        reminderType: "wednesday",
+        slot: 1,
+        pickDeadlineUtc,
       }),
     );
-    expect(wed).toContain("Make your picks");
-    expect(wed).toContain(picksUrl);
-    expect(wed).toContain("Or paste this link:");
+    expect(slot1).toContain("Make your picks");
+    expect(slot1).toContain(picksUrl);
+    expect(slot1).toContain("Or paste this link:");
+    expect(slot1).toContain("Picks lock Wednesday, September 9 at 8:10 PM ET.");
+    expect(slot1.toLowerCase()).not.toContain("thursday's deadline");
+    expect(slot1.toLowerCase()).not.toContain("in about one hour");
 
-    const thu = await render(
+    const slot2 = await render(
       createElement(ReminderEmail, {
         leagueName: "Office League",
         weekNumber: 3,
@@ -130,12 +135,15 @@ describe("email templates CTA + plaintext fallback", () => {
         jailedTeamName: null,
         jailedTeamAbbreviation: null,
         picksUrl,
-        reminderType: "thursday",
+        slot: 2,
+        pickDeadlineUtc,
       }),
     );
-    expect(thu).toContain("Submit your pick now");
-    expect(thu).toContain(picksUrl);
-    expect(thu).toContain("Or paste this link:");
+    expect(slot2).toContain("Submit your pick now");
+    expect(slot2).toContain(picksUrl);
+    expect(slot2).toContain("Or paste this link:");
+    expect(slot2).toContain("picks lock Wednesday, September 9 at 8:10 PM ET");
+    expect(slot2.toLowerCase()).not.toContain("thursday");
   });
 
   it("InvitationEmail includes Accept invitation + signup URL fallback", async () => {

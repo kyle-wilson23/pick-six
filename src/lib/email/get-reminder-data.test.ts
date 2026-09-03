@@ -85,6 +85,7 @@ describe("getReminderData", () => {
       },
     ]);
     expect(result.submittedCount).toBe(1);
+    expect(result.pickDeadlineUtc).toEqual(new Date("2026-09-14T23:55:00.000Z"));
   });
 
   it("excludes members who have already submitted", async () => {

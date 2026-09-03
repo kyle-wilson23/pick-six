@@ -1,5 +1,9 @@
 import { createElement } from "react";
 
+import {
+  REMINDER_SLOT_SENT_AT_FIELD,
+  type ReminderSlot,
+} from "@/lib/cron/should-send-weekly-reminder";
 import { prisma } from "@/lib/db";
 import {
   EMAIL_CIRCUIT_OPEN_CODE,
@@ -21,25 +25,28 @@ import { getTestLeagueEmailMode } from "@/lib/email/test-league-email-mode";
 import { ReminderEmail } from "@/lib/email/templates/ReminderEmail";
 import { logEvent } from "@/lib/logging/log-event";
 
-function reminderSubject(
-  data: ReminderData,
-  reminderType: "wednesday" | "thursday",
-): string {
+function reminderSubject(data: ReminderData, slot: ReminderSlot): string {
   const base =
-    reminderType === "wednesday"
+    slot === 1
       ? `[${data.leagueName}] Week ${data.weekNumber} — Don't Forget Your Pick`
-      : `[${data.leagueName}] Week ${data.weekNumber} — Pick Deadline in 1 Hour`;
+      : `[${data.leagueName}] Week ${data.weekNumber} — Last Call Before Picks Lock`;
   return formatEmailSubject(base, data.isTestLeague);
+}
+
+/** Resend idempotency keys stay on the historical weekday prefix so retries cannot double-send. */
+function slotIdempotencyType(slot: ReminderSlot): "wednesday" | "thursday" {
+  return slot === 1 ? "wednesday" : "thursday";
 }
 
 export async function sendReminder({
   leagueId,
-  reminderType,
+  slot,
   preloadedData,
   breaker: providedBreaker,
 }: {
   leagueId: string;
-  reminderType: "wednesday" | "thursday";
+  /** 1 = heads-up (`deadline − 48h`), 2 = last call (`deadline − 12h`). */
+  slot: ReminderSlot;
   preloadedData?: ReminderData;
   /**
    * Shared circuit breaker for a multi-league cron invocation — pass the same
@@ -67,8 +74,7 @@ export async function sendReminder({
     // upserts when sent > 0, so a suppressed no-recipient run doesn't falsely
     // mark the reminder as "sent."
     const now = wouldSendCount > 0 ? new Date() : null;
-    const reminderField =
-      reminderType === "wednesday" ? "wednesdayReminderSentAt" : "thursdayReminderSentAt";
+    const reminderField = REMINDER_SLOT_SENT_AT_FIELD[slot];
 
     if (now != null) {
       await prisma.leagueWeekEmailConfig.upsert({
@@ -97,9 +103,9 @@ export async function sendReminder({
       action: "reminder_suppressed",
       leagueId,
       weekNumber: data.weekNumber,
-      message: `${reminderType} reminder suppressed for test league`,
+      message: `slot ${slot} reminder suppressed for test league`,
       context: {
-        reminderType,
+        slot,
         wouldSendCount,
       },
     });
@@ -142,7 +148,7 @@ export async function sendReminder({
             {
               from: getResendFrom(),
               to: [member.email],
-              subject: reminderSubject(data, reminderType),
+              subject: reminderSubject(data, slot),
               react: createElement(ReminderEmail, {
                 leagueName: data.leagueName,
                 weekNumber: data.weekNumber,
@@ -150,12 +156,13 @@ export async function sendReminder({
                 jailedTeamName: data.jailedTeamName,
                 jailedTeamAbbreviation: data.jailedTeamAbbreviation,
                 picksUrl: data.picksUrl,
-                reminderType,
+                slot,
+                pickDeadlineUtc: data.pickDeadlineUtc,
                 isTestLeague: data.isTestLeague,
               }),
             },
             {
-              idempotencyKey: `${reminderType}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
+              idempotencyKey: `${slotIdempotencyType(slot)}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
             },
           );
 
@@ -174,9 +181,9 @@ export async function sendReminder({
           code: "EMAIL_SEND_FAILED",
           leagueId,
           weekNumber: data.weekNumber,
-          message: `${reminderType} reminder member send failed`,
+          message: `slot ${slot} reminder member send failed`,
           context: {
-            reminderType,
+            slot,
             membershipId: member.membershipId,
             error: err instanceof Error ? err.message : String(err),
           },
@@ -190,9 +197,9 @@ export async function sendReminder({
             code: EMAIL_CIRCUIT_OPEN_CODE,
             leagueId,
             weekNumber: data.weekNumber,
-            message: `${reminderType} reminder aborted remaining sends — Resend circuit open`,
+            message: `slot ${slot} reminder aborted remaining sends — Resend circuit open`,
             context: {
-              reminderType,
+              slot,
               consecutiveFailures: breaker.consecutiveFailures,
               remainingAborted: true,
             },
@@ -213,8 +220,7 @@ export async function sendReminder({
   const sentAt = sent > 0 ? new Date() : null;
 
   if (sentAt != null) {
-    const reminderField =
-      reminderType === "wednesday" ? "wednesdayReminderSentAt" : "thursdayReminderSentAt";
+    const reminderField = REMINDER_SLOT_SENT_AT_FIELD[slot];
 
     await prisma.leagueWeekEmailConfig.upsert({
       where: {
@@ -244,10 +250,10 @@ export async function sendReminder({
     weekNumber: data.weekNumber,
     message:
       sent > 0
-        ? `${reminderType} reminder sent`
-        : `${reminderType} reminder skipped — no outstanding members`,
+        ? `slot ${slot} reminder sent`
+        : `slot ${slot} reminder skipped — no outstanding members`,
     context: {
-      reminderType,
+      slot,
       leagueName: data.leagueName,
       sent,
       failed,

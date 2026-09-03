@@ -94,7 +94,7 @@ export function AdminReminderControls({
       reminderType === "wednesday" ? setWednesdaySentAt : setThursdaySentAt;
 
     setSending(true);
-    // One banner at a time — clear any prior Wed/Thu feedback before this send.
+    // One banner at a time — clear any prior first/final reminder feedback before this send.
     setFeedback(null);
 
     try {
@@ -202,7 +202,7 @@ export function AdminReminderControls({
               disabled={noActiveWeek || loading || sendingWednesday || allSubmitted}
               sx={{ minHeight: 48, whiteSpace: "nowrap" }}
             >
-              {sendingWednesday ? "Sending…" : "Send Wednesday Reminder"}
+              {sendingWednesday ? "Sending…" : "Send First Reminder"}
             </Button>
             {wednesdaySentAt != null ? (
               <Typography variant="caption" color="text.secondary">
@@ -220,7 +220,7 @@ export function AdminReminderControls({
               disabled={noActiveWeek || loading || sendingThursday || allSubmitted}
               sx={{ minHeight: 48, whiteSpace: "nowrap" }}
             >
-              {sendingThursday ? "Sending…" : "Send Thursday Reminder"}
+              {sendingThursday ? "Sending…" : "Send Final Reminder"}
             </Button>
             {thursdaySentAt != null ? (
               <Typography variant="caption" color="text.secondary">

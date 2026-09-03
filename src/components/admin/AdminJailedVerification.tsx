@@ -9,6 +9,7 @@ import type {
   JailedCandidateView,
   JailedVerificationView,
 } from "@/lib/admin/get-jailed-verification";
+import { formatDecimalMoneyline } from "@/lib/domain/odds-format";
 
 export type AdminJailedVerificationProps = {
   verification: JailedVerificationView | null;
@@ -18,10 +19,6 @@ export type AdminJailedVerificationProps = {
 function formatTimestamp(isoUtc: string): string {
   const d = new Date(isoUtc);
   return isNaN(d.getTime()) ? isoUtc : d.toLocaleString();
-}
-
-function formatAmericanOdds(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
 }
 
 function resolutionChipColor(
@@ -101,7 +98,7 @@ export function AdminJailedVerification({
                 complete lines
               </Typography>
               <Typography variant="body2">
-                Winning moneyline: {formatAmericanOdds(verification.winningMoneylineAmerican)}
+                Winning moneyline: {formatDecimalMoneyline(verification.winningMoneylineAmerican)}
               </Typography>
               {verification.resolvedBy === "RANDOM" && verification.randomSeed ? (
                 <Typography variant="caption" color="text.secondary">
@@ -151,8 +148,8 @@ export function AdminJailedVerification({
                           {candidate.homeTeamName} vs {candidate.awayTeamName}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {formatAmericanOdds(candidate.homeMoneylineAmerican)} /{" "}
-                          {formatAmericanOdds(candidate.awayMoneylineAmerican)} — Spread:{" "}
+                          {formatDecimalMoneyline(candidate.homeMoneylineAmerican)} /{" "}
+                          {formatDecimalMoneyline(candidate.awayMoneylineAmerican)} — Spread:{" "}
                           {candidate.spreadInFavoriteFavor} (fav: {candidate.favoriteTeamName})
                         </Typography>
                         {chips.length > 0 ? (

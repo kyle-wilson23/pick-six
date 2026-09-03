@@ -6,6 +6,13 @@ export type EffectiveOddsLineRow = {
   homeSpreadPoints: Prisma.Decimal | null;
 };
 
+export function moneylineToNumber(value: Prisma.Decimal | number | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  return typeof value === "number" ? value : value.toNumber();
+}
+
 type Db = PrismaClient | Prisma.TransactionClient;
 
 /**
@@ -55,8 +62,8 @@ export async function getEffectiveOddsLinesForWeek(
   const out = new Map<string, EffectiveOddsLineRow>();
   for (const [gameId, line] of best) {
     out.set(gameId, {
-      homeMoneylineAmerican: line.homeMoneylineAmerican,
-      awayMoneylineAmerican: line.awayMoneylineAmerican,
+      homeMoneylineAmerican: moneylineToNumber(line.homeMoneylineAmerican),
+      awayMoneylineAmerican: moneylineToNumber(line.awayMoneylineAmerican),
       homeSpreadPoints: line.homeSpreadPoints,
     });
   }
@@ -106,8 +113,8 @@ export async function getEffectiveOddsLinesForSimWeek(
   const out = new Map<string, EffectiveOddsLineRow>();
   for (const [gameId, line] of best) {
     out.set(gameId, {
-      homeMoneylineAmerican: line.homeMoneylineAmerican,
-      awayMoneylineAmerican: line.awayMoneylineAmerican,
+      homeMoneylineAmerican: moneylineToNumber(line.homeMoneylineAmerican),
+      awayMoneylineAmerican: moneylineToNumber(line.awayMoneylineAmerican),
       homeSpreadPoints: line.homeSpreadPoints,
     });
   }

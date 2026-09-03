@@ -4,17 +4,9 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
-import { TeamLogo } from "./TeamLogo";
+import { formatDecimalMoneyline } from "@/lib/domain/odds-format";
 
-function formatAmericanMl(value: number | null): string {
-  if (value === null || Number.isNaN(value)) {
-    return "–";
-  }
-  if (value > 0) {
-    return `+${value}`;
-  }
-  return `${value}`;
-}
+import { TeamLogo } from "./TeamLogo";
 
 export type JailedTeamCalloutProps = {
   team: { id: string; abbreviation: string; name: string };
@@ -49,7 +41,7 @@ export function JailedTeamCallout({ team, moneylineAmerican }: JailedTeamCallout
             Jailed this week: {team.name}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ML {formatAmericanMl(moneylineAmerican)} · biggest favorite — cannot be picked directly.
+            ML {formatDecimalMoneyline(moneylineAmerican)} · biggest favorite — cannot be picked directly.
             Pick <strong>against</strong> for a 2-point bonus.
           </Typography>
         </Stack>

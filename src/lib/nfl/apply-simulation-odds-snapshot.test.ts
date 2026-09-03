@@ -20,8 +20,8 @@ vi.mock("@/lib/nfl/simulation-fixture-schedule", () => ({
 
 vi.mock("@/lib/domain/derive-fixture-odds-line", () => ({
   deriveFixtureOddsLine: vi.fn(() => ({
-    homeMoneylineAmerican: -150,
-    awayMoneylineAmerican: 130,
+    homeMoneylineAmerican: 1.67,
+    awayMoneylineAmerican: 2.3,
     homeSpreadPoints: -3,
   })),
 }));
@@ -90,7 +90,7 @@ describe("applySimulationOddsSnapshot", () => {
         audit: {
           gamesInWeek: 2,
           gamesWithCompleteLines: 2,
-          winningMoneylineAmerican: -150,
+          winningMoneylineAmerican: 1.67,
           tieLevel: "MONEYLINE",
           candidates: [],
         },
@@ -180,7 +180,7 @@ describe("applySimulationOddsSnapshot", () => {
         audit: {
           gamesInWeek: 1,
           gamesWithCompleteLines: 1,
-          winningMoneylineAmerican: -150,
+          winningMoneylineAmerican: 1.67,
           tieLevel: "MONEYLINE",
           candidates: [],
         },

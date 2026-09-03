@@ -29,7 +29,7 @@ describe("deriveFixtureOddsLine", () => {
     expect(a).not.toEqual(c);
   });
 
-  it("never produces both non-negative moneylines (sign-safe for resolveJailedTeam)", () => {
+  it("always produces one lower-decimal favorite (safe for resolveJailedTeam)", () => {
     const pairs = [
       ["h1", "a1"],
       ["h2", "a2"],
@@ -61,27 +61,22 @@ describe("deriveFixtureOddsLine", () => {
           homeTeamId: home,
           awayTeamId: away,
         });
-        const bothNonNeg =
-          line.homeMoneylineAmerican >= 0 && line.awayMoneylineAmerican >= 0;
-        expect(bothNonNeg).toBe(false);
-
-        const homeFav = line.homeMoneylineAmerican < 0;
-        const awayFav = line.awayMoneylineAmerican < 0;
-        expect(homeFav !== awayFav).toBe(true);
+        const homeFav = line.homeMoneylineAmerican < line.awayMoneylineAmerican;
+        expect(line.homeMoneylineAmerican).not.toBe(line.awayMoneylineAmerican);
 
         if (homeFav) {
-          expect(line.homeMoneylineAmerican).toBeGreaterThanOrEqual(-450);
-          expect(line.homeMoneylineAmerican).toBeLessThanOrEqual(-110);
-          expect(line.awayMoneylineAmerican).toBeGreaterThanOrEqual(100);
-          expect(line.awayMoneylineAmerican).toBeLessThanOrEqual(440);
+          expect(line.homeMoneylineAmerican).toBeGreaterThanOrEqual(1.22);
+          expect(line.homeMoneylineAmerican).toBeLessThanOrEqual(1.91);
+          expect(line.awayMoneylineAmerican).toBeGreaterThanOrEqual(2);
+          expect(line.awayMoneylineAmerican).toBeLessThanOrEqual(5.4);
           expect(line.homeSpreadPoints).toBeLessThanOrEqual(-0.5);
           expect(line.homeSpreadPoints).toBeGreaterThanOrEqual(-14);
           expect(line.homeSpreadPoints * 2).toBe(Math.round(line.homeSpreadPoints * 2));
         } else {
-          expect(line.awayMoneylineAmerican).toBeGreaterThanOrEqual(-450);
-          expect(line.awayMoneylineAmerican).toBeLessThanOrEqual(-110);
-          expect(line.homeMoneylineAmerican).toBeGreaterThanOrEqual(100);
-          expect(line.homeMoneylineAmerican).toBeLessThanOrEqual(440);
+          expect(line.awayMoneylineAmerican).toBeGreaterThanOrEqual(1.22);
+          expect(line.awayMoneylineAmerican).toBeLessThanOrEqual(1.91);
+          expect(line.homeMoneylineAmerican).toBeGreaterThanOrEqual(2);
+          expect(line.homeMoneylineAmerican).toBeLessThanOrEqual(5.4);
           expect(line.homeSpreadPoints).toBeGreaterThanOrEqual(0.5);
           expect(line.homeSpreadPoints).toBeLessThanOrEqual(14);
           expect(line.homeSpreadPoints * 2).toBe(Math.round(line.homeSpreadPoints * 2));

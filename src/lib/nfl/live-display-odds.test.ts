@@ -106,8 +106,8 @@ describe("getLiveDisplayOddsLinesForWeek", () => {
     });
     expect(out).not.toBeNull();
     expect(out!.has("game-kc-lv")).toBe(true);
-    expect(out!.get("game-kc-lv")?.homeMoneylineAmerican).toBe(-250);
-    expect(out!.get("game-kc-lv")?.awayMoneylineAmerican).toBe(210);
+    expect(out!.get("game-kc-lv")?.homeMoneylineAmerican).toBe(1.4);
+    expect(out!.get("game-kc-lv")?.awayMoneylineAmerican).toBe(3.1);
     expect(out!.get("game-kc-lv")?.homeSpreadPoints).toBe(-7.5);
     expect(out!.has("game-unmatched")).toBe(false);
   });
@@ -175,8 +175,8 @@ describe("getLiveDisplayOddsLinesForWeek", () => {
               {
                 key: "h2h",
                 outcomes: [
-                  { name: "Kansas City Chiefs", price: -250 },
-                  { name: "Las Vegas Raiders", price: 210 },
+                  { name: "Kansas City Chiefs", price: 1.4 },
+                  { name: "Las Vegas Raiders", price: 3.1 },
                 ],
               },
               // spreads market missing → incomplete line

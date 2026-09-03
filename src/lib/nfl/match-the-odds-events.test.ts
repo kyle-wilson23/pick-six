@@ -18,7 +18,7 @@ describe("matchTheOddsEventsToGames", () => {
     const m = matchTheOddsEventsToGames(events, games);
     expect(m.size).toBe(1);
     const line = m.get("game-db-1");
-    expect(line?.homeMoneylineAmerican).toBe(-250);
+    expect(line?.homeMoneylineAmerican).toBe(1.4);
     expect(line?.homeSpreadPoints).toBe(-7.5);
   });
 });

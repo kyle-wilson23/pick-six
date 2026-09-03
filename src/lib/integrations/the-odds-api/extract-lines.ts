@@ -13,6 +13,7 @@ function pickFirstBookmaker(event: TheOddsApiEvent) {
 
 /**
  * Uses the first bookmaker’s **h2h** and **spreads** markets when present.
+ * h2h `price` is European decimal when fetched with `oddsFormat=decimal`.
  * Missing market → null fields (caller may reject partial rows).
  */
 export function extractLineFromTheOddsApiEvent(event: TheOddsApiEvent): ExtractedOddsLine {

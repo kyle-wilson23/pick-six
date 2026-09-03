@@ -9,8 +9,8 @@ describe("extractLineFromTheOddsApiEvent", () => {
   it("reads h2h and home spread from first bookmaker", () => {
     const event = theOddsApiEventSchema.parse(sample[0]);
     const line = extractLineFromTheOddsApiEvent(event);
-    expect(line.homeMoneylineAmerican).toBe(-250);
-    expect(line.awayMoneylineAmerican).toBe(210);
+    expect(line.homeMoneylineAmerican).toBe(1.4);
+    expect(line.awayMoneylineAmerican).toBe(3.1);
     expect(line.homeSpreadPoints).toBe(-7.5);
   });
 });

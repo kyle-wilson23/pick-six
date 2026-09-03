@@ -6,6 +6,16 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useCallback, useState } from "react";
 
+import { normalizeMoneylineToDecimal } from "@/lib/domain/odds-format";
+
+function moneylineDraftValue(n: number | null): string {
+  if (n === null) {
+    return "";
+  }
+  const dec = normalizeMoneylineToDecimal(n);
+  return dec === null ? "" : dec.toFixed(3);
+}
+
 type ApiErr = { error?: { code?: string; message?: string } };
 
 type GameRow = {
@@ -22,13 +32,6 @@ type NflOddsAdminPanelProps = {
   defaultNflSeasonYear: number;
   firstCompetitionWeek: number | null;
 };
-
-function parseNullableInt(raw: string): number | null {
-  const t = raw.trim();
-  if (t === "") return null;
-  const n = Number.parseInt(t, 10);
-  return Number.isFinite(n) ? n : null;
-}
 
 function parseNullableFloat(raw: string): number | null {
   const t = raw.trim();
@@ -187,8 +190,8 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        homeMoneylineAmerican: parseNullableInt(draft.h),
-        awayMoneylineAmerican: parseNullableInt(draft.a),
+        homeMoneylineAmerican: parseNullableFloat(draft.h),
+        awayMoneylineAmerican: parseNullableFloat(draft.a),
         homeSpreadPoints: parseNullableFloat(draft.s),
       }),
     });
@@ -291,12 +294,8 @@ function OddsRow({
   disabled: boolean;
   errorText: string | null;
 }) {
-  const [h, setH] = useState(
-    game.homeMoneylineAmerican === null ? "" : String(game.homeMoneylineAmerican),
-  );
-  const [a, setA] = useState(
-    game.awayMoneylineAmerican === null ? "" : String(game.awayMoneylineAmerican),
-  );
+  const [h, setH] = useState(moneylineDraftValue(game.homeMoneylineAmerican));
+  const [a, setA] = useState(moneylineDraftValue(game.awayMoneylineAmerican));
   const [s, setS] = useState(game.homeSpreadPoints ?? "");
 
   return (
@@ -315,14 +314,14 @@ function OddsRow({
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="flex-start">
         <TextField
           size="small"
-          label="Home ML"
+          label="Home ML (decimal)"
           value={h}
           onChange={(e) => setH(e.target.value)}
           sx={{ width: 120 }}
         />
         <TextField
           size="small"
-          label="Away ML"
+          label="Away ML (decimal)"
           value={a}
           onChange={(e) => setA(e.target.value)}
           sx={{ width: 120 }}

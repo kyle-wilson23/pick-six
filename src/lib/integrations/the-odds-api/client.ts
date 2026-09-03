@@ -47,7 +47,7 @@ export async function fetchAmericanFootballNflOdds(
   url.searchParams.set("apiKey", apiKey);
   url.searchParams.set("regions", "us");
   url.searchParams.set("markets", "h2h,spreads");
-  url.searchParams.set("oddsFormat", "american");
+  url.searchParams.set("oddsFormat", "decimal");
 
   const { status, text, json } = await fetchJson(url);
   const parsed = theOddsApiOddsResponseSchema.safeParse(json);

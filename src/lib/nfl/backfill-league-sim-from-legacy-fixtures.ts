@@ -164,8 +164,8 @@ export async function backfillLeagueSimFromLegacyFixtures(
 
       const lineData: Array<{
         leagueSimGameId: string;
-        homeMoneylineAmerican: number | null;
-        awayMoneylineAmerican: number | null;
+        homeMoneylineAmerican: Prisma.Decimal | number | null;
+        awayMoneylineAmerican: Prisma.Decimal | number | null;
         homeSpreadPoints: Prisma.Decimal | null;
       }> = [];
 

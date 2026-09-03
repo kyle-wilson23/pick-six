@@ -217,8 +217,10 @@ model NflGameOddsLine {
   id                    String   @id @default(cuid())
   nflGameId             String   @map("nfl_game_id")
   oddsSnapshotRunId     String   @map("odds_snapshot_run_id")
-  homeMoneylineAmerican Int?     @map("home_moneyline_american")
-  awayMoneylineAmerican Int?     @map("away_moneyline_american")
+  /// Mixed-era moneyline: leftover American integers (e.g. -150) remain until overwritten; new writes are European decimal (e.g. 1.91).
+  homeMoneylineAmerican Decimal? @map("home_moneyline_american") @db.Decimal(10, 3)
+  /// Mixed-era moneyline: leftover American integers (e.g. +130) remain until overwritten; new writes are European decimal (e.g. 2.10).
+  awayMoneylineAmerican Decimal? @map("away_moneyline_american") @db.Decimal(10, 3)
   /// Point spread from the **home** team’s perspective (negative = home favored). Provider h2h/spreads mapped in `lib/integrations`.
   homeSpreadPoints      Decimal? @map("home_spread_points") @db.Decimal(5, 1)
 
@@ -312,8 +314,9 @@ model LeagueSimGameOddsLine {
   id                         String   @id @default(cuid())
   leagueSimGameId            String   @map("league_sim_game_id")
   leagueSimOddsSnapshotRunId String   @map("league_sim_odds_snapshot_run_id")
-  homeMoneylineAmerican      Int?     @map("home_moneyline_american")
-  awayMoneylineAmerican      Int?     @map("away_moneyline_american")
+  /// Mixed-era moneyline: leftover American integers remain until overwritten; new writes are European decimal.
+  homeMoneylineAmerican      Decimal? @map("home_moneyline_american") @db.Decimal(10, 3)
+  awayMoneylineAmerican      Decimal? @map("away_moneyline_american") @db.Decimal(10, 3)
   homeSpreadPoints           Decimal? @map("home_spread_points") @db.Decimal(5, 1)
 
   leagueSimGame            LeagueSimGame            @relation(fields: [leagueSimGameId], references: [id], onDelete: Cascade)

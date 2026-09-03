@@ -13,8 +13,8 @@
           {
             "key": "h2h",
             "outcomes": [
-              { "name": "Kansas City Chiefs", "price": -250 },
-              { "name": "Las Vegas Raiders", "price": 210 }
+              { "name": "Kansas City Chiefs", "price": 1.4 },
+              { "name": "Las Vegas Raiders", "price": 3.1 }
             ]
           },
           {

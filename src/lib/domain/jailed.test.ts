@@ -74,8 +74,70 @@ describe("resolveJailedTeam", () => {
       expect(r.result.jailedTeamId).toBe("tC");
       expect(r.result.resolvedBy).toBe("MONEYLINE");
       expect(r.result.randomSeed).toBeUndefined();
+      expect(r.result.audit.winningMoneylineAmerican).toBe(1.25);
       expect(r.result.audit.afterMoneyline).toEqual([]);
       expect(r.result.audit.afterSpread).toEqual([]);
+    }
+  });
+
+  it("resolves MONEYLINE from European decimal favorites (lowest decimal wins)", () => {
+    const r = resolveJailedTeam(
+      [
+        g({
+          nflGameId: "g1",
+          homeTeamId: "tA",
+          awayTeamId: "tB",
+          homeMoneylineAmerican: 1.5,
+          awayMoneylineAmerican: 2.6,
+          homeSpreadPoints: -3,
+        }),
+        g({
+          nflGameId: "g2",
+          homeTeamId: "tC",
+          awayTeamId: "tD",
+          homeMoneylineAmerican: 1.25,
+          awayMoneylineAmerican: 3.8,
+          homeSpreadPoints: -7.5,
+        }),
+      ],
+      seed,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.result.jailedTeamId).toBe("tC");
+      expect(r.result.resolvedBy).toBe("MONEYLINE");
+      expect(r.result.audit.winningMoneylineAmerican).toBe(1.25);
+    }
+  });
+
+  it("ranks leftover American against new decimal after normalizing", () => {
+    const r = resolveJailedTeam(
+      [
+        g({
+          nflGameId: "g-american",
+          homeTeamId: "tA",
+          awayTeamId: "tB",
+          homeMoneylineAmerican: -400,
+          awayMoneylineAmerican: 320,
+          homeSpreadPoints: -7.5,
+        }),
+        g({
+          nflGameId: "g-decimal",
+          homeTeamId: "tC",
+          awayTeamId: "tD",
+          homeMoneylineAmerican: 1.4,
+          awayMoneylineAmerican: 3.1,
+          homeSpreadPoints: -3,
+        }),
+      ],
+      seed,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.result.jailedTeamId).toBe("tA");
+      expect(r.result.resolvedBy).toBe("MONEYLINE");
+      expect(r.result.audit.gamesWithCompleteLines).toBe(2);
+      expect(r.result.audit.winningMoneylineAmerican).toBe(1.25);
     }
   });
 
@@ -148,6 +210,26 @@ describe("resolveJailedTeam", () => {
     }
   });
 
+  it("treats equal European decimal moneylines as home favorite", () => {
+    const r = resolveJailedTeam(
+      [
+        g({
+          nflGameId: "g1",
+          homeTeamId: "homeWins",
+          awayTeamId: "awayLose",
+          homeMoneylineAmerican: 2,
+          awayMoneylineAmerican: 2,
+          homeSpreadPoints: 0.5,
+        }),
+      ],
+      seed,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.result.jailedTeamId).toBe("homeWins");
+    }
+  });
+
   it("treats equal moneylines in one game as home favorite (tie-breaker)", () => {
     const r = resolveJailedTeam(
       [
@@ -196,11 +278,9 @@ describe("resolveJailedTeam", () => {
     );
   });
 
-  it("excludes games with no real favorite (both moneylines positive) from candidates", () => {
+  it("keeps leftover both-positive American games eligible after normalize", () => {
     const r = resolveJailedTeam(
       [
-        // Both teams underdogs — no favorite exists; per Algorithm step 3 this game must not
-        // be considered. Without the filter, +120 would be elected as the week's "biggest favorite".
         g({
           nflGameId: "g1",
           homeTeamId: "tA",
@@ -225,23 +305,26 @@ describe("resolveJailedTeam", () => {
       expect(r.result.jailedTeamId).toBe("tC");
       expect(r.result.resolvedBy).toBe("MONEYLINE");
       expect(r.result.audit.gamesInWeek).toBe(2);
-      expect(r.result.audit.gamesWithCompleteLines).toBe(1);
-      expect(r.result.audit.candidates).toHaveLength(1);
-      expect(r.result.audit.candidates[0]!.nflGameId).toBe("g2");
+      expect(r.result.audit.gamesWithCompleteLines).toBe(2);
+      expect(r.result.audit.candidates).toHaveLength(2);
     }
   });
 
-  it("returns NO_COMPLETE_MONEYLINES when every game has only positive moneylines", () => {
+  it("resolves leftover all-positive American weeks via normalized decimals", () => {
     const r = resolveJailedTeam(
       [
         g({
           nflGameId: "g1",
+          homeTeamId: "tA",
+          awayTeamId: "tB",
           homeMoneylineAmerican: 120,
           awayMoneylineAmerican: 200,
           homeSpreadPoints: -1,
         }),
         g({
           nflGameId: "g2",
+          homeTeamId: "tC",
+          awayTeamId: "tD",
           homeMoneylineAmerican: 100,
           awayMoneylineAmerican: 100,
           homeSpreadPoints: 0,
@@ -249,12 +332,12 @@ describe("resolveJailedTeam", () => {
       ],
       seed,
     );
-    expect(r).toEqual(
-      expect.objectContaining({
-        ok: false,
-        code: "NO_COMPLETE_MONEYLINES",
-      }),
-    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.result.jailedTeamId).toBe("tC");
+      expect(r.result.resolvedBy).toBe("MONEYLINE");
+      expect(r.result.audit.winningMoneylineAmerican).toBe(2);
+    }
   });
 
   it("uses signed spread magnitude so SPREAD tie-break demotes ML/spread disagreement", () => {
@@ -342,7 +425,7 @@ describe("resolveJailedTeam", () => {
           awayMoneylineAmerican: 210,
           homeSpreadPoints: -6.5,
           favoriteTeamId: "tA",
-          favoriteMoneylineAmerican: -250,
+          favoriteMoneylineAmerican: 1.4,
           spreadInFavoriteFavor: 6.5,
         },
       ]);

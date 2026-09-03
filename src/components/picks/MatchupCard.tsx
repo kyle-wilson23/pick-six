@@ -12,6 +12,7 @@ import { parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { useMemo, type KeyboardEvent } from "react";
 
+import { formatDecimalMoneyline } from "@/lib/domain/odds-format";
 import { LEAGUE_BUSINESS_TIMEZONE } from "@/lib/league/league-rules";
 import {
   computeMatchupSideState,
@@ -30,16 +31,6 @@ const fmtSpread = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
   signDisplay: "always",
 });
-
-function formatAmericanMl(value: number | null): string {
-  if (value === null || Number.isNaN(value)) {
-    return "–";
-  }
-  if (value > 0) {
-    return `+${value}`;
-  }
-  return `${value}`;
-}
 
 function pickSideGlowSx(isSelected: boolean, isSelectable: boolean) {
   if (isSelected) {
@@ -227,7 +218,7 @@ export function MatchupCard(props: MatchupCardProps) {
 
     const ariaLabel = buildTeamPickAriaLabel({
       teamName: team.name,
-      moneylineLabel: formatAmericanMl(moneylineAmerican),
+      moneylineLabel: formatDecimalMoneyline(moneylineAmerican),
       state,
       pickedInWeek: otherWeek,
     });
@@ -293,7 +284,7 @@ export function MatchupCard(props: MatchupCardProps) {
           </Typography>
         </Stack>
         <Typography variant="body2" fontWeight={500} sx={{ ml: 5 }}>
-          ML {formatAmericanMl(moneylineAmerican)}
+          ML {formatDecimalMoneyline(moneylineAmerican)}
           {spreadStr ? ` · ${spreadStr}` : ""}
         </Typography>
       </Stack>

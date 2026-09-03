@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { normalizeMoneylineToDecimal } from "@/lib/domain/odds-format";
+
 /**
  * One NFL game's odds after effective-odds resolution. Spread is **home-relative** (negative = home favored).
  * The favorite's spread is reported as a **signed magnitude in the chosen favorite's favor** —
@@ -96,15 +98,14 @@ export function resolveJailedTeam(
     if (hm === null || am === null || sp === null) {
       continue;
     }
-    // Algorithm step 3: "Do not compare underdog moneylines to favorites." A game with both
-    // moneylines >= 0 has no real favorite (theoretical / data-quality guard) and is excluded
-    // so a +150 team is never elected as the week's "biggest favorite".
-    if (hm >= 0 && am >= 0) {
+    const homeDecimal = normalizeMoneylineToDecimal(hm);
+    const awayDecimal = normalizeMoneylineToDecimal(am);
+    if (homeDecimal === null || awayDecimal === null) {
       continue;
     }
-    const side = pickFavoriteSide(hm, am);
+    const side = pickFavoriteSide(homeDecimal, awayDecimal);
     const favoriteTeamId = side === "home" ? g.homeTeamId : g.awayTeamId;
-    const favoriteMoneylineAmerican = side === "home" ? hm : am;
+    const favoriteMoneylineAmerican = side === "home" ? homeDecimal : awayDecimal;
     const spreadInFavoriteFavor = side === "home" ? -sp : sp;
     candidates.push({
       nflGameId: g.nflGameId,
@@ -124,7 +125,7 @@ export function resolveJailedTeam(
       ok: false,
       code: "NO_COMPLETE_MONEYLINES",
       message:
-        "No games in this week have a real favorite (both moneylines, a home spread, and at least one negative moneyline) — cannot determine jailed team.",
+        "No games in this week have complete, normalizable moneylines and a home spread — cannot determine jailed team.",
     };
   }
 
@@ -194,14 +195,14 @@ export function resolveJailedTeam(
 }
 
 function pickFavoriteSide(
-  homeMoneylineAmerican: number,
-  awayMoneylineAmerican: number,
+  homeMoneylineDecimal: number,
+  awayMoneylineDecimal: number,
 ): "home" | "away" {
-  // Story 3.3 Algorithm step 2: equal-ML edge case is documented to break to home.
-  if (homeMoneylineAmerican === awayMoneylineAmerican) {
+  // Lowest European decimal is the biggest favorite. Equal-ML breaks to home.
+  if (homeMoneylineDecimal === awayMoneylineDecimal) {
     return "home";
   }
-  return homeMoneylineAmerican < awayMoneylineAmerican ? "home" : "away";
+  return homeMoneylineDecimal < awayMoneylineDecimal ? "home" : "away";
 }
 
 function buildResult(

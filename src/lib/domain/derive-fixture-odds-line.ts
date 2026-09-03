@@ -13,12 +13,12 @@ export type FixtureOddsLine = {
   homeSpreadPoints: number;
 };
 
-/** Favorite moneyline inclusive range (American). */
-const FAVORITE_ML_MIN = -450;
-const FAVORITE_ML_MAX = -110;
-/** Underdog moneyline inclusive range (American). */
-const UNDERDOG_ML_MIN = 100;
-const UNDERDOG_ML_MAX = 440;
+/** Favorite decimal inclusive range (hundredths): 1.22 … 1.91. */
+const FAVORITE_HUNDREDTHS_MIN = 122;
+const FAVORITE_HUNDREDTHS_MAX = 191;
+/** Underdog decimal inclusive range (hundredths): 2.00 … 5.40. */
+const DOG_HUNDREDTHS_MIN = 200;
+const DOG_HUNDREDTHS_MAX = 540;
 /** Half-point spread magnitude steps: 0.5 … 14.0 → 28 values. */
 const SPREAD_HALF_STEPS = 28;
 
@@ -26,8 +26,8 @@ const SPREAD_HALF_STEPS = 28;
  * Deterministic fixture odds for rehearsal (Story 8.3). Pure hash of
  * `(nflSeasonYear, weekNumber, homeTeamId, awayTeamId)` — no `Date.now()` / `Math.random()`.
  *
- * Always produces exactly one negative moneyline (favorite) so `resolveJailedTeam` treats the
- * game as having a real favorite.
+ * Always produces a lower-decimal favorite so `resolveJailedTeam` treats the game as having
+ * a real favorite.
  */
 export function deriveFixtureOddsLine(input: FixtureOddsLineInput): FixtureOddsLine {
   const seed = `${input.nflSeasonYear}:${input.weekNumber}:${input.homeTeamId}:${input.awayTeamId}`;
@@ -35,13 +35,13 @@ export function deriveFixtureOddsLine(input: FixtureOddsLineInput): FixtureOddsL
 
   const homeIsFavorite = (buf[0]! & 1) === 0;
 
-  const favMlSpan = FAVORITE_ML_MAX - FAVORITE_ML_MIN; // 340 → 341 inclusive values
-  const favOffset = readU16(buf, 1) % (favMlSpan + 1);
-  const favoriteMl = FAVORITE_ML_MAX - favOffset; // -110 … -450
+  const favSpan = FAVORITE_HUNDREDTHS_MAX - FAVORITE_HUNDREDTHS_MIN;
+  const favHundredths = FAVORITE_HUNDREDTHS_MAX - (readU16(buf, 1) % (favSpan + 1));
+  const favoriteMl = favHundredths / 100;
 
-  const dogMlSpan = UNDERDOG_ML_MAX - UNDERDOG_ML_MIN; // 340 → 341 inclusive values
-  const dogOffset = readU16(buf, 3) % (dogMlSpan + 1);
-  const underdogMl = UNDERDOG_ML_MIN + dogOffset; // +100 … +440
+  const dogSpan = DOG_HUNDREDTHS_MAX - DOG_HUNDREDTHS_MIN;
+  const dogHundredths = DOG_HUNDREDTHS_MIN + (readU16(buf, 3) % (dogSpan + 1));
+  const underdogMl = dogHundredths / 100;
 
   const halfSteps = 1 + (readU16(buf, 5) % SPREAD_HALF_STEPS); // 1…28
   const spreadMagnitude = halfSteps * 0.5; // 0.5…14.0

@@ -92,7 +92,7 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 
 | Topic | Decision |
 |-------|----------|
-| **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `american`). Server-only via `ODDS_API_KEY`. |
+| **Odds (moneyline + spread)** | **[The Odds API](https://the-odds-api.com/)** (`americanfootball_nfl`, markets `h2h` + `spreads`, region `us`, format `decimal`). Server-only via `ODDS_API_KEY`. New lines persist European decimal moneylines. Leftover American integers in snapshot/audit rows are **not** rewritten; display and jailed ranking convert them at read time. |
 | **Schedule (`NflGame`)** | **The Odds API** `/events` (quota-free) — weekly cron `GET/POST /api/cron/sync-nfl-schedule` (Mon UTC / Mon ET window) plus admin override `POST /api/admin/nfl/sync-schedule`. Upserts weeks **1–18** (week inferred from kickoff ET), then deletes season-year games absent from the mapped set. **Canonical-only** — never writes test-league sim tables. |
 | **Results (finalize scores)** | **The Odds API** `/scores?daysFrom=3` — weekly cron `GET/POST /api/cron/sync-nfl-results` (Wed UTC / Wed ET window) plus admin override `POST /api/admin/nfl/sync-results`. Lookback is **max 3 days**; missed Wed cron → run admin sync before games age out of the window. |
 | **Test / rehearsal leagues** | **Hybrid Option B** — schedules, fixture odds, and jailed live in league-scoped `LeagueSimGame` / sim odds / `LeagueWeekJailedTeam`. League reads use `resolveGamesForLeague`. See [`docs/adr/001-hybrid-canonical-live-league-sim-schedule.md`](./adr/001-hybrid-canonical-live-league-sim-schedule.md). |
@@ -108,7 +108,8 @@ The gap is not “no matchup fields” — it is **schedule authority and comple
 - **Schedule — week numbers:** Odds `/events` has no week field. We infer week **1–18** from kickoffs (America/New_York Tue–Mon buckets from the earliest event’s week). See `map-schedule-from-events.ts`.
 - **Odds — games (lines):** We match provider odds events to `NflGame` rows by **away @ home** team names for the requested `nfl_season_year` + `week_number` (orientation must match the API).
 - **Results — games:** Completed `/scores` events match existing `NflGame` by home/away team ids (closest `kickoffAt` if duplicates).
-- **Spread:** Stored as **`home_spread_points`** (negative = home favored), taken from the home team’s `spreads` outcome `point` in the first bookmaker.
+- **Spread:** Stored as **`home_spread_points`** (negative = home favored), taken from the home team’s `spreads` outcome `point` in the first bookmaker. Spread juice `price` is ignored.
+- **Moneyline format:** Provider h2h `price` is requested as **European decimal**. Columns `home_moneyline_american` / `away_moneyline_american` are `DECIMAL(10,3)` and may still hold leftover American integers from earlier snapshots until overwritten.
 
 ## Snapshot semantics (“mid-week”)
 
@@ -194,7 +195,7 @@ See `.env.example`: `ODDS_API_KEY` (required for schedule sync, results sync, an
 | **Results sync** | **`src/lib/nfl/sync-nfl-results-from-odds.ts`**, cron **`/api/cron/sync-nfl-results`**, admin override **`POST /api/admin/nfl/sync-results`** (Odds `/scores?daysFrom=3`) |
 | **POST** snapshot | `POST /api/admin/nfl/snapshot-odds` — body `{ "nflSeasonYear": number, "weekNumber": 1–18 }` |
 | **GET** lines for a week | `GET /api/admin/nfl/week-odds?nflSeasonYear=&weekNumber=` |
-| **PATCH** manual line | `PATCH /api/admin/nfl/games/[gameId]/odds-line` — body `{ "homeMoneylineAmerican": number \| null, "awayMoneylineAmerican": number \| null, "homeSpreadPoints": number \| null }` |
+| **PATCH** manual line | `PATCH /api/admin/nfl/games/[gameId]/odds-line` — body `{ "homeMoneylineAmerican": number \| null, "awayMoneylineAmerican": number \| null, "homeSpreadPoints": number \| null }` (moneylines are **European decimal**; American values like `-150` / `130` return `400`) |
 | Admin UI | League **Settings** (admin only) — **NFL odds (global)** panel: `src/app/(app)/leagues/[leagueId]/settings/nfl-odds-admin-panel.tsx` |
 
 ### 6. Automated tests (no live API)

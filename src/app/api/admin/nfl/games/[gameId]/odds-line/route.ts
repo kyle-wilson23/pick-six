@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { assertAuthorizedForNflOddsOps } from "@/lib/nfl/authorize-odds-admin";
+import { parseOddsLinePatchBody } from "@/lib/nfl/parse-odds-line-patch";
 import { upsertManualOddsLineForGame } from "@/lib/nfl/snapshot-nfl-week-odds";
 
 function isOddsAutomationRequest(request: NextRequest): boolean {
@@ -13,12 +13,6 @@ function isOddsAutomationRequest(request: NextRequest): boolean {
   if (!secret) return false;
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
-
-const patchSchema = z.object({
-  homeMoneylineAmerican: z.number().int().nullable(),
-  awayMoneylineAmerican: z.number().int().nullable(),
-  homeSpreadPoints: z.number().nullable(),
-});
 
 async function readJsonObject(request: NextRequest): Promise<{ ok: true; value: unknown } | { ok: false }> {
   try {
@@ -59,13 +53,9 @@ export async function PATCH(
     );
   }
 
-  const parsed = patchSchema.safeParse(bodyRead.value);
-  if (!parsed.success) {
-    const first = parsed.error.issues[0];
-    return NextResponse.json(
-      { error: { code: "VALIDATION_ERROR", message: first?.message ?? "Invalid request body" } },
-      { status: 400 },
-    );
+  const parsed = parseOddsLinePatchBody(bodyRead.value);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
   try {

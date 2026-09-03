@@ -12,8 +12,8 @@ export function PicksPreviewBanner() {
           Preview – picks not yet open
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          You can review this week&apos;s matchups and lines, but pick submission opens when your league&apos;s competition
-          window starts.
+          You can review this week&apos;s matchups and lines. Picks for this week open on the Tuesday
+          before its first game.
         </Typography>
       </Stack>
     </Alert>

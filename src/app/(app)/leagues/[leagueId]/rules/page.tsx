@@ -165,11 +165,10 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             variant='body1'
             component='p'
           >
-            Picks lock <strong>5 minutes before the first kickoff</strong> of
-            the NFL week—typically Thursday around{' '}
-            <strong>8:10 PM Eastern</strong> when the week opens on Thursday
-            night, or earlier if the first game is sooner. Lock times are based
-            on the real kickoff schedule.
+            Picks for a week open on the <strong>Tuesday</strong> before its
+            first game, and lock{' '}
+            <strong>5 minutes before the first kickoff</strong> of the NFL week.
+            Lock times are based on the real kickoff schedule.
           </Typography>
         </section>
 

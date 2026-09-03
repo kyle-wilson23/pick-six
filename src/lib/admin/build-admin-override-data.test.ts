@@ -70,7 +70,7 @@ describe("buildAdminOverrideData", () => {
   it("omits open-window week rows from allSeasonPicks (including the override target)", async () => {
     const week1Kickoff = new Date("2026-09-11T20:00:00.000Z");
     const week2Kickoff = new Date("2026-09-18T20:00:00.000Z");
-    // After week 1 kickoff (window closed) but before week 2 Thursday lock (window open).
+    // After week 1 kickoff (window closed) but before week 2's deadline (window open).
     const now = new Date("2026-09-12T12:00:00.000Z");
     const games = [teamPair(1, week1Kickoff), teamPair(2, week2Kickoff)];
     mockNflGameFindMany.mockImplementation((args: { where?: { weekNumber?: number } }) => {

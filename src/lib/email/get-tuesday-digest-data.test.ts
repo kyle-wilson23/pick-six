@@ -158,7 +158,7 @@ describe("getTuesdayDigestData", () => {
     expect(result.isTestLeague).toBe(true);
   });
 
-  it("sets isPreviewWeek true before first competition kickoff", async () => {
+  it("sets isPreviewWeek true before the week's window-open instant", async () => {
     mockGetLeagueStandings.mockResolvedValue([]);
     mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
     mockMembershipFindMany.mockResolvedValue([]);
@@ -175,7 +175,7 @@ describe("getTuesdayDigestData", () => {
     expect(result.isPreviewWeek).toBe(true);
   });
 
-  it("sets isPreviewWeek false after first competition kickoff", async () => {
+  it("sets isPreviewWeek false once the window has opened", async () => {
     mockGetLeagueStandings.mockResolvedValue([]);
     mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
     mockMembershipFindMany.mockResolvedValue([]);
@@ -186,6 +186,25 @@ describe("getTuesdayDigestData", () => {
     const result = await getTuesdayDigestData(
       { leagueId: LEAGUE_ID },
       new Date("2026-09-09T12:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.isPreviewWeek).toBe(false);
+  });
+
+  // FR26a: the Tuesday digest links to the pick page, so the week has to be active by the time the
+  // digest lands — Tuesday 19:00 ET, which is before the deadline but after window open.
+  it("sets isPreviewWeek false on digest night, before the deadline", async () => {
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-08T23:20:00.000Z") },
+    ]);
+
+    const result = await getTuesdayDigestData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-09-08T23:00:00.000Z"),
     );
 
     expect(result.weekNumber).toBe(1);

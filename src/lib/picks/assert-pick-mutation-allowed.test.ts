@@ -6,7 +6,7 @@ import { checkPickMutationDeadline } from "./assert-pick-mutation-allowed";
 
 describe("checkPickMutationDeadline", () => {
   it("returns null when the pick window is open (kickoff far in the future)", () => {
-    // Deadline = min(kickoff − 5m, Thursday 8:10 PM). With kickoff in 2099, both legs are future.
+    // Deadline = kickoff − 5m, so a 2099 kickoff leaves the window open.
     const farFutureKickoff = new Date("2099-10-10T20:20:00.000Z");
     const result = checkPickMutationDeadline({
       now: new Date(),
@@ -16,7 +16,7 @@ describe("checkPickMutationDeadline", () => {
   });
 
   it("returns 403 PICK_DEADLINE_PASSED with correct shape when window is closed", () => {
-    // Kickoff far in the past: both deadline legs are well before now.
+    // Kickoff far in the past, so the deadline is well before now.
     const farPastKickoff = new Date("2000-10-10T20:20:00.000Z");
     const result = checkPickMutationDeadline({
       now: new Date(),

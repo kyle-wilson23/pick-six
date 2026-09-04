@@ -24,6 +24,7 @@ export function JailedTeamCallout({ team, moneylineAmerican }: JailedTeamCallout
       sx={{
         p: 1.5,
         borderRadius: 2,
+        height: "100%",
         bgcolor: (t) => `${t.palette.warning.main}1A`, // ~10% opacity
         border: (t) => `1px solid ${t.palette.warning.main}4D`, // ~30% opacity
       }}

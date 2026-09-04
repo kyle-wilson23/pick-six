@@ -1,5 +1,6 @@
 "use client";
 
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { keyframes } from "@mui/system";
@@ -97,36 +98,44 @@ export function DeadlineCountdown({ pickDeadlineUtc }: DeadlineCountdownProps) {
   const headlinePrefix = isPassed ? "Picks closed" : "Picks lock in";
 
   return (
-    <Stack
+    <Paper
+      elevation={0}
       role="timer"
       aria-live="polite"
       aria-atomic
-      spacing={0.25}
       sx={{
-        py: 1,
-        px: 1.25,
+        p: 1.5,
         borderRadius: 2,
-        bgcolor: "background.paper",
+        height: "100%",
+        flex: 1,
+        bgcolor: (t) => `${t.palette.success.main}1A`,
+        border: (t) => `1px solid ${t.palette.success.main}4D`,
       }}
     >
-      <Typography variant="caption" color="text.secondary" component="span">
-        {headlinePrefix}
-        {easternLabel ? ` · ${easternLabel}` : ""}
-      </Typography>
-      <Typography
-        component="span"
-        sx={{
-          color: styles.color,
-          fontWeight: styles.fontWeight,
-          fontSize: styles.fontSize,
-          lineHeight: 1.2,
-          ...(variant.urgency === "critical" && {
-            animation: `${pulse} 1.6s ease-in-out infinite`,
-          }),
-        }}
-      >
-        {variant.label}
-      </Typography>
-    </Stack>
+      <Stack spacing={0.25} justifyContent="center" sx={{ height: "100%" }}>
+        <Typography variant="body2" color="success.main" fontWeight={700} component="span">
+          {headlinePrefix}
+        </Typography>
+        {easternLabel ? (
+          <Typography variant="caption" color="text.secondary" component="span">
+            {easternLabel}
+          </Typography>
+        ) : null}
+        <Typography
+          component="span"
+          sx={{
+            color: styles.color,
+            fontWeight: styles.fontWeight,
+            fontSize: styles.fontSize,
+            lineHeight: 1.2,
+            ...(variant.urgency === "critical" && {
+              animation: `${pulse} 1.6s ease-in-out infinite`,
+            }),
+          }}
+        >
+          {variant.label}
+        </Typography>
+      </Stack>
+    </Paper>
   );
 }

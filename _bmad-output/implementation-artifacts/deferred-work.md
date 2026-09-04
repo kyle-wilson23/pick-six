@@ -2,6 +2,16 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: spec-league-rules-missing-spaces.md (2026-09-04)
+
+Pre-existing rules-page copy gaps, not caused by the two spacing fixes. Jailed-team pickability and NFL-tie scoring are already listed under `spec-league-rules-user-facing-copy.md`.
+
+- **Seed/result “verified later” wording** — Participants have no verification UI; only admin jailed-verification exists. Leftover audit language from the earlier copy rewrite.
+- **“Same snapshot” overstates lock** — Admins can edit lines and recompute jailed before the deadline, so the snapshot is not immutable for the whole week.
+- **Tuesday open / first-week / timezone** — Copy says picks open “Tuesday before its first game” and names no timezone. Domain open is Tuesday 00:00 America/New_York, and the league’s first competition week opens at first kickoff minus 7 days.
+- **Intro vs mid-season start** — Intro says rules can’t be customized, but this page already branches on `firstCompetitionWeek`.
+- **Null season fallback** — If `resolveCurrentSeasonForLeague` returns null, `firstWeek` falls back to 1 and the Season start section is omitted.
+
 ## Deferred from: spec-pre-week-1-deadline-anchored-reminders.md (2026-09-03)
 
 - **`get-weekly-email-status.ts` still infers reminder status from fixed Wed/Thu Eastern windows** — Rule C moved automated sends onto deadline-anchored daily ticks, but the admin "Email automation status" card still labels rows Wednesday/Thursday reminder and uses `isInEasternWindow` to decide pending vs missed. Cosmetic only; `wednesdayReminderSentAt` / `thursdayReminderSentAt` stamps remain correct. Relabel and re-gate when the admin card is next touched.

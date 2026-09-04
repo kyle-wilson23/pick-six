@@ -108,7 +108,7 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             component='p'
           >
             Each week, one NFL team is the <strong>jailed team</strong>—the
-            biggest favorite by <strong>moneyline</strong> among that
+            biggest favorite by <strong>moneyline</strong>{' '}among that
             week&apos;s favorites, based on a <strong>locked weekly odds</strong>{' '}
             snapshot. Everyone in the league uses the same snapshot, so the
             jailed team is the same for all participants.
@@ -128,7 +128,7 @@ export default async function LeagueRulesPage({ params }: PageProps) {
             component='p'
           >
             Break ties in this order: <strong>moneyline</strong> first (biggest
-            favorite), then <strong>point spread</strong> in the
+            favorite), then <strong>point spread</strong>{' '}in the
             favorite&apos;s favor, then a <strong>seeded random</strong> choice
             from the remaining teams. The seed and result are recorded so the
             outcome can be verified later if needed.

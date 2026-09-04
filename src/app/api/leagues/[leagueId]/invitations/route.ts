@@ -9,16 +9,17 @@
 
 import { randomBytes } from "node:crypto";
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { sendInvitationEmail } from "@/lib/email/send-invitation-email";
 import { prisma } from "@/lib/db";
 import { hashInviteToken } from "@/lib/invitations";
 import { createInvitationsBodySchema } from "@/lib/league/create-invitations-body";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 
 /** TTL for new invitations (AC1). */
 export const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -59,20 +60,9 @@ export async function POST(
 
   const { leagueId } = await context.params;
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: {
-      userId_leagueId: { userId: session.user.id, leagueId },
-    },
-    include: {
-      league: { select: { name: true, isTestLeague: true } },
-    },
-  });
-
-  if (!membership || membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
   const parsed = createInvitationsBodySchema.safeParse(json);
@@ -90,8 +80,19 @@ export async function POST(
   }
 
   const { emails } = parsed.data;
-  const leagueName = membership.league.name;
-  const isTestLeague = membership.league.isTestLeague;
+  if (emails.some((email) => isSuperuserEmail(email))) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "FORBIDDEN",
+          message: "One or more emails cannot be invited to this league",
+        },
+      },
+      { status: 403 },
+    );
+  }
+  const leagueName = access.league.name;
+  const isTestLeague = access.league.isTestLeague;
 
   const blocked = await prisma.leagueMembership.findMany({
     where: {

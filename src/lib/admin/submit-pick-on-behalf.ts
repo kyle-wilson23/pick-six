@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import {
   deriveAntiJailedBonus,
   validateDuplicateTeamAcrossSeason,
@@ -41,7 +42,8 @@ export async function submitPickOnBehalf(
   tx: Tx,
   args: {
     leagueId: string;
-    adminMembershipId: string;
+    adminMembershipId: string | null;
+    adminUserId: string;
     targetMembershipId: string;
     teamId: string;
     nflWeekNumber: number;
@@ -49,7 +51,7 @@ export async function submitPickOnBehalf(
     antiJailedBonus?: boolean;
   },
 ): Promise<SubmitPickOnBehalfErr | SubmitPickOnBehalfOk> {
-  const { leagueId, adminMembershipId, targetMembershipId, teamId, nflWeekNumber } = args;
+  const { leagueId, adminMembershipId, adminUserId, targetMembershipId, teamId, nflWeekNumber } = args;
 
   const season = await resolveCurrentSeasonForLeague(tx.season, leagueId);
   if (!season) {
@@ -70,10 +72,13 @@ export async function submitPickOnBehalf(
 
   const targetMembership = await tx.leagueMembership.findFirst({
     where: { id: targetMembershipId, leagueId },
-    select: { id: true },
+    select: { id: true, user: { select: { email: true } } },
   });
   if (!targetMembership) {
     return err(404, "MEMBER_NOT_FOUND", "Target membership not found in this league");
+  }
+  if (isSuperuserEmail(targetMembership.user.email)) {
+    return err(403, "FORBIDDEN", "That member cannot receive picks");
   }
 
   const leagueRow = await tx.league.findUnique({
@@ -215,6 +220,7 @@ export async function submitPickOnBehalf(
     data: {
       leagueId,
       adminMembershipId,
+      adminUserId,
       targetMembershipId,
       nflWeekNumber,
       beforeTeamId: existing?.teamId ?? null,

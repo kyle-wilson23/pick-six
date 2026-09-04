@@ -2,6 +2,7 @@ import { LeagueMembershipRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { isInvitationUsable } from "@/lib/invitations";
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { normalizeEmail } from "@/lib/normalize-email";
 
 export type AcceptLeagueInvitationResult = {
@@ -43,6 +44,9 @@ export async function acceptLeagueInvitation({
     const invitedEmail = normalizeEmail(invitation.invitedEmail);
     if (invitedEmail !== normalizeEmail(userEmail)) {
       throw new InviteAcceptError("EMAIL_MISMATCH");
+    }
+    if (isSuperuserEmail(userEmail) || isSuperuserEmail(invitedEmail)) {
+      throw new InviteAcceptError("INVITE_BAD");
     }
 
     if (invitation.leagueId) {

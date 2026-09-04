@@ -39,4 +39,14 @@ describe("authorizeLeagueDelete", () => {
       }),
     ).toEqual({ outcome: "ok" });
   });
+
+  it("returns ok for a superuser with no membership", () => {
+    expect(
+      authorizeLeagueDelete({
+        leagueExists: true,
+        membership: null,
+        isSuperuser: true,
+      }),
+    ).toEqual({ outcome: "ok" });
+  });
 });

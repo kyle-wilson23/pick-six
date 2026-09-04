@@ -35,6 +35,7 @@ model User {
   sessions             Session[]
   leagueMemberships    LeagueMembership[]
   passwordResetTokens  PasswordResetToken[]
+  auditLogEntriesAsAdmin AuditLogEntry[] @relation("AuditAdminUser")
 
   @@map("users")
 }
@@ -405,7 +406,8 @@ model Pick {
 model AuditLogEntry {
   id                 String   @id @default(cuid())
   leagueId           String   @map("league_id")
-  adminMembershipId  String   @map("admin_membership_id")
+  adminMembershipId  String?  @map("admin_membership_id")
+  adminUserId        String?  @map("admin_user_id")
   targetMembershipId String   @map("target_membership_id")
   nflWeekNumber      Int      @map("nfl_week_number")
   /// Null if this override created the pick for the week (no prior pick existed)
@@ -418,7 +420,8 @@ model AuditLogEntry {
 
   league           League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   /// onDelete: Restrict — no member removal stories in MVP; prevents orphan audit rows
-  adminMembership  LeagueMembership @relation("AuditAdmin", fields: [adminMembershipId], references: [id], onDelete: Restrict)
+  adminMembership  LeagueMembership? @relation("AuditAdmin", fields: [adminMembershipId], references: [id], onDelete: Restrict)
+  adminUser        User?             @relation("AuditAdminUser", fields: [adminUserId], references: [id], onDelete: Restrict)
   targetMembership LeagueMembership @relation("AuditTarget", fields: [targetMembershipId], references: [id], onDelete: Restrict)
   /// Team relations — Restrict: team rows are global and never deleted in MVP
   beforeTeam       Team?            @relation("AuditBeforeTeam", fields: [beforeTeamId], references: [id], onDelete: Restrict)

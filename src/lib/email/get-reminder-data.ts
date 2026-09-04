@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 import { computePickDeadlineUtc, getFirstKickoffUtc } from "@/lib/domain/pick-deadline";
 import { getAppBaseUrl } from "@/lib/email/app-base-url";
 import {
@@ -130,7 +131,7 @@ export async function getReminderData(
       isTestLeague: league.isTestLeague,
     }),
     prisma.leagueMembership.findMany({
-      where: { leagueId },
+      where: leaguePlayerMembershipWhere(leagueId),
       include: { user: { select: { email: true, name: true } } },
       orderBy: { createdAt: "asc" },
     }),
@@ -168,6 +169,6 @@ export async function getReminderData(
     jailedTeamAbbreviation: jailedRow?.jailedTeam.abbreviation ?? null,
     picksUrl,
     outstandingMembers,
-    submittedCount: picks.length,
+    submittedCount: memberships.filter((m) => pickedMembershipIds.has(m.id)).length,
   };
 }

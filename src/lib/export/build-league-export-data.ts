@@ -4,6 +4,7 @@ import { PickOutcome, type PrismaClient } from "@prisma/client";
 
 import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { teamNameForExport } from "@/lib/export/team-name-for-export";
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
 
@@ -119,7 +120,7 @@ export async function buildLeagueExportData(
 
   const [memberships, picks, jailedRows, games] = await Promise.all([
     prisma.leagueMembership.findMany({
-      where: { leagueId: opts.leagueId },
+      where: leaguePlayerMembershipWhere(opts.leagueId),
       select: {
         id: true,
         user: { select: { email: true } },

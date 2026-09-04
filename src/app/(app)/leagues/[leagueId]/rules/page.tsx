@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getLeagueAccess } from '@/lib/league/get-league-access';
-import { isLeagueParticipantRole } from '@/lib/league/participant-membership';
 import { getCurrentNflSeasonYear } from '@/lib/league/nfl-season';
 import { resolveCurrentSeasonForLeague } from '@/lib/league/resolve-current-season';
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -23,7 +22,7 @@ export default async function LeagueRulesPage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
 

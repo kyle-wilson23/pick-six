@@ -1,10 +1,8 @@
-import { LeagueMembershipRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 
 import { SyncAppNavLeague } from "@/components/layout/AppNavLeagueContext";
 import { auth } from "@/lib/auth";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { recordLeagueVisit } from "@/lib/league/record-league-visit";
 
 type LayoutProps = {
@@ -20,7 +18,7 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
 
@@ -34,7 +32,7 @@ export default async function LeagueLayout({ children, params }: LayoutProps) {
         leagueId,
         leagueName: access.league.name,
         isTestLeague: access.league.isTestLeague,
-        isAdmin: access.membership.role === LeagueMembershipRole.ADMIN,
+        isAdmin: access.isAdmin,
       }}
     >
       {children}

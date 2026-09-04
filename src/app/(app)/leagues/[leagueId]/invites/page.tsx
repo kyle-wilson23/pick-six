@@ -1,4 +1,3 @@
-import { LeagueMembershipRole } from "@prisma/client";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { notFound } from "next/navigation";
@@ -29,15 +28,13 @@ export default async function LeagueInvitesPage({ params }: PageProps) {
     notFound();
   }
 
-  const { membership } = access;
-
   const nflSeasonYear = getCurrentNflSeasonYear();
   const season = await prisma.season.findUnique({
     where: { leagueId_nflSeasonYear: { leagueId, nflSeasonYear } },
     select: { preSeasonInitializedAt: true },
   });
 
-  const isAdmin = membership.role === LeagueMembershipRole.ADMIN;
+  const isAdmin = access.isAdmin;
 
   return (
     <Stack

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/db";
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import {
   hashInviteToken,
   inviteSignupBodySchema,
@@ -61,6 +62,9 @@ export async function POST(request: Request) {
       }
 
       const email = normalizeEmail(invitation.invitedEmail);
+      if (isSuperuserEmail(email)) {
+        throw new Error("INVITE_BAD");
+      }
       const existing = await tx.user.findUnique({ where: { email } });
       if (existing) {
         throw new Error("INVITE_BAD");

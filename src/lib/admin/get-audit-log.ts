@@ -26,6 +26,7 @@ export async function getAuditLog(
     orderBy: { createdAt: "desc" },
     include: {
       adminMembership: { include: { user: { select: { name: true, email: true } } } },
+      adminUser: { select: { name: true, email: true } },
       targetMembership: { include: { user: { select: { name: true, email: true } } } },
       beforeTeam: { select: { name: true } },
       afterTeam: { select: { name: true } },
@@ -34,7 +35,9 @@ export async function getAuditLog(
 
   return entries.map((e) => ({
     id: e.id,
-    adminName: userDisplayName(e.adminMembership.user),
+    adminName: userDisplayName(
+      e.adminMembership?.user ?? e.adminUser ?? { name: "Superuser", email: "superuser" },
+    ),
     targetName: userDisplayName(e.targetMembership.user),
     nflWeekNumber: e.nflWeekNumber,
     beforeTeamName: e.beforeTeam?.name ?? null,

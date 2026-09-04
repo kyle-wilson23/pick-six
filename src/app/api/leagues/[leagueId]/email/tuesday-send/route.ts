@@ -4,11 +4,11 @@
  * - **CSRF / same-origin:** `assertCookieSessionMutationOrigin` before `auth()` (NFR15).
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import {
@@ -37,22 +37,9 @@ export async function POST(
 
   const { leagueId } = await context.params;
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
-  }
-
-  if (membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
   const force = request.nextUrl.searchParams.get("force") === "true";

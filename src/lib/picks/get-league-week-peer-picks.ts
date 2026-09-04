@@ -1,5 +1,6 @@
 import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 import { isPickWindowClosedByDeadline } from "@/lib/picks/countdown";
 import { userDisplayName } from "@/lib/user-display-name";
 
@@ -94,7 +95,7 @@ export async function getLeagueWeekPeerPicks(
   const [memberships, picks] = await Promise.all([
     prisma.leagueMembership.findMany({
       where: {
-        leagueId: opts.leagueId,
+        ...leaguePlayerMembershipWhere(opts.leagueId),
         role: { in: [LeagueMembershipRole.ADMIN, LeagueMembershipRole.MEMBER] },
       },
       select: {

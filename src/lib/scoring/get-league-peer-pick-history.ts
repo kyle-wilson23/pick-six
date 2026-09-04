@@ -1,5 +1,6 @@
 import { LeagueMembershipRole, type PrismaClient } from "@prisma/client";
 
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import { isWeekFullyFinalized } from "@/lib/scoring/finalize-nfl-week";
@@ -98,6 +99,7 @@ export async function getLeaguePeerPickHistory(
 
   const weekMap = new Map<number, PeerPickEntry[]>();
   for (const p of picks) {
+    if (isSuperuserEmail(p.leagueMembership.user.email)) continue;
     const wk = p.nflWeekNumber;
     const isRevealed = revealedWeeks.has(wk);
     if (!isAdmin && !isRevealed) continue;

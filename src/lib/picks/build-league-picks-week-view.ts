@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma as prismaSingleton } from "@/lib/db";
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { fetchWeatherForGame } from "@/lib/integrations/weather/client";
 import { getStadiumRoof } from "@/lib/integrations/weather/stadium-locations";
 import type { WeatherData } from "@/lib/integrations/weather/client";
@@ -53,11 +54,17 @@ export async function buildLeaguePicksWeekView(
   const { leagueId, sessionUserId, explicitWeekNumber } = args;
   const db = prismaSingleton;
 
+  const user = await db.user.findUnique({
+    where: { id: sessionUserId },
+    select: { email: true },
+  });
+  const superuserViewer = isSuperuserEmail(user?.email);
+
   const membership = await db.leagueMembership.findUnique({
     where: { userId_leagueId: { userId: sessionUserId, leagueId } },
   });
 
-  if (!membership || !isLeagueParticipantRole(membership.role)) {
+  if (!superuserViewer && (!membership || !isLeagueParticipantRole(membership.role))) {
     return {
       ok: false,
       status: 403,
@@ -198,28 +205,32 @@ export async function buildLeaguePicksWeekView(
     isTestLeague,
   });
 
-  // Story 3.7 — caller's own pick context. Always filtered by `leagueMembershipId`; never returns
-  // other participants' pick data (NFR17 / project-context #4).
+  // Story 3.7 — caller's own pick context. Superuser viewers have no pick slot.
+  const playerMembershipId = superuserViewer ? null : membership?.id ?? null;
   const [currentPickRow, otherWeekPickRows, catalogTeams] = await Promise.all([
-    db.pick.findUnique({
-      where: {
-        leagueMembershipId_seasonId_nflWeekNumber: {
-          leagueMembershipId: membership.id,
-          seasonId: season.id,
-          nflWeekNumber: targetWeek,
-        },
-      },
-      select: { teamId: true, antiJailedBonus: true, updatedAt: true },
-    }),
-    db.pick.findMany({
-      where: {
-        leagueMembershipId: membership.id,
-        seasonId: season.id,
-        nflWeekNumber: { not: targetWeek },
-      },
-      select: { teamId: true, nflWeekNumber: true },
-      orderBy: { nflWeekNumber: "asc" },
-    }),
+    playerMembershipId
+      ? db.pick.findUnique({
+          where: {
+            leagueMembershipId_seasonId_nflWeekNumber: {
+              leagueMembershipId: playerMembershipId,
+              seasonId: season.id,
+              nflWeekNumber: targetWeek,
+            },
+          },
+          select: { teamId: true, antiJailedBonus: true, updatedAt: true },
+        })
+      : Promise.resolve(null),
+    playerMembershipId
+      ? db.pick.findMany({
+          where: {
+            leagueMembershipId: playerMembershipId,
+            seasonId: season.id,
+            nflWeekNumber: { not: targetWeek },
+          },
+          select: { teamId: true, nflWeekNumber: true },
+          orderBy: { nflWeekNumber: "asc" },
+        })
+      : Promise.resolve([]),
     db.team.findMany({
       select: { id: true, abbreviation: true, name: true },
     }),

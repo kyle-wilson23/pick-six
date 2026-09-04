@@ -41,7 +41,7 @@ function serializeAdminLeagueRow(row: AdministeredLeagueWithSeasonRow) {
 }
 
 /**
- * GET `/api/leagues` — leagues the caller administers (Story 2.4). **ADMIN** memberships only.
+ * GET `/api/leagues` — leagues the caller administers (Story 2.4). **ADMIN** memberships, or every league for the configured superuser.
  */
 export async function GET() {
   const session = await auth();

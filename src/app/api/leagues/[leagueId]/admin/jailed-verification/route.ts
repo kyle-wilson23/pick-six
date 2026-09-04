@@ -4,13 +4,12 @@
  * Read-only; no CSRF. Admin league membership required. No pick data exposed (NFR17).
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { getJailedVerification } from "@/lib/admin/get-jailed-verification";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 
 export async function GET(
   _request: NextRequest,
@@ -26,22 +25,9 @@ export async function GET(
 
   const { leagueId } = await context.params;
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
-  }
-
-  if (membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
   try {

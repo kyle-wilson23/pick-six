@@ -2,7 +2,29 @@ import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { prisma } from "@/lib/db";
+
+export type NflOddsOpsAuthDecision = "allow" | "unauthenticated" | "forbidden";
+
+/** Pure gate used by {@link assertAuthorizedForNflOddsOps}. */
+export function resolveNflOddsOpsAuthorization(args: {
+  bearerAuthorized: boolean;
+  userId: string | undefined;
+  isSuperuser: boolean;
+  hasAnyLeagueAdminMembership: boolean;
+}): NflOddsOpsAuthDecision {
+  if (args.bearerAuthorized) {
+    return "allow";
+  }
+  if (!args.userId) {
+    return "unauthenticated";
+  }
+  if (args.isSuperuser || args.hasAnyLeagueAdminMembership) {
+    return "allow";
+  }
+  return "forbidden";
+}
 
 /**
  * Returns true if the request carries the `ODDS_SNAPSHOT_SECRET` bearer token
@@ -24,28 +46,42 @@ export async function assertAuthorizedForNflOddsOps(
 ): Promise<NextResponse | null> {
   const secret = process.env.ODDS_SNAPSHOT_SECRET?.trim();
   const authHeader = request.headers.get("authorization");
-  if (secret && authHeader === `Bearer ${secret}`) {
-    return null;
+  const bearerAuthorized = Boolean(secret && authHeader === `Bearer ${secret}`);
+
+  let isSuperuser = false;
+  let hasAnyLeagueAdminMembership = false;
+  if (!bearerAuthorized && userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    isSuperuser = isSuperuserEmail(user?.email);
+    if (!isSuperuser) {
+      const anyAdmin = await prisma.leagueMembership.findFirst({
+        where: { userId, role: LeagueMembershipRole.ADMIN },
+        select: { id: true },
+      });
+      hasAnyLeagueAdminMembership = Boolean(anyAdmin);
+    }
   }
 
-  if (!userId) {
+  const decision = resolveNflOddsOpsAuthorization({
+    bearerAuthorized,
+    userId,
+    isSuperuser,
+    hasAnyLeagueAdminMembership,
+  });
+  if (decision === "allow") {
+    return null;
+  }
+  if (decision === "unauthenticated") {
     return NextResponse.json(
       { error: { code: "UNAUTHENTICATED", message: "Sign in required" } },
       { status: 401 },
     );
   }
-
-  const anyAdmin = await prisma.leagueMembership.findFirst({
-    where: { userId, role: LeagueMembershipRole.ADMIN },
-    select: { id: true },
-  });
-
-  if (!anyAdmin) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "League admin access required" } },
-      { status: 403 },
-    );
-  }
-
-  return null;
+  return NextResponse.json(
+    { error: { code: "FORBIDDEN", message: "League admin access required" } },
+    { status: 403 },
+  );
 }

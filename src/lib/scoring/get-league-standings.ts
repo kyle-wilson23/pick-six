@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { userDisplayName } from "@/lib/user-display-name";
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 
 export type StandingsEntry = {
   membershipId: string;
@@ -23,7 +24,7 @@ export async function getLeagueStandings(
   });
 
   const memberships = await prisma.leagueMembership.findMany({
-    where: { leagueId: opts.leagueId },
+    where: leaguePlayerMembershipWhere(opts.leagueId),
     include: {
       user: { select: { name: true, email: true, image: true } },
       picks: season

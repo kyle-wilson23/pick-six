@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { authorizeLeagueDelete } from "@/lib/league/delete-league-authorization";
@@ -36,7 +37,7 @@ export async function DELETE(
 
   const { leagueId } = await context.params;
 
-  const [league, membership] = await Promise.all([
+  const [league, membership, user] = await Promise.all([
     prisma.league.findUnique({
       where: { id: leagueId },
       select: { id: true, isTestLeague: true },
@@ -46,11 +47,16 @@ export async function DELETE(
         userId_leagueId: { userId: session.user.id, leagueId },
       },
     }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    }),
   ]);
 
   const decision = authorizeLeagueDelete({
     leagueExists: league !== null,
     membership,
+    isSuperuser: isSuperuserEmail(user?.email),
   });
 
   if (decision.outcome === "league_not_found") {

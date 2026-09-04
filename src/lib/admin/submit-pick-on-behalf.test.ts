@@ -61,6 +61,7 @@ const baseGames = [
 const baseArgs = {
   leagueId: "league-1",
   adminMembershipId: "admin-mem",
+  adminUserId: "admin-user",
   targetMembershipId: "target-mem",
   teamId: "team-home",
   nflWeekNumber: 1,
@@ -70,7 +71,7 @@ const baseArgs = {
 function setupHappyPath() {
   mockSeasonFindUnique.mockResolvedValue(baseSeason);
   mockLeagueFindUnique.mockResolvedValue({ isTestLeague: false });
-  mockMembershipFindFirst.mockResolvedValue({ id: "target-mem" });
+  mockMembershipFindFirst.mockResolvedValue({ id: "target-mem", user: { email: "player@example.com" } });
   mockJailedFindUnique.mockResolvedValue({ jailedTeamId: "team-jailed" });
   mockGameFindMany.mockResolvedValue(
     baseGames.map((g, i) => ({
@@ -122,6 +123,7 @@ describe("submitPickOnBehalf", () => {
       data: {
         leagueId: "league-1",
         adminMembershipId: "admin-mem",
+        adminUserId: "admin-user",
         targetMembershipId: "target-mem",
         nflWeekNumber: 1,
         beforeTeamId: null,
@@ -159,6 +161,7 @@ describe("submitPickOnBehalf", () => {
       data: {
         leagueId: "league-1",
         adminMembershipId: "admin-mem",
+        adminUserId: "admin-user",
         targetMembershipId: "target-mem",
         nflWeekNumber: 1,
         beforeTeamId: "team-away",
@@ -230,6 +233,7 @@ describe("submitPickOnBehalf", () => {
       data: {
         leagueId: "league-1",
         adminMembershipId: "admin-mem",
+        adminUserId: "admin-user",
         targetMembershipId: "target-mem",
         nflWeekNumber: 1,
         beforeTeamId: null,
@@ -310,6 +314,7 @@ describe("submitPickOnBehalf", () => {
       data: {
         leagueId: "league-1",
         adminMembershipId: "admin-mem",
+        adminUserId: "admin-user",
         targetMembershipId: "target-mem",
         nflWeekNumber: 1,
         beforeTeamId: null,
@@ -368,6 +373,7 @@ describe("submitPickOnBehalf", () => {
       data: {
         leagueId: "league-1",
         adminMembershipId: "admin-mem",
+        adminUserId: "admin-user",
         targetMembershipId: "target-mem",
         nflWeekNumber: 1,
         beforeTeamId: null,

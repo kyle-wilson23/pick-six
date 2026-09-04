@@ -1,6 +1,5 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { LeagueMembershipRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 
 import { AdminAuditLog } from "@/components/admin/AdminAuditLog";
@@ -40,7 +39,7 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || access.membership.role !== LeagueMembershipRole.ADMIN) {
+  if (!access?.isAdmin) {
     notFound();
   }
 

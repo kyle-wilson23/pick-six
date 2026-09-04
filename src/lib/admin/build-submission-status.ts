@@ -1,6 +1,7 @@
 import type { AdminSubmittedPick } from "@/lib/admin/submitted-pick";
 import { isLeagueWeekPickWindowClosed } from "@/lib/domain/pick-deadline";
 import { prisma as prismaSingleton } from "@/lib/db";
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
 import {
@@ -151,7 +152,7 @@ export async function buildSubmissionStatus(
 
   const [memberships, picks] = await Promise.all([
     db.leagueMembership.findMany({
-      where: { leagueId },
+      where: leaguePlayerMembershipWhere(leagueId),
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
       orderBy: { createdAt: "asc" },
     }),

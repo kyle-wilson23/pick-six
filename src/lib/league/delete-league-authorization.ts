@@ -12,9 +12,13 @@ export type DeleteLeagueAuthorization =
 export function authorizeLeagueDelete(args: {
   leagueExists: boolean;
   membership: { role: LeagueMembershipRole } | null;
+  isSuperuser?: boolean;
 }): DeleteLeagueAuthorization {
   if (!args.leagueExists) {
     return { outcome: "league_not_found" };
+  }
+  if (args.isSuperuser) {
+    return { outcome: "ok" };
   }
   if (!args.membership || args.membership.role !== LeagueMembershipRole.ADMIN) {
     return { outcome: "forbidden" };

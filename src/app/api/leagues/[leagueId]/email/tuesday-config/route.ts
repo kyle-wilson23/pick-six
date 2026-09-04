@@ -4,7 +4,6 @@
  * - **CSRF / same-origin:** PUT reads JSON first, then `assertCookieSessionMutationOrigin` (NFR15).
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
@@ -17,26 +16,13 @@ import {
   NoActiveWeekError,
   getTuesdayDigestData,
 } from "@/lib/email/get-tuesday-digest-data";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 
 async function requireAdmin(leagueId: string, userId: string) {
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId, leagueId } },
-  });
-
-  if (!membership) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(userId, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
-
-  if (membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
-  }
-
   return null;
 }
 

@@ -6,7 +6,6 @@ import { PickHistoryTable } from "@/components/history/PickHistoryTable";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getPersonalPickHistory } from "@/lib/scoring/get-personal-pick-history";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -24,16 +23,17 @@ export default async function LeagueHistoryPage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
-  const { membership } = access;
   const nflSeasonYear = getCurrentNflSeasonYear();
-  const history = await getPersonalPickHistory(prisma, {
-    leagueId,
-    nflSeasonYear,
-    membershipId: membership.id,
-  });
+  const history = access.isParticipant && access.membership
+    ? await getPersonalPickHistory(prisma, {
+        leagueId,
+        nflSeasonYear,
+        membershipId: access.membership.id,
+      })
+    : { entries: [], totalPoints: 0, wins: 0, losses: 0, ties: 0 };
 
   return (
     <Stack

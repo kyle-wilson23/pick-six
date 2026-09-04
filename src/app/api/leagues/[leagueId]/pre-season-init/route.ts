@@ -5,7 +5,6 @@
  * - **Idempotent:** if `preSeasonInitializedAt` is already set, returns success without changing the timestamp.
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -13,6 +12,7 @@ import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
 import { preSeasonInitBodySchema } from "@/lib/league/pre-season-init-body";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 
 async function readJsonObject(request: NextRequest): Promise<{ ok: true; value: unknown } | { ok: false }> {
@@ -68,20 +68,9 @@ export async function POST(
 
   const { leagueId } = await context.params;
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: {
-      userId_leagueId: { userId: session.user.id, leagueId },
-    },
-    include: {
-      league: { select: { isTestLeague: true } },
-    },
-  });
-
-  if (!membership || membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
   const season = await resolveCurrentSeasonForLeague(prisma.season, leagueId);
@@ -104,7 +93,7 @@ export async function POST(
       where: { id: season.id, preSeasonInitializedAt: null },
       data: {
         preSeasonInitializedAt: new Date(),
-        ...(membership.league.isTestLeague
+        ...(access.league.isTestLeague
           ? { simulatedCurrentWeek: season.firstCompetitionWeek }
           : {}),
       },

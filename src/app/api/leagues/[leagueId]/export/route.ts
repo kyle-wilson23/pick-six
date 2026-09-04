@@ -6,7 +6,6 @@
 
 import "server-only";
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -14,6 +13,7 @@ import { buildLeagueExportData } from "@/lib/export/build-league-export-data";
 import { sanitizeDownloadFilenameSegment } from "@/lib/export/sanitize-download-filename";
 import { serializeLeagueExportCsv } from "@/lib/export/serialize-league-export-csv";
 import { auth } from "@/lib/auth";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 
@@ -43,15 +43,9 @@ export async function GET(
     );
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!membership || membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
   try {

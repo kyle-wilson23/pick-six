@@ -7,7 +7,6 @@ import { StandingsTable } from "@/components/standings/StandingsTable";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeagueStandings } from "@/lib/scoring/get-league-standings";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -25,10 +24,9 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
-  const { membership } = access;
   const nflSeasonYear = getCurrentNflSeasonYear();
   const standings = await getLeagueStandings(prisma, { leagueId, nflSeasonYear });
 
@@ -51,7 +49,7 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
 
       {access.league.isTestLeague ? <TestLeagueBanner /> : null}
 
-      <StandingsTable standings={standings} currentMembershipId={membership.id} />
+      <StandingsTable standings={standings} currentMembershipId={access.membership?.id ?? ""} />
     </Stack>
   );
 }

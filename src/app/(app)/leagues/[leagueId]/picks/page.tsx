@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { buildLeaguePicksWeekView } from "@/lib/picks/build-league-picks-week-view";
 import type { BuildLeaguePicksWeekViewOutcome } from "@/lib/picks/build-league-picks-week-view";
@@ -38,7 +37,7 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
 
@@ -145,7 +144,7 @@ export default async function LeaguePicksPage({ params, searchParams }: PageProp
         teamsOnBye={payload.teamsOnBye}
         pickDeadlineUtc={payload.pickDeadlineUtc}
         jailedTeamId={payload.jailedTeamId}
-        isPreview={payload.isPreview}
+        isPreview={payload.isPreview || !access.isParticipant}
         currentPick={payload.currentPick}
         seasonPickedTeams={payload.seasonPickedTeams}
       />

@@ -7,7 +7,6 @@
  * - **Rate limiting:** not applied here — admin-only, low-frequency override path; proxy rate limits target high-risk public routes.
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -16,6 +15,7 @@ import { submitPickOnBehalf } from "@/lib/admin/submit-pick-on-behalf";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 
 async function readJsonObject(
   request: NextRequest,
@@ -78,15 +78,9 @@ export async function POST(
   const { leagueId } = await context.params;
   const { targetMembershipId, teamId, nflWeekNumber, antiJailedBonus } = parsed.data;
 
-  const adminMembership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
-
-  if (!adminMembership || adminMembership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin role required" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson("Admin role required");
   }
 
   let outcome;
@@ -94,7 +88,8 @@ export async function POST(
     outcome = await prisma.$transaction(async (tx) => {
       return submitPickOnBehalf(tx, {
         leagueId,
-        adminMembershipId: adminMembership.id,
+        adminMembershipId: access.membership?.id ?? null,
+        adminUserId: session.user.id,
         targetMembershipId,
         teamId,
         nflWeekNumber,

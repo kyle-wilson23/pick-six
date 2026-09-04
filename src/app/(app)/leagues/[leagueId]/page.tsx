@@ -12,7 +12,6 @@ import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { describeSeasonForParticipant } from "@/lib/league/list-joined-leagues";
 import { listLeagueRoster } from "@/lib/league/list-league-roster";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -30,7 +29,7 @@ export default async function LeagueHomePage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
 

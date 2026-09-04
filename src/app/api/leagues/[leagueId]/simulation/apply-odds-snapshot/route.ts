@@ -10,13 +10,13 @@
  *   low abuse surface, same documented exception as `advance-week` / `first-competition-week` PATCH.
  */
 
-import { LeagueMembershipRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
+import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { applySimulationOddsSnapshot } from "@/lib/nfl/apply-simulation-odds-snapshot";
 
@@ -71,23 +71,12 @@ export async function POST(
 
   const { leagueId } = await context.params;
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: {
-      userId_leagueId: { userId: session.user.id, leagueId },
-    },
-    include: {
-      league: { select: { isTestLeague: true } },
-    },
-  });
-
-  if (!membership || membership.role !== LeagueMembershipRole.ADMIN) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Admin access required for this league" } },
-      { status: 403 },
-    );
+  const access = await requireLeagueAdminAccess(session.user.id, leagueId);
+  if (!access) {
+    return forbiddenAdminJson();
   }
 
-  if (!membership.league.isTestLeague) {
+  if (!access.league.isTestLeague) {
     return NextResponse.json(
       {
         error: {

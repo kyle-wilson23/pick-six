@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { LeagueResultsTable } from "@/components/results/LeagueResultsTable";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { LeagueMembershipRole } from "@prisma/client";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeaguePeerPickHistory } from "@/lib/scoring/get-league-peer-pick-history";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -24,16 +24,15 @@ export default async function LeagueResultsPage({ params }: PageProps) {
   }
 
   const access = await getLeagueAccess(session.user.id, leagueId);
-  if (!access || !isLeagueParticipantRole(access.membership.role)) {
+  if (!access) {
     notFound();
   }
-  const { membership } = access;
   const nflSeasonYear = getCurrentNflSeasonYear();
   const history = await getLeaguePeerPickHistory(prisma, {
     leagueId,
     nflSeasonYear,
-    callerRole: membership.role,
-    callerMembershipId: membership.id,
+    callerRole: access.isAdmin ? LeagueMembershipRole.ADMIN : LeagueMembershipRole.MEMBER,
+    callerMembershipId: access.membership?.id,
   });
 
   return (
@@ -53,7 +52,7 @@ export default async function LeagueResultsPage({ params }: PageProps) {
         League Results
       </Typography>
 
-      <LeagueResultsTable history={history} currentMembershipId={membership.id} />
+      <LeagueResultsTable history={history} currentMembershipId={access.membership?.id ?? ""} />
     </Stack>
   );
 }

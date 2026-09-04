@@ -1,5 +1,6 @@
 import { LeagueMembershipRole } from "@prisma/client";
 
+import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { prisma } from "@/lib/db";
 
 import { getCurrentNflSeasonYear } from "./nfl-season";
@@ -62,6 +63,26 @@ export async function listAdministeredLeaguesWithCurrentSeason(
   userId: string,
   nflSeasonYear: number = getCurrentNflSeasonYear(),
 ): Promise<AdministeredLeagueWithSeasonRow[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  if (isSuperuserEmail(user?.email)) {
+    const leagues = await prisma.league.findMany({
+      include: {
+        seasons: {
+          where: { nflSeasonYear },
+          take: 1,
+        },
+      },
+    });
+    const rows = toAdministeredLeagueRows(leagues).map((row) => ({
+      ...row,
+      lastVisitedAt: null as Date | null,
+    }));
+    return sortLeaguesByRecentVisit(rows);
+  }
+
   const memberships = await prisma.leagueMembership.findMany({
     where: { userId, role: LeagueMembershipRole.ADMIN },
     include: {

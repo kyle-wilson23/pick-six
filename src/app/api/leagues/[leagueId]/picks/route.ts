@@ -14,13 +14,13 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 import { prisma } from "@/lib/db";
+import { loadLeagueAccess } from "@/lib/league/get-league-access";
 import {
   deriveAntiJailedBonus,
   validateDuplicateTeamAcrossSeason,
   validateJailedLineupAndBonus,
 } from "@/lib/domain/picks";
 import { isFirstPickForSeason, isFirstCompetitionWeekEditable } from "@/lib/league/first-competition-week";
-import { isLeagueParticipantRole } from "@/lib/league/participant-membership";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedTeamIdForLeagueWeek } from "@/lib/nfl/league-jailed";
 import { isWeekInLeagueCompetition } from "@/lib/nfl/nfl-regular-season";
@@ -211,11 +211,10 @@ export async function POST(
     );
   }
 
-  const membership = await prisma.leagueMembership.findUnique({
-    where: { userId_leagueId: { userId: session.user.id, leagueId } },
-  });
+  const access = await loadLeagueAccess(session.user.id, leagueId);
+  const membership = access?.isParticipant ? access.membership : null;
 
-  if (!membership || !isLeagueParticipantRole(membership.role)) {
+  if (!membership) {
     logPickSubmitRejected({
       startedAt,
       leagueId,

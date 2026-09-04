@@ -16,11 +16,12 @@ export type SendInvitationEmailInput = {
 
 /**
  * Sends a league invitation email via Resend. Server-only — never called from the client.
- * Failures are logged but not rethrown (fire-and-forget at the API call site).
+ * Returns whether Resend accepted the send. Failures are logged and not thrown so a
+ * batch can finish even when some recipients fail.
  */
 export async function sendInvitationEmail(
   input: SendInvitationEmailInput,
-): Promise<void> {
+): Promise<boolean> {
   const signupUrl = `${getAppBaseUrl()}/signup/${input.rawToken}`;
   const isTestLeague = input.isTestLeague === true;
 
@@ -60,6 +61,7 @@ export async function sendInvitationEmail(
         leagueName: input.leagueName,
       },
     });
+    return true;
   } catch (err) {
     logEvent({
       level: 'error',
@@ -72,5 +74,6 @@ export async function sendInvitationEmail(
         error: err instanceof Error ? err.message : String(err),
       },
     });
+    return false;
   }
 }

@@ -15,6 +15,7 @@ import type { NextRequest } from "next/server";
 import { isSuperuserEmail } from "@/lib/auth/is-superuser";
 import { auth } from "@/lib/auth";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
+import { EMAIL_SEND_CONCURRENCY, mapWithConcurrency } from "@/lib/email/map-with-concurrency";
 import { sendInvitationEmail } from "@/lib/email/send-invitation-email";
 import { prisma } from "@/lib/db";
 import { hashInviteToken } from "@/lib/invitations";
@@ -23,6 +24,9 @@ import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/requi
 
 /** TTL for new invitations (AC1). */
 export const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** Keep the isolate alive while Resend calls finish (Hobby ceiling). */
+export const maxDuration = 300;
 
 type CreatedInvite = {
   rawToken: string;
@@ -150,16 +154,24 @@ export async function POST(
       return created;
     });
 
-    for (const row of toSend) {
-      sendInvitationEmail({
-        to: row.to,
-        rawToken: row.rawToken,
-        leagueName: row.leagueName,
-        isTestLeague: row.isTestLeague,
-      });
-    }
+    const sendResults = await mapWithConcurrency(
+      toSend,
+      EMAIL_SEND_CONCURRENCY,
+      (row) =>
+        sendInvitationEmail({
+          to: row.to,
+          rawToken: row.rawToken,
+          leagueName: row.leagueName,
+          isTestLeague: row.isTestLeague,
+        }),
+    );
+    const sent = sendResults.filter(Boolean).length;
 
-    return NextResponse.json({ created: toSend.length });
+    return NextResponse.json({
+      created: toSend.length,
+      sent,
+      failed: toSend.length - sent,
+    });
   } catch (e) {
     console.error("POST /api/leagues/[leagueId]/invitations failed", e);
     return NextResponse.json(

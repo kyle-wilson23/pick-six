@@ -35,3 +35,18 @@ export function hasConcludedFirstCompetitionWeek(args: {
   }
   return args.now.getTime() > lastKickoff.getTime();
 }
+
+/** Admin copy + tooltip: why Week 1 digest controls are disabled. */
+export const TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL =
+  "Weekly digest starts after the first NFL week finishes. There's no results recap yet — pick reminders still send.";
+
+/**
+ * Whether the admin Tuesday digest composer (note / preview / send) may be used.
+ * Rehearsal leagues stay enabled; production waits until the first competition week is over.
+ */
+export function isTuesdayDigestComposerEnabled(args: {
+  isTestLeague: boolean;
+  hasConcludedFirstCompetitionWeek: boolean;
+}): boolean {
+  return args.isTestLeague || args.hasConcludedFirstCompetitionWeek;
+}

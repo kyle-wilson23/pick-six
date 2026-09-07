@@ -16,6 +16,7 @@ import {
   NoActiveWeekError,
   getTuesdayDigestData,
 } from "@/lib/email/get-tuesday-digest-data";
+import { isTuesdayDigestComposerEnabled } from "@/lib/email/has-concluded-first-competition-week";
 import { sendTuesdayDigest } from "@/lib/email/send-tuesday-digest";
 
 export async function POST(
@@ -46,6 +47,24 @@ export async function POST(
 
   try {
     const data = await getTuesdayDigestData({ leagueId });
+
+    if (
+      !isTuesdayDigestComposerEnabled({
+        isTestLeague: data.isTestLeague,
+        hasConcludedFirstCompetitionWeek: data.hasConcludedFirstCompetitionWeek,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "FIRST_WEEK_NOT_CONCLUDED",
+            message:
+              "Weekly digest is unavailable until the first competition week has finished",
+          },
+        },
+        { status: 409 },
+      );
+    }
 
     const existing = await prisma.leagueWeekEmailConfig.findUnique({
       where: {

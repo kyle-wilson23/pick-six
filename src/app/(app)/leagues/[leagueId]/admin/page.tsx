@@ -164,7 +164,14 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
             <Typography variant="h5" component="h2">
               Weekly Email
             </Typography>
-            <AdminEmailComposer leagueId={leagueId} weekNumber={weekNumber} />
+            <AdminEmailComposer
+              leagueId={leagueId}
+              weekNumber={weekNumber}
+              digestAvailable={
+                league.isTestLeague ||
+                weeklyEmailStatus?.tuesdayDigest.reason !== "no_completed_week"
+              }
+            />
           </Stack>
 
           <Stack spacing={1}>

@@ -4,6 +4,7 @@ import { easternLocal } from "@/test/season-2026-openers";
 
 import {
   hasConcludedFirstCompetitionWeek,
+  isTuesdayDigestComposerEnabled,
   lastKickoffForWeek,
 } from "./has-concluded-first-competition-week";
 
@@ -95,6 +96,35 @@ describe("hasConcludedFirstCompetitionWeek", () => {
         firstCompetitionWeek: 12,
         games: week12,
         now: easternLocal(2026, 11, 1, 19, 0),
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("isTuesdayDigestComposerEnabled", () => {
+  it("false for production before the first week concludes", () => {
+    expect(
+      isTuesdayDigestComposerEnabled({
+        isTestLeague: false,
+        hasConcludedFirstCompetitionWeek: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("true for production after the first week concludes", () => {
+    expect(
+      isTuesdayDigestComposerEnabled({
+        isTestLeague: false,
+        hasConcludedFirstCompetitionWeek: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("true for test leagues even before the first week concludes", () => {
+    expect(
+      isTuesdayDigestComposerEnabled({
+        isTestLeague: true,
+        hasConcludedFirstCompetitionWeek: false,
       }),
     ).toBe(true);
   });

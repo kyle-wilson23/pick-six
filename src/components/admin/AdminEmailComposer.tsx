@@ -7,11 +7,16 @@ import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+
+import { TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL } from "@/lib/email/has-concluded-first-competition-week";
 
 export type AdminEmailComposerProps = {
   leagueId: string;
   weekNumber: number | null;
+  /** False for production Week 1 until that slate has finished. Default true. */
+  digestAvailable?: boolean;
 };
 
 type ConfigResponse = {
@@ -24,7 +29,11 @@ function formatSentAt(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
-export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerProps) {
+export function AdminEmailComposer({
+  leagueId,
+  weekNumber,
+  digestAvailable = true,
+}: AdminEmailComposerProps) {
   const [bodyText, setBodyText] = useState("");
   const [sentAt, setSentAt] = useState<string | null>(null);
   const [activeWeekNumber, setActiveWeekNumber] = useState<number | null>(weekNumber);
@@ -68,14 +77,21 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
   }, [configUrl]);
 
   useEffect(() => {
+    if (!digestAvailable) {
+      setLoading(false);
+      return;
+    }
     if (weekNumber != null) {
       void loadConfig();
     } else {
       setLoading(false);
     }
-  }, [weekNumber, loadConfig]);
+  }, [weekNumber, digestAvailable, loadConfig]);
 
   async function handleSave(): Promise<boolean> {
+    if (!digestAvailable) {
+      return false;
+    }
     if (activeWeekNumber == null) {
       return true;
     }
@@ -107,6 +123,9 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
   }
 
   async function handlePreview() {
+    if (!digestAvailable) {
+      return;
+    }
     if (activeWeekNumber != null) {
       await handleSave();
     }
@@ -114,6 +133,9 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
   }
 
   async function handleSend(force = false) {
+    if (!digestAvailable) {
+      return;
+    }
     setSending(true);
     setSendMessage(null);
     setSendInfo(null);
@@ -212,7 +234,7 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
           fullWidth
           value={bodyText}
           onChange={(e) => setBodyText(e.target.value)}
-          disabled={loading}
+          disabled={loading || !digestAvailable}
           placeholder="Add a custom message to include in the Tuesday email…"
         />
 
@@ -220,6 +242,10 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
           <Typography variant="body2" color="text.secondary">
             Last sent: {formatSentAt(sentAt)}
           </Typography>
+        ) : null}
+
+        {!digestAvailable ? (
+          <Alert severity="info">{TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL}</Alert>
         ) : null}
 
         {saveMessage != null ? (
@@ -241,22 +267,36 @@ export function AdminEmailComposer({ leagueId, weekNumber }: AdminEmailComposerP
         ) : null}
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button
-            variant="outlined"
-            color="info"
-            onClick={() => void handlePreview()}
-            disabled={loading || saving}
+          <Tooltip
+            title={!digestAvailable ? TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL : ""}
+            disableHoverListener={digestAvailable}
           >
-            Preview
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => void handleSend()}
-            disabled={loading || sending}
+            <span>
+              <Button
+                variant="outlined"
+                color="info"
+                onClick={() => void handlePreview()}
+                disabled={loading || saving || !digestAvailable}
+              >
+                Preview
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip
+            title={!digestAvailable ? TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL : ""}
+            disableHoverListener={digestAvailable}
           >
-            {sending ? "Sending…" : "Send Now"}
-          </Button>
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => void handleSend()}
+                disabled={loading || sending || !digestAvailable}
+              >
+                {sending ? "Sending…" : "Send Now"}
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
       </Stack>
     </Paper>

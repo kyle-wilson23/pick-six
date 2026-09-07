@@ -16,6 +16,7 @@ import {
   NoActiveWeekError,
   getTuesdayDigestData,
 } from "@/lib/email/get-tuesday-digest-data";
+import { isTuesdayDigestComposerEnabled } from "@/lib/email/has-concluded-first-competition-week";
 import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 
 async function requireAdmin(leagueId: string, userId: string) {
@@ -141,6 +142,24 @@ export async function PUT(
 
   try {
     const data = await getTuesdayDigestData({ leagueId });
+
+    if (
+      !isTuesdayDigestComposerEnabled({
+        isTestLeague: data.isTestLeague,
+        hasConcludedFirstCompetitionWeek: data.hasConcludedFirstCompetitionWeek,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "FIRST_WEEK_NOT_CONCLUDED",
+            message:
+              "Weekly digest is unavailable until the first competition week has finished",
+          },
+        },
+        { status: 409 },
+      );
+    }
 
     if (parsed.data.weekNumber !== data.weekNumber) {
       return NextResponse.json(

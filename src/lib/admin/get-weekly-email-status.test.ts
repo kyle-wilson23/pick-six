@@ -31,7 +31,10 @@ import { computePickDeadlineUtc } from "@/lib/domain/pick-deadline";
 import { NoActiveWeekError } from "@/lib/email/get-tuesday-digest-data";
 import { easternLocal } from "@/test/season-2026-openers";
 
-import { getWeeklyEmailStatus } from "./get-weekly-email-status";
+import {
+  getWeeklyEmailStatus,
+  isTuesdayDigestComposerAvailable,
+} from "./get-weekly-email-status";
 
 const LEAGUE_ID = "league-1";
 
@@ -264,5 +267,30 @@ describe("getWeeklyEmailStatus", () => {
     expect(status.tuesdayDigest).toEqual({ state: "pending" });
     expect(status.wednesdayReminder).toEqual({ state: "pending" });
     expect(status.thursdayReminder).toEqual({ state: "pending" });
+  });
+});
+
+describe("isTuesdayDigestComposerAvailable", () => {
+  it("is false only when the digest was skipped for an unfinished first week", () => {
+    expect(
+      isTuesdayDigestComposerAvailable({
+        state: "skipped",
+        reason: "no_completed_week",
+      }),
+    ).toBe(false);
+    expect(
+      isTuesdayDigestComposerAvailable({
+        state: "skipped",
+        reason: "no_outstanding",
+      }),
+    ).toBe(true);
+    expect(isTuesdayDigestComposerAvailable({ state: "pending" })).toBe(true);
+    expect(
+      isTuesdayDigestComposerAvailable({
+        state: "sent",
+        sentAtIso: "2026-09-08T22:00:00.000Z",
+      }),
+    ).toBe(true);
+    expect(isTuesdayDigestComposerAvailable(undefined)).toBe(true);
   });
 });

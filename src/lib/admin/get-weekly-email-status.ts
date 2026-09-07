@@ -28,6 +28,15 @@ export type WeeklyEmailStatus = {
   thursdayReminder: EmailJobRowStatus;
 };
 
+/** Composer stays enabled unless the digest row is skipped for an unfinished first week. */
+export function isTuesdayDigestComposerAvailable(
+  tuesdayDigest: EmailJobRowStatus | undefined,
+): boolean {
+  return (
+    tuesdayDigest?.state !== "skipped" || tuesdayDigest.reason !== "no_completed_week"
+  );
+}
+
 function inferTuesdayDigestStatus(
   sentAt: Date | null | undefined,
   now: Date,

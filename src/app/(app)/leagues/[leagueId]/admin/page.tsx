@@ -15,7 +15,10 @@ import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import { getAuditLog } from "@/lib/admin/get-audit-log";
 import { getJailedVerification } from "@/lib/admin/get-jailed-verification";
-import { getWeeklyEmailStatus } from "@/lib/admin/get-weekly-email-status";
+import {
+  getWeeklyEmailStatus,
+  isTuesdayDigestComposerAvailable,
+} from "@/lib/admin/get-weekly-email-status";
 import {
   buildSubmissionStatus,
   type AdminSubmissionStatusPayload,
@@ -169,7 +172,7 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
               weekNumber={weekNumber}
               digestAvailable={
                 league.isTestLeague ||
-                weeklyEmailStatus?.tuesdayDigest.reason !== "no_completed_week"
+                isTuesdayDigestComposerAvailable(weeklyEmailStatus?.tuesdayDigest)
               }
             />
           </Stack>

@@ -55,8 +55,9 @@ export function AdminWeeklyEmailStatus({ status, loadError }: AdminWeeklyEmailSt
   const rows = status
     ? [
         rowLabel("Tuesday digest", status.tuesdayDigest),
-        rowLabel("Wednesday reminder", status.wednesdayReminder),
-        rowLabel("Thursday reminder", status.thursdayReminder),
+        // Display names follow slot 1/2, not the weekday-named status fields.
+        rowLabel("First pick reminder", status.wednesdayReminder),
+        rowLabel("Final pick reminder", status.thursdayReminder),
       ]
     : [];
 

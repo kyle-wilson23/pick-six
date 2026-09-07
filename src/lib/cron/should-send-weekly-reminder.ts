@@ -18,6 +18,11 @@ export const REMINDER_SLOTS: readonly ReminderSlot[] = [1, 2];
 /** Hours before the deadline at which each slot becomes eligible to send. */
 export const REMINDER_SLOT_LEAD_HOURS: Record<ReminderSlot, number> = { 1: 48, 2: 12 };
 
+/** Daily cron instants (`vercel.json` reminder-tick-am / reminder-tick-pm). */
+export const REMINDER_TICK_UTC_HOURS = [11, 20] as const;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 /**
  * Historical weekday column names, reused as slot stamps. Do not rename — no migration.
  * Slot 1 → `wednesdayReminderSentAt`; slot 2 → `thursdayReminderSentAt`.
@@ -51,6 +56,26 @@ export function isPastPickDeadline(deadline: Date | null, now: Date): boolean {
 /** The instant `slot` becomes eligible: `deadline − REMINDER_SLOT_LEAD_HOURS[slot]`. */
 export function reminderSlotAnchorUtc(slot: ReminderSlot, deadline: Date): Date {
   return new Date(deadline.getTime() - REMINDER_SLOT_LEAD_HOURS[slot] * MS_PER_HOUR);
+}
+
+/**
+ * First 11:00 or 20:00 UTC tick at or after `anchor` — the instant cron actually evaluates the slot.
+ */
+export function firstEligibleReminderTickUtc(anchor: Date): Date {
+  const startOfUtcDay = Date.UTC(
+    anchor.getUTCFullYear(),
+    anchor.getUTCMonth(),
+    anchor.getUTCDate(),
+  );
+  for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
+    for (const hour of REMINDER_TICK_UTC_HOURS) {
+      const tickMs = startOfUtcDay + dayOffset * MS_PER_DAY + hour * MS_PER_HOUR;
+      if (tickMs >= anchor.getTime()) {
+        return new Date(tickMs);
+      }
+    }
+  }
+  return new Date(startOfUtcDay + MS_PER_DAY + REMINDER_TICK_UTC_HOURS[0] * MS_PER_HOUR);
 }
 
 /**

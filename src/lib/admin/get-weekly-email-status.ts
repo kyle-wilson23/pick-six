@@ -1,10 +1,12 @@
 import "server-only";
 
+import { isOnOrAfterEasternDayHour } from "@/lib/cron/eastern-window";
 import {
-  isBeforeEasternDayHour,
-  isInEasternWindow,
-  isOnOrAfterEasternDayHour,
-} from "@/lib/cron/eastern-window";
+  firstEligibleReminderTickUtc,
+  isPastPickDeadline,
+  reminderSlotAnchorUtc,
+  type ReminderSlot,
+} from "@/lib/cron/should-send-weekly-reminder";
 import { prisma } from "@/lib/db";
 import {
   LeagueNotFoundError,
@@ -54,10 +56,9 @@ function inferReminderStatus(
   reminderSentAt: Date | null | undefined,
   outstandingCount: number,
   now: Date,
-  windowDay: number,
-  windowStartHour: number,
-  windowEndHour: number,
-  notSentAfterDay: number,
+  slot: ReminderSlot,
+  deadline: Date | null,
+  isPreviewWeek: boolean,
 ): EmailJobRowStatus {
   if (reminderSentAt != null) {
     return { state: "sent", sentAtIso: reminderSentAt.toISOString() };
@@ -67,19 +68,21 @@ function inferReminderStatus(
     return { state: "skipped", reason: "no_outstanding" };
   }
 
-  const beforeWindow =
-    !isInEasternWindow(now, windowDay, windowStartHour, windowEndHour) &&
-    isBeforeEasternDayHour(now, windowDay, windowStartHour);
-
-  if (beforeWindow) {
+  // Cron skips preview weeks entirely — not a missed send.
+  if (isPreviewWeek && !isPastPickDeadline(deadline, now)) {
     return { state: "pending" };
   }
 
-  if (isOnOrAfterEasternDayHour(now, notSentAfterDay, 0)) {
+  if (deadline == null || isPastPickDeadline(deadline, now)) {
     return { state: "not_sent" };
   }
 
-  return { state: "pending" };
+  const firstTick = firstEligibleReminderTickUtc(reminderSlotAnchorUtc(slot, deadline));
+  if (now.getTime() < firstTick.getTime()) {
+    return { state: "pending" };
+  }
+
+  return { state: "not_sent" };
 }
 
 export async function getWeeklyEmailStatus(input: {
@@ -133,19 +136,17 @@ export async function getWeeklyEmailStatus(input: {
       config?.wednesdayReminderSentAt,
       input.outstandingCount,
       now,
-      3,
-      19,
-      24,
-      4,
+      1,
+      digestData.pickDeadlineUtc,
+      digestData.isPreviewWeek,
     ),
     thursdayReminder: inferReminderStatus(
       config?.thursdayReminderSentAt,
       input.outstandingCount,
       now,
-      4,
-      17,
-      21,
-      5,
+      2,
+      digestData.pickDeadlineUtc,
+      digestData.isPreviewWeek,
     ),
   };
 }

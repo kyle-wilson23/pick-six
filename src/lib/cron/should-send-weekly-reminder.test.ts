@@ -7,6 +7,8 @@ import { SEASON_2026_OPENERS, easternLocal } from "@/test/season-2026-openers";
 
 import {
   REMINDER_SLOT_LEAD_HOURS,
+  REMINDER_TICK_UTC_HOURS,
+  firstEligibleReminderTickUtc,
   isPastPickDeadline,
   shouldSendWeeklyReminder,
   summarizeReminderSkip,
@@ -21,7 +23,6 @@ function easternWall(at: Date): string {
   return formatInTimeZone(at, TZ, "yyyy-MM-dd HH:mm");
 }
 
-const TICK_UTC_HOURS = [11, 20] as const;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Every 11:00 and 20:00 UTC tick in `[from, to]` (inclusive). */
@@ -35,7 +36,7 @@ function utcTicks(from: Date, to: Date): Date[] {
     from.getUTCDate(),
   );
   for (let day = startDay; day <= toMs + MS_PER_DAY; day += MS_PER_DAY) {
-    for (const hour of TICK_UTC_HOURS) {
+    for (const hour of REMINDER_TICK_UTC_HOURS) {
       const t = day + hour * 60 * 60 * 1000;
       if (t >= fromMs && t <= toMs) {
         ticks.push(new Date(t));
@@ -83,6 +84,26 @@ function replaySlots(deadline: Date): { slot1: Date | null; slot2: Date | null }
 describe("REMINDER_SLOT_LEAD_HOURS", () => {
   it("anchors slot 1 at 48h and slot 2 at 12h", () => {
     expect(REMINDER_SLOT_LEAD_HOURS).toEqual({ 1: 48, 2: 12 });
+  });
+});
+
+describe("firstEligibleReminderTickUtc", () => {
+  it("returns the same instant when the anchor is a tick", () => {
+    expect(firstEligibleReminderTickUtc(new Date("2026-09-08T11:00:00.000Z"))).toEqual(
+      new Date("2026-09-08T11:00:00.000Z"),
+    );
+  });
+
+  it("advances to the afternoon tick when the anchor is after 11:00 UTC", () => {
+    expect(firstEligibleReminderTickUtc(new Date("2026-09-08T12:00:00.000Z"))).toEqual(
+      new Date("2026-09-08T20:00:00.000Z"),
+    );
+  });
+
+  it("rolls to the next morning tick after 20:00 UTC", () => {
+    expect(firstEligibleReminderTickUtc(new Date("2026-09-08T20:00:01.000Z"))).toEqual(
+      new Date("2026-09-09T11:00:00.000Z"),
+    );
   });
 });
 

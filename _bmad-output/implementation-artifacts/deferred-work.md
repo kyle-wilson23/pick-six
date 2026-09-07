@@ -14,7 +14,6 @@ Pre-existing rules-page copy gaps, not caused by the two spacing fixes. Jailed-t
 
 ## Deferred from: spec-pre-week-1-deadline-anchored-reminders.md (2026-09-03)
 
-- **`get-weekly-email-status.ts` still infers reminder status from fixed Wed/Thu Eastern windows** — Automated sends are deadline-anchored (slot 1 ≈ deadline − 48h, slot 2 ≈ deadline − 12h), but pending vs missed still uses `isInEasternWindow` on Wed 19:00 / Thu 17:00 ET. The card now labels those rows First/Final pick reminder, so weekday gating and display names disagree (e.g. a Tuesday slot-1 send can still show Pending). `wednesdayReminderSentAt` / `thursdayReminderSentAt` stamps remain correct. Re-gate off the deadline, not “next UI touch.”
 - **Empty-outstanding ticks keep calling `sendReminder`** — stamps are written only when `sent > 0` so a nobody-outstanding slot 1 can fall through to slot 2. After slot 1 is due, daily ticks therefore re-enter `sendReminder` (no Resend, `sentAt` stays null) until a send succeeds or the deadline passes. Harmless extra work/logs; tighten if cron duration becomes an issue.
 
 ## Deferred from: review of spec-floating-pick-submit-button.md (2026-08-09)
@@ -409,7 +408,7 @@ Split from implementing research `technical-league-scoped-vs-canonical-nfl-sched
 
 ## Deferred from: story 8-5-email-and-scheduled-jobs-in-rehearsal (2026-07-27)
 
-- **`get-weekly-email-status.ts` real-Eastern-clock status inference is cosmetically wrong for rehearsal leagues** — `src/lib/admin/get-weekly-email-status.ts` infers `pending` / `not_sent` / `skipped` using real Eastern wall-clock day/hour (`isOnOrAfterEasternDayHour`), not the simulated week clock. For a rehearsal league viewed on a real Saturday, the admin dashboard card may show misleading labels even though manual send buttons work correctly (AC1 fixes week targeting; this card is read-only display only). Not cited by Story 8.5 ACs; revisit if reported as confusing in practice.
+- **Tuesday digest status still uses the real Eastern clock** — `inferTuesdayDigestStatus` still maps pending vs not_sent with `isOnOrAfterEasternDayHour` (Tue 9 PM / Wed midnight ET). Reminder rows now follow deadline-anchored ticks. For a rehearsal league viewed on a real Saturday, the Tuesday digest row can still look missed even when the simulated week has not reached Tuesday. Manual send buttons work; revisit if rehearsal operators report it.
 
 ## Deferred from: code review of 8-5-email-and-scheduled-jobs-in-rehearsal (2026-07-28)
 

@@ -26,8 +26,8 @@ After each automation window, confirm sends succeeded per league:
 | When | What to check |
 |------|----------------|
 | **Tue ~6 PM ET** | Admin card → Tuesday digest shows **Sent**; Vercel logs → `action:"job_complete"` for `/api/cron/tuesday-email` |
-| **Wed evening (19:00–24:00 ET)** | Admin card → First pick reminder **Sent** or **Skipped** (all picks in); logs → `wednesday-reminder` job_complete |
-| **Thu pre-deadline (~5–8 PM ET)** | Admin card → Final pick reminder **Sent** or **Skipped**; logs → `thursday-reminder` job_complete |
+| **First daily tick ≥ deadline − 48h** | Admin card → First pick reminder **Sent** or **Skipped** (all picks in); logs → reminder-tick `job_complete` |
+| **First daily tick ≥ deadline − 12h** | Admin card → Final pick reminder **Sent** or **Skipped**; logs → reminder-tick `job_complete` |
 
 **Admin card location:** `/leagues/{leagueId}/admin` → right column → **Email automation status** (below Reminder Emails).
 

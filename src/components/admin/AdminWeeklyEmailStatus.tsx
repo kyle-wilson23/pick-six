@@ -33,7 +33,10 @@ function rowLabel(
     case "skipped":
       return {
         severity: "info",
-        text: `${jobName} — Skipped (all picks submitted)`,
+        text:
+          row.reason === "no_completed_week"
+            ? `${jobName} — Skipped (waiting for first week to finish)`
+            : `${jobName} — Skipped (all picks submitted)`,
       };
     case "pending":
       return {

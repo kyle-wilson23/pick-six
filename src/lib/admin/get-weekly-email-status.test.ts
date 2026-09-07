@@ -43,6 +43,7 @@ describe("getWeeklyEmailStatus", () => {
     mockGetTuesdayDigestData.mockResolvedValue({
       nflSeasonYear: 2026,
       weekNumber: 7,
+      hasConcludedFirstCompetitionWeek: true,
     });
     mockFindUnique.mockResolvedValue({
       sentAt,
@@ -64,6 +65,7 @@ describe("getWeeklyEmailStatus", () => {
     mockGetTuesdayDigestData.mockResolvedValue({
       nflSeasonYear: 2026,
       weekNumber: 7,
+      hasConcludedFirstCompetitionWeek: true,
     });
     mockFindUnique.mockResolvedValue({
       sentAt: null,
@@ -84,6 +86,7 @@ describe("getWeeklyEmailStatus", () => {
     mockGetTuesdayDigestData.mockResolvedValue({
       nflSeasonYear: 2026,
       weekNumber: 7,
+      hasConcludedFirstCompetitionWeek: true,
     });
     mockFindUnique.mockResolvedValue({
       sentAt: null,
@@ -105,6 +108,7 @@ describe("getWeeklyEmailStatus", () => {
     mockGetTuesdayDigestData.mockResolvedValue({
       nflSeasonYear: 2026,
       weekNumber: 7,
+      hasConcludedFirstCompetitionWeek: true,
     });
     mockFindUnique.mockResolvedValue({
       sentAt: new Date("2026-07-08T22:00:00.000Z"),
@@ -125,6 +129,7 @@ describe("getWeeklyEmailStatus", () => {
     mockGetTuesdayDigestData.mockResolvedValue({
       nflSeasonYear: 2026,
       weekNumber: 7,
+      hasConcludedFirstCompetitionWeek: true,
     });
     mockFindUnique.mockResolvedValue({
       sentAt: new Date("2026-07-08T22:00:00.000Z"),
@@ -139,6 +144,27 @@ describe("getWeeklyEmailStatus", () => {
     });
 
     expect(status.wednesdayReminder).toEqual({ state: "not_sent" });
+  });
+
+  it("returns skipped for Tuesday when the first competition week has not concluded", async () => {
+    mockGetTuesdayDigestData.mockResolvedValue({
+      nflSeasonYear: 2026,
+      weekNumber: 1,
+      hasConcludedFirstCompetitionWeek: false,
+    });
+    mockFindUnique.mockResolvedValue({
+      sentAt: null,
+      wednesdayReminderSentAt: null,
+      thursdayReminderSentAt: null,
+    });
+
+    const status = await getWeeklyEmailStatus({
+      leagueId: LEAGUE_ID,
+      outstandingCount: 2,
+      now: new Date("2026-09-08T23:00:00.000Z"),
+    });
+
+    expect(status.tuesdayDigest).toEqual({ state: "skipped", reason: "no_completed_week" });
   });
 
   it("returns weekNumber null when there is no active week", async () => {

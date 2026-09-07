@@ -14,7 +14,7 @@ import {
 
 export type EmailJobRowStatus =
   | { state: "sent"; sentAtIso: string }
-  | { state: "skipped"; reason: "no_outstanding" }
+  | { state: "skipped"; reason: "no_outstanding" | "no_completed_week" }
   | { state: "pending" }
   | { state: "not_sent" };
 
@@ -29,9 +29,14 @@ export type WeeklyEmailStatus = {
 function inferTuesdayDigestStatus(
   sentAt: Date | null | undefined,
   now: Date,
+  hasConcludedFirstCompetitionWeek: boolean,
 ): EmailJobRowStatus {
   if (sentAt != null) {
     return { state: "sent", sentAtIso: sentAt.toISOString() };
+  }
+
+  if (!hasConcludedFirstCompetitionWeek) {
+    return { state: "skipped", reason: "no_completed_week" };
   }
 
   if (isOnOrAfterEasternDayHour(now, 3, 0)) {
@@ -93,7 +98,7 @@ export async function getWeeklyEmailStatus(input: {
 
   let digestData;
   try {
-    digestData = await getTuesdayDigestData({ leagueId: input.leagueId });
+    digestData = await getTuesdayDigestData({ leagueId: input.leagueId }, now);
   } catch (e) {
     if (e instanceof NoActiveWeekError || e instanceof LeagueNotFoundError) {
       return pendingStatus;
@@ -119,7 +124,11 @@ export async function getWeeklyEmailStatus(input: {
   return {
     weekNumber: digestData.weekNumber,
     nflSeasonYear: digestData.nflSeasonYear,
-    tuesdayDigest: inferTuesdayDigestStatus(config?.sentAt, now),
+    tuesdayDigest: inferTuesdayDigestStatus(
+      config?.sentAt,
+      now,
+      digestData.hasConcludedFirstCompetitionWeek,
+    ),
     wednesdayReminder: inferReminderStatus(
       config?.wednesdayReminderSentAt,
       input.outstandingCount,

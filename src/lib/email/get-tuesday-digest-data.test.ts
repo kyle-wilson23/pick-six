@@ -210,6 +210,44 @@ describe("getTuesdayDigestData", () => {
 
     expect(result.weekNumber).toBe(1);
     expect(result.isPreviewWeek).toBe(false);
+    expect(result.hasConcludedFirstCompetitionWeek).toBe(false);
+  });
+
+  it("sets hasConcludedFirstCompetitionWeek false on Week 1 kickoff Tuesday", async () => {
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-10T00:15:00.000Z") },
+      { weekNumber: 1, kickoffAt: new Date("2026-09-15T00:15:00.000Z") },
+    ]);
+
+    const result = await getTuesdayDigestData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-09-08T23:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(1);
+    expect(result.hasConcludedFirstCompetitionWeek).toBe(false);
+  });
+
+  it("sets hasConcludedFirstCompetitionWeek true after the first week's last kickoff", async () => {
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNflGameFindMany.mockResolvedValue([
+      { weekNumber: 1, kickoffAt: new Date("2026-09-10T00:15:00.000Z") },
+      { weekNumber: 1, kickoffAt: new Date("2026-09-15T00:15:00.000Z") },
+      { weekNumber: 2, kickoffAt: new Date("2026-09-18T00:15:00.000Z") },
+    ]);
+
+    const result = await getTuesdayDigestData(
+      { leagueId: LEAGUE_ID },
+      new Date("2026-09-15T23:00:00.000Z"),
+    );
+
+    expect(result.weekNumber).toBe(2);
+    expect(result.hasConcludedFirstCompetitionWeek).toBe(true);
   });
 
   it("test league: weekNumber follows simulatedCurrentWeek regardless of now", async () => {

@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
   let skippedAlreadySent = 0;
   let skippedNoWeek = 0;
   let skippedPreview = 0;
+  let skippedNoCompletedWeek = 0;
   let skippedPastDeadline = 0;
   let failed = 0;
 
@@ -107,6 +108,22 @@ export async function POST(request: NextRequest) {
           code: "CRON_PREVIEW_WEEK",
           leagueId,
           message: "tuesday-email: skipped — competition week not started (preview)",
+          context: { weekNumber: data.weekNumber, nflSeasonYear: data.nflSeasonYear },
+        });
+        continue;
+      }
+
+      if (!data.hasConcludedFirstCompetitionWeek) {
+        skippedNoCompletedWeek++;
+        processed++;
+        logEvent({
+          level: "info",
+          domain: "cron",
+          route: ROUTE,
+          action: "no_completed_week_skip",
+          code: "CRON_NO_COMPLETED_WEEK",
+          leagueId,
+          message: "tuesday-email: skipped — first competition week has not concluded",
           context: { weekNumber: data.weekNumber, nflSeasonYear: data.nflSeasonYear },
         });
         continue;
@@ -185,6 +202,7 @@ export async function POST(request: NextRequest) {
     skippedAlreadySent,
     skippedNoWeek,
     skippedPreview,
+    skippedNoCompletedWeek,
     skippedPastDeadline,
     failed,
   };

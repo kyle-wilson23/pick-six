@@ -5,6 +5,7 @@ import { getAppBaseUrl } from "@/lib/email/app-base-url";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { getJailedWithTeamForLeagueWeek } from "@/lib/nfl/league-jailed";
 import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
+import { hasConcludedFirstCompetitionWeek } from "@/lib/email/has-concluded-first-competition-week";
 import { isAutomatedEmailWeekActive } from "@/lib/email/is-automated-email-week-active";
 import {
   resolveActiveWeekNumber,
@@ -22,6 +23,11 @@ export type TuesdayDigestData = {
   weekNumber: number;
   /** True when competition has not started (picks preview). Cron skips; admin may still send. */
   isPreviewWeek: boolean;
+  /**
+   * True when the league's first competition week's last kickoff is in the past.
+   * Automated Tuesday digest waits for this; admin may still send.
+   */
+  hasConcludedFirstCompetitionWeek: boolean;
   /** FR26 lock instant for `weekNumber`, or `null` when that week has no schedule data. */
   pickDeadlineUtc: Date | null;
   standings: StandingsEntry[];
@@ -132,6 +138,12 @@ export async function getTuesdayDigestData(
   );
   const pickDeadlineUtc = firstKickoff == null ? null : computePickDeadlineUtc(firstKickoff);
 
+  const firstWeekConcluded = hasConcludedFirstCompetitionWeek({
+    firstCompetitionWeek: season.firstCompetitionWeek,
+    games: gamesForResolve,
+    now,
+  });
+
   const [standings, jailedRow, memberships] = await Promise.all([
     getLeagueStandings(prisma, { leagueId, nflSeasonYear: season.nflSeasonYear }),
     getJailedWithTeamForLeagueWeek(prisma, {
@@ -156,6 +168,7 @@ export async function getTuesdayDigestData(
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     isPreviewWeek,
+    hasConcludedFirstCompetitionWeek: firstWeekConcluded,
     pickDeadlineUtc,
     standings,
     jailedTeamName: jailedRow?.jailedTeam.name ?? null,

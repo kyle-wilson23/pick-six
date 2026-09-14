@@ -49,9 +49,11 @@ export type RunWeekCloseResult = WeekCloseTargets & {
   jailed: WeekCloseJailedStep;
 };
 
-function firstHardStatus(...steps: Array<{ ok?: boolean; httpStatus?: number }>): number {
+function firstHardStatus(
+  ...steps: Array<WeekCloseResultsStep | WeekCloseFinalizeStep | WeekCloseSnapshotStep | WeekCloseJailedStep>
+): number {
   for (const step of steps) {
-    if (step.ok === false && typeof step.httpStatus === "number") {
+    if ("ok" in step && step.ok === false && typeof step.httpStatus === "number") {
       return step.httpStatus;
     }
   }
@@ -91,7 +93,7 @@ export async function finalizeClosedWeekAfterResultsSync(
       },
     };
   }
-  return { closedWeek, finalize: { ok: true, ...result } };
+  return { closedWeek, finalize: result };
 }
 
 export async function runWeekClose(
@@ -123,7 +125,7 @@ export async function runWeekClose(
       weekNumber: targets.closedWeek,
     });
     finalize = finalized.ok
-      ? { ok: true, ...finalized }
+      ? finalized
       : {
           ok: false,
           code: finalized.code,

@@ -4,6 +4,7 @@
  * Auth: `Authorization: Bearer <CRON_SECRET>` (Vercel Cron). No cookie session.
  * Hobby: fires Wednesday UTC; Eastern window gates ±1h drift.
  * Ops: provider lookback is max 3 days — missed Wed run needs admin sync-results override.
+ * After a successful sync, also `finalizeNflWeek` for the closed week (late MNF catch-up).
  */
 
 import { NextResponse } from "next/server";
@@ -11,6 +12,7 @@ import type { NextRequest } from "next/server";
 
 import { assertCronRequest } from "@/lib/cron/assert-cron-request";
 import { isInEasternWindow } from "@/lib/cron/eastern-window";
+import { finalizeClosedWeekAfterResultsSync } from "@/lib/cron/run-week-close";
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { logEvent } from "@/lib/logging/log-event";
@@ -85,12 +87,35 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const catchUp = await finalizeClosedWeekAfterResultsSync(prisma, nflSeasonYear);
+  if ("ok" in catchUp.finalize && catchUp.finalize.ok === false) {
+    logEvent({
+      level: "error",
+      domain: "cron",
+      route: ROUTE,
+      action: "finalize_failed",
+      code: catchUp.finalize.code,
+      message: catchUp.finalize.message,
+      context: {
+        nflSeasonYear,
+        closedWeek: catchUp.closedWeek,
+        httpStatus: catchUp.finalize.httpStatus,
+      },
+    });
+    return NextResponse.json(
+      { error: { code: catchUp.finalize.code, message: catchUp.finalize.message } },
+      { status: catchUp.finalize.httpStatus },
+    );
+  }
+
   const body = {
     nflSeasonYear,
     weekNumber: null as null,
     synced: result.synced,
     skipped: result.skipped,
     provider: "the-odds-api" as const,
+    closedWeek: catchUp.closedWeek,
+    finalize: catchUp.finalize,
   };
 
   logEvent({

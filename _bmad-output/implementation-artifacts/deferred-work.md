@@ -2,6 +2,12 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: spec-cron-tuesday-week-close.md (2026-09-13)
+
+- **Vercel retry after partial week-close** — Results hard-fail still snapshots + jailed (per spec) then returns non-2xx. A platform retry can create another `OddsSnapshotRun`. Spec already allows extra snapshot runs; add a same-day skip if retries show up in prod.
+- **TNF vs 3-day `/scores` lookback on Tuesday primary** — Closed-week Thursday games can age out of `daysFrom=3` before Tue 7am. Same lookback gap already tracked under `spec-cron-odds-schedule-results-auto-sync.md`; Saturday backup results cron still deferred.
+- **`getCurrentNflSeasonYear` UTC calendar default** — Pre-existing; week-close shares the January label-year risk with other Odds crons.
+
 ## Deferred from: spec-admin-weekly-digest-copy.md (2026-09-13)
 
 Pre-existing composer issues, not caused by the schedule subtext or **Save & Preview** label.

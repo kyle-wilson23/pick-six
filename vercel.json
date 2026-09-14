@@ -9,6 +9,10 @@
       "schedule": "0 23 * * 2"
     },
     {
+      "path": "/api/cron/week-close",
+      "schedule": "0 11 * * 2"
+    },
+    {
       "path": "/api/cron/sync-nfl-results",
       "schedule": "0 16 * * 3"
     },

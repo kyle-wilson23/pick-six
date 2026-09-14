@@ -107,7 +107,7 @@ Record pass/fail in `_bmad-output/implementation-artifacts/pre-epic-7-smoke-test
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | Click **Preview** | New tab opens rendered HTML: standings, jailed team (or placeholder), picks CTA, optional admin note |
+| 1 | Click **Save & Preview** | Note is saved, then a new tab opens rendered HTML: standings, jailed team (or placeholder), picks CTA, optional admin note |
 | 2 | (Optional) Save admin note | Persists via PUT `/api/leagues/{id}/email/tuesday-config` |
 | 3 | Click **Send Now** | Each member receives digest; UI shows **Sent at [timestamp]** |
 | 4 | DB / API | `league_week_email_configs.sentAt` set for active week |

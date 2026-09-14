@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider, createTheme } from "@mui/material";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL } from "@/lib/email/has-concluded-first-competition-week";
@@ -35,9 +35,10 @@ describe("AdminEmailComposer", () => {
 
     const note = screen.getByLabelText("Optional note for participants");
     expect(note).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Preview" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Save & Preview" })).toHaveProperty("disabled", true);
     expect(screen.getByRole("button", { name: "Send Now" })).toHaveProperty("disabled", true);
     expect(screen.getByText(TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL)).toBeTruthy();
+    expect(screen.getByText("Sent on Tuesday evenings")).toBeTruthy();
   });
 
   it("enables note and send controls after the first week concludes", () => {
@@ -52,9 +53,40 @@ describe("AdminEmailComposer", () => {
     renderComposer(true);
 
     expect(screen.getByLabelText("Optional note for participants")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Preview" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save & Preview" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Send Now" })).toBeTruthy();
+    expect(screen.getByText("Sent on Tuesday evenings")).toBeTruthy();
     expect(screen.queryByText(TUESDAY_DIGEST_FIRST_WEEK_DISABLED_LABEL)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not open preview when save fails", async () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ weekNumber: 2, bodyText: "note", sentAt: null }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({ error: { code: "SAVE_FAILED", message: "nope" } }),
+        }),
+    );
+
+    renderComposer(true);
+
+    const preview = await screen.findByRole("button", { name: "Save & Preview" });
+    await waitFor(() => {
+      expect(preview).toHaveProperty("disabled", false);
+    });
+    fireEvent.click(preview);
+
+    expect(await screen.findByText("Could not save email note")).toBeTruthy();
+    expect(open).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
   });

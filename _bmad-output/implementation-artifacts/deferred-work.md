@@ -2,6 +2,14 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: spec-admin-weekly-digest-copy.md (2026-09-13)
+
+Pre-existing composer issues, not caused by the schedule subtext or **Save & Preview** label.
+
+- **Preview `window.open` after `await handleSave()`** — The user-gesture is gone by the time the tab opens, so popup blockers can swallow a successful save. Same for **Send Now**'s save-then-POST path. Open the preview URL in the same tab, or `window.open` a placeholder before awaiting save, if operators report blocked tabs.
+- **No dedicated Save** — Persisting a note without sending still goes through **Save & Preview** (or **Send Now**). Add a Save-only control if commissioners need to stash copy without a preview tab.
+- **Duplicate `h2`s** — The page heading is "Weekly Email" and the card heading is "Week {n}". Harmless for this copy tweak; flatten heading levels if the admin column gets an a11y pass.
+
 ## Deferred from: spec-league-rules-missing-spaces.md (2026-09-04)
 
 Pre-existing rules-page copy gaps, not caused by the two spacing fixes. Jailed-team pickability and NFL-tie scoring are already listed under `spec-league-rules-user-facing-copy.md`.

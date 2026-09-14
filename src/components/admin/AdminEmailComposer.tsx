@@ -127,7 +127,10 @@ export function AdminEmailComposer({
       return;
     }
     if (activeWeekNumber != null) {
-      await handleSave();
+      const saved = await handleSave();
+      if (!saved) {
+        return;
+      }
     }
     window.open(previewUrl, "_blank", "noopener,noreferrer");
   }
@@ -223,9 +226,20 @@ export function AdminEmailComposer({
   return (
     <Paper sx={{ p: 2, borderRadius: 2 }}>
       <Stack spacing={2}>
-        <Typography variant="subtitle1" component="h2">
-          Week {activeWeekNumber}
-        </Typography>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="baseline"
+          flexWrap="wrap"
+          useFlexGap
+        >
+          <Typography variant="subtitle1" component="h2" aria-describedby="tuesday-digest-schedule-hint">
+            Week {activeWeekNumber}
+          </Typography>
+          <Typography id="tuesday-digest-schedule-hint" variant="body2" color="text.secondary">
+            Sent on Tuesday evenings
+          </Typography>
+        </Stack>
 
         <TextField
           label="Optional note for participants"
@@ -277,8 +291,9 @@ export function AdminEmailComposer({
                 color="info"
                 onClick={() => void handlePreview()}
                 disabled={loading || saving || !digestAvailable}
+                sx={{ whiteSpace: "nowrap" }}
               >
-                Preview
+                Save & Preview
               </Button>
             </span>
           </Tooltip>

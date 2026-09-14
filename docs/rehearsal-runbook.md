@@ -118,7 +118,7 @@ Rehearsal leagues use **admin manual send only** — production Vercel cron neve
 - **`send`** — Controlled rehearsal with real testers checking their inboxes (your own deploy, local dev with Resend sandbox).
 - **`suppress`** — Shared staging or ad-hoc dry runs where you do not want **weekly** emails leaving the server. Set `TEST_LEAGUE_EMAIL_MODE=suppress` on that deployment. Still treat invite sends as live Resend traffic.
 
-**Buttons:** **"Preview"**, **"Send Now"** (Tuesday digest); **"Send Wednesday Reminder"**, **"Send Thursday Reminder"**. Reminders reach only outstanding (not-yet-picked) members.
+**Buttons:** **"Save & Preview"**, **"Send Now"** (Tuesday digest); **"Send Wednesday Reminder"**, **"Send Thursday Reminder"**. Reminders reach only outstanding (not-yet-picked) members.
 
 For full local Resend setup, see [email-local-smoke-test-runbook.md](./email-local-smoke-test-runbook.md).
 

@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
       return {
         id: g.id,
         kickoffAt: g.kickoffAt.toISOString(),
+        status: g.status,
+        homeScore: g.homeScore,
+        awayScore: g.awayScore,
         homeAbbreviation: g.homeTeam.abbreviation,
         awayAbbreviation: g.awayTeam.abbreviation,
         homeMoneylineAmerican: line?.homeMoneylineAmerican ?? null,

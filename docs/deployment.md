@@ -84,15 +84,15 @@ Routes (Hobby: **one cron fire per job per UTC calendar day**; multiple jobs may
 | `/api/cron/sync-nfl-schedule` | `0 15 * * 1` (Mon) | Mon 10–16 ET | Odds `/events` → canonical `NflGame` |
 | `/api/cron/week-close` | `0 11 * * 2` (Tue) | Tue 5–11 ET | Results → finalize closed week → odds snapshot → jailed (opening week) |
 | `/api/cron/tuesday-email` | `0 23 * * 2` (Tue) | Tue 17–21 ET | Tuesday digest |
-| `/api/cron/sync-nfl-results` | `0 16 * * 3` (Wed) | Wed 11–17 ET | Odds `/scores` + **finalize closed week** (late MNF catch-up; no snapshot/jailed) |
+| `/api/cron/sync-nfl-results` | `0 16 * * 3` (Wed) and `0 16 * * 6` (Sat) | Wed or Sat 11–17 ET | Odds `/scores`. **Wednesday** also **finalize closed week** (late MNF). **Saturday** syncs only so Thursday (and Wednesday openers) stay FINAL before the 3-day lookback expires. |
 | `/api/cron/reminder-tick-am` | `0 11 * * *` | none (deadline-anchored) | Morning reminder tick |
 | `/api/cron/reminder-tick-pm` | `0 20 * * *` | none (deadline-anchored) | Afternoon reminder tick |
 
 Each handler exports `maxDuration = 300` (Hobby ceiling). Vercel Cron invokes via **GET**; handlers also accept **POST**. Same `Authorization: Bearer $CRON_SECRET` for both. Odds sync / week-close crons also need Production `ODDS_API_KEY`.
 
-**Tuesday vs Wednesday scoring:** `/api/cron/week-close` is the primary close (Tue ~7am ET). If Monday Night Football is still not final then, it still snapshots odds and computes jailed for the **opening** week, and leaves scoring for Wednesday. `/api/cron/sync-nfl-results` syncs `/scores` then calls `finalizeNflWeek` for the closed week (idempotent). Admin overrides remain: **`POST /api/admin/nfl/sync-results`**, **`POST /api/admin/scoring/finalize-week`**, **`POST /api/admin/nfl/snapshot-odds`**, **`POST /api/admin/nfl/week-jailed`**.
+**Tuesday vs Wednesday scoring:** `/api/cron/week-close` is the primary close (Tue ~7am ET). If Monday Night Football is still not final then, it still snapshots odds and computes jailed for the **opening** week, and leaves scoring for Wednesday. `/api/cron/sync-nfl-results` syncs `/scores` on **Saturday** (TNF persistence, no finalize) and **Wednesday** (then `finalizeNflWeek` for the closed week; idempotent). Admin overrides remain: **`POST /api/admin/nfl/sync-results`**, **`POST /api/admin/scoring/finalize-week`**, **`POST /api/admin/nfl/snapshot-odds`**, **`POST /api/admin/nfl/week-jailed`**, plus settings UI **Save result as FINAL** / **Finalize & score week**.
 
-**Odds `/scores` 3-day lookback:** The results cron uses The Odds API `daysFrom=3`. A missed Tuesday **and** Wednesday run can leave completed games unfinalized once they fall outside that window — use admin **`POST /api/admin/nfl/sync-results`** (or league admin UI) as override before the lookback slides past. Schedule sync override: **`POST /api/admin/nfl/sync-schedule`**.
+**Odds `/scores` 3-day lookback:** The results cron uses The Odds API `daysFrom=3`. Thursday Night Football (and Week 1 Wednesday openers) age out before Tuesday week-close — Saturday’s results cron is the automated persist. A missed Saturday **and** Tuesday **and** Wednesday run can leave completed games unfinalized once they fall outside that window — use admin **Save result as FINAL** then **Finalize & score week** (or `PATCH /api/admin/nfl/games/{id}/result` + `POST /api/admin/scoring/finalize-week`) before standings can update. Schedule sync override: **`POST /api/admin/nfl/sync-schedule`**.
 
 ```bash
 # Expect 401
@@ -143,6 +143,7 @@ Schedule the check inside or near the Eastern send window if you want failure al
 | **Tue 5–11 AM ET** | Week-close cron (results / score / odds snapshot / jailed) |
 | **Tue 5–7 PM ET** | Tuesday digest / standings reveal window |
 | **Wed 11 AM–5 PM ET** | Odds results sync + finalize catch-up (`daysFrom=3`) |
+| **Sat 11 AM–5 PM ET** | Odds results sync only (persist TNF / Wednesday openers) |
 | **Thu 7–9 PM ET** | Thursday reminder / late-week pick pressure |
 
 **Do not** schedule maintenance or deploys in those windows. Prefer off-season or between games. Mid-season hotfixes are OK **outside** those windows.

@@ -2,16 +2,16 @@
  * GET/POST `/api/cron/sync-nfl-results` — Odds `/scores` (`daysFrom=3`) → canonical `NflGame`.
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>` (Vercel Cron). No cookie session.
- * Hobby: fires Wednesday UTC; Eastern window gates ±1h drift.
- * Ops: provider lookback is max 3 days — missed Wed run needs admin sync-results override.
- * After a successful sync, also `finalizeNflWeek` for the closed week (late MNF catch-up).
+ * Hobby: fires Wednesday and Saturday UTC; Eastern window gates ±1h drift.
+ * Ops: provider lookback is max 3 days — Saturday persists TNF before Tuesday ages it out.
+ * Wednesday also `finalizeNflWeek` for the closed week (late MNF catch-up). Saturday syncs only.
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { assertCronRequest } from "@/lib/cron/assert-cron-request";
-import { isInEasternWindow } from "@/lib/cron/eastern-window";
+import { resolveNflResultsCronWindow } from "@/lib/cron/nfl-results-cron-window";
 import { finalizeClosedWeekAfterResultsSync } from "@/lib/cron/run-week-close";
 import { prisma } from "@/lib/db";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
@@ -23,18 +23,14 @@ export const maxDuration = 300;
 
 const ROUTE = "/api/cron/sync-nfl-results";
 
-/** Wed 11:00–17:00 ET (matches vercel `0 16 * * 3` ~12 PM ET). */
-const ET_DAY = 3;
-const ET_START = 11;
-const ET_END = 17;
-
 export async function POST(request: NextRequest) {
   const authError = assertCronRequest(request);
   if (authError) {
     return authError;
   }
 
-  if (!isInEasternWindow(new Date(), ET_DAY, ET_START, ET_END)) {
+  const window = resolveNflResultsCronWindow(new Date());
+  if (!window.inWindow) {
     logEvent({
       level: "info",
       domain: "cron",
@@ -87,7 +83,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const catchUp = await finalizeClosedWeekAfterResultsSync(prisma, nflSeasonYear);
+  const catchUp = window.shouldFinalizeClosedWeek
+    ? await finalizeClosedWeekAfterResultsSync(prisma, nflSeasonYear)
+    : {
+        closedWeek: null,
+        finalize: { skipped: true as const, reason: "saturday_no_finalize" as const },
+      };
   if ("ok" in catchUp.finalize && catchUp.finalize.ok === false) {
     logEvent({
       level: "error",

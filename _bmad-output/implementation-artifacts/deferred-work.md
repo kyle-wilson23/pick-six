@@ -5,7 +5,7 @@ Items surfaced during code review that are intentionally deferred. Each entry ci
 ## Deferred from: spec-cron-tuesday-week-close.md (2026-09-13)
 
 - **Vercel retry after partial week-close** — Results hard-fail still snapshots + jailed (per spec) then returns non-2xx. A platform retry can create another `OddsSnapshotRun`. Spec already allows extra snapshot runs; add a same-day skip if retries show up in prod.
-- **TNF vs 3-day `/scores` lookback on Tuesday primary** — Closed-week Thursday games can age out of `daysFrom=3` before Tue 7am. Same lookback gap already tracked under `spec-cron-odds-schedule-results-auto-sync.md`; Saturday backup results cron still deferred.
+- **TNF vs 3-day `/scores` lookback on Tuesday primary** — **Mitigated** by Saturday `/api/cron/sync-nfl-results` (`0 16 * * 6`, sync only). Tuesday can still skip scoring if Saturday was missed and Thursday/Wednesday games aged out; admin **Save result as FINAL** + **Finalize & score week** is the override. Sunday backup cron still not added.
 - **`getCurrentNflSeasonYear` UTC calendar default** — Pre-existing; week-close shares the January label-year risk with other Odds crons.
 
 ## Deferred from: spec-admin-weekly-digest-copy.md (2026-09-13)
@@ -82,7 +82,7 @@ Split from implementing research `technical-league-scoped-vs-canonical-nfl-sched
 
 ## Deferred from: review of spec-cron-odds-schedule-results-auto-sync.md (2026-08-04)
 
-- **TNF / early-week scores vs Wed-only results cron** — Odds `/scores` `daysFrom=3` + single Wednesday cron can miss Thursday Night Football (and similar) before lookback slides; ops uses admin `sync-results` today. Consider a Sat UTC backup results cron on a free Hobby day if auto-coverage is required.
+- ~~**TNF / early-week scores vs Wed-only results cron**~~ — **Mitigated** by Saturday `/api/cron/sync-nfl-results` (`0 16 * * 6`, sync only). Admin **Save result as FINAL** remains the override if Saturday is missed.
 - **`getCurrentNflSeasonYear` UTC calendar default** — Pre-existing; cron + admin share MVP UTC year (or `NFL_SEASON_YEAR` env). January playoff weeks can target the wrong label year until Eastern league-year logic lands.
 - **Concurrent admin + cron schedule sync** — No locking between cron and admin override; both call the same sync libs. Acceptable for Hobby; add an in-flight guard if overlapping runs appear in prod.
 

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-vi.mock("@/lib/cron/eastern-window", () => ({
-  isInEasternWindow: vi.fn(),
+vi.mock("@/lib/cron/nfl-results-cron-window", () => ({
+  resolveNflResultsCronWindow: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -25,14 +25,14 @@ vi.mock("@/lib/cron/run-week-close", () => ({
   finalizeClosedWeekAfterResultsSync: vi.fn(),
 }));
 
-import { isInEasternWindow } from "@/lib/cron/eastern-window";
+import { resolveNflResultsCronWindow } from "@/lib/cron/nfl-results-cron-window";
 import { finalizeClosedWeekAfterResultsSync } from "@/lib/cron/run-week-close";
 import { syncNflResultsFromOdds } from "@/lib/nfl/sync-nfl-results-from-odds";
 import { GET, POST } from "./route";
 
 const syncMock = vi.mocked(syncNflResultsFromOdds);
 const finalizeCatchUpMock = vi.mocked(finalizeClosedWeekAfterResultsSync);
-const windowMock = vi.mocked(isInEasternWindow);
+const windowMock = vi.mocked(resolveNflResultsCronWindow);
 
 function req(authHeader?: string) {
   const headers = authHeader != null ? { authorization: authHeader } : undefined;
@@ -46,7 +46,7 @@ describe("POST /api/cron/sync-nfl-results", () => {
   beforeEach(() => {
     vi.stubEnv("CRON_SECRET", "test-secret-value");
     vi.stubEnv("ODDS_API_KEY", "odds-key");
-    windowMock.mockReturnValue(true);
+    windowMock.mockReturnValue({ inWindow: true, shouldFinalizeClosedWeek: true });
     syncMock.mockResolvedValue({ ok: true, synced: 8, skipped: 1 });
     finalizeCatchUpMock.mockResolvedValue({
       closedWeek: 1,
@@ -74,7 +74,7 @@ describe("POST /api/cron/sync-nfl-results", () => {
   });
 
   it("skips outside Eastern window without calling sync", async () => {
-    windowMock.mockReturnValue(false);
+    windowMock.mockReturnValue({ inWindow: false, shouldFinalizeClosedWeek: false });
     const res = await POST(req("Bearer test-secret-value"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "skipped", reason: "outside_window" });
@@ -131,6 +131,23 @@ describe("POST /api/cron/sync-nfl-results", () => {
     expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.error?.code).toBe("ODDS_API_ERROR");
+    expect(finalizeCatchUpMock).not.toHaveBeenCalled();
+  });
+
+  it("Saturday window syncs scores without finalize catch-up", async () => {
+    windowMock.mockReturnValue({ inWindow: true, shouldFinalizeClosedWeek: false });
+    const res = await POST(req("Bearer test-secret-value"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      nflSeasonYear: 2026,
+      weekNumber: null,
+      synced: 8,
+      skipped: 1,
+      provider: "the-odds-api",
+      closedWeek: null,
+      finalize: { skipped: true, reason: "saturday_no_finalize" },
+    });
+    expect(syncMock).toHaveBeenCalledTimes(1);
     expect(finalizeCatchUpMock).not.toHaveBeenCalled();
   });
 

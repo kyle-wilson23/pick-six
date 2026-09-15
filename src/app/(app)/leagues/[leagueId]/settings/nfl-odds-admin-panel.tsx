@@ -311,22 +311,27 @@ export function NflOddsAdminPanel({ defaultNflSeasonYear, firstCompetitionWeek }
       }));
       return;
     }
-    const res = await fetch(`/api/admin/nfl/games/${g.id}/result`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ status: "FINAL", homeScore, awayScore }),
-    });
-    const data: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const msg =
-        typeof data === "object" && data !== null && "error" in data
-          ? (data as ApiErr).error?.message ?? "Result save failed"
-          : "Result save failed";
-      setRowError((prev) => ({ ...prev, [g.id]: msg }));
-      return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/nfl/games/${g.id}/result`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "FINAL", homeScore, awayScore }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" && data !== null && "error" in data
+            ? (data as ApiErr).error?.message ?? "Result save failed"
+            : "Result save failed";
+        setRowError((prev) => ({ ...prev, [g.id]: msg }));
+        return;
+      }
+      await loadGames();
+    } finally {
+      setLoading(false);
     }
-    await loadGames();
   }
 
   async function saveRow(g: GameRow, draft: { h: string; a: string; s: string }) {

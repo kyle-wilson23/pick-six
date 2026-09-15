@@ -92,7 +92,7 @@ Each handler exports `maxDuration = 300` (Hobby ceiling). Vercel Cron invokes vi
 
 **Tuesday vs Wednesday scoring:** `/api/cron/week-close` is the primary close (Tue ~7am ET). If Monday Night Football is still not final then, it still snapshots odds and computes jailed for the **opening** week, and leaves scoring for Wednesday. `/api/cron/sync-nfl-results` syncs `/scores` on **Saturday** (TNF persistence, no finalize) and **Wednesday** (then `finalizeNflWeek` for the closed week; idempotent). Admin overrides remain: **`POST /api/admin/nfl/sync-results`**, **`POST /api/admin/scoring/finalize-week`**, **`POST /api/admin/nfl/snapshot-odds`**, **`POST /api/admin/nfl/week-jailed`**, plus settings UI **Save result as FINAL** / **Finalize & score week**.
 
-**Odds `/scores` 3-day lookback:** The results cron uses The Odds API `daysFrom=3`. Thursday Night Football (and Week 1 Wednesday openers) age out before Tuesday week-close — Saturday’s results cron is the automated persist. A missed Saturday **and** Tuesday **and** Wednesday run can leave completed games unfinalized once they fall outside that window — use admin **Save result as FINAL** then **Finalize & score week** (or `PATCH /api/admin/nfl/games/{id}/result` + `POST /api/admin/scoring/finalize-week`) before standings can update. Schedule sync override: **`POST /api/admin/nfl/sync-schedule`**.
+**Odds `/scores` 3-day lookback:** The results cron uses The Odds API `daysFrom=3`. Thursday Night Football (and Week 1 Wednesday openers) age out before Tuesday week-close — Saturday’s results cron is the automated persist. A missed Saturday cannot be recovered by Tuesday or Wednesday Odds sync (those games are already outside `daysFrom=3`) — use admin **Save result as FINAL** then **Finalize & score week** (or `PATCH /api/admin/nfl/games/{id}/result` + `POST /api/admin/scoring/finalize-week`). A missed Tuesday **and** Wednesday run can still leave Sunday/Monday games unfinalized once they fall outside the window — same admin override. Schedule sync override: **`POST /api/admin/nfl/sync-schedule`**.
 
 ```bash
 # Expect 401
@@ -105,7 +105,7 @@ curl -s -o /tmp/cron.json -w "%{http_code}\n" \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 cat /tmp/cron.json | jq
 
-# Odds schedule / results (same auth; outside_window unless Mon/Wed ET windows)
+# Odds schedule / results (same auth; outside_window unless Mon ET schedule or Wed/Sat ET results windows)
 curl -s -o /tmp/cron-schedule.json -w "%{http_code}\n" \
   https://your-app.vercel.app/api/cron/sync-nfl-schedule \
   -H "Authorization: Bearer YOUR_CRON_SECRET"

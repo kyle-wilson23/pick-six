@@ -55,9 +55,9 @@ export async function openAdminNotePreview(
     }
 
     const html = await res.text();
-    const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
-    tab.addEventListener("load", () => URL.revokeObjectURL(blobUrl), { once: true });
-    tab.location.replace(blobUrl);
+    tab.document.open();
+    tab.document.write(html);
+    tab.document.close();
     tab.opener = null;
     return { ok: true };
   } catch {

@@ -54,9 +54,12 @@ describe("AdminOnDemandEmailCard", () => {
   it("opens a tab then POSTs the note with fetch", async () => {
     const tab = {
       close: vi.fn(),
-      location: { replace: vi.fn() },
+      document: {
+        open: vi.fn(),
+        write: vi.fn(),
+        close: vi.fn(),
+      },
       opener: {} as Window | null,
-      addEventListener: vi.fn(),
     };
     const openMock = vi.fn(() => tab);
     vi.stubGlobal("open", openMock);
@@ -86,16 +89,19 @@ describe("AdminOnDemandEmailCard", () => {
         }),
       );
     });
-    expect(tab.location.replace).toHaveBeenCalledOnce();
+    expect(tab.document.write).toHaveBeenCalledWith("<html>preview</html>");
     expect(tab.opener).toBeNull();
   });
 
   it("shows the CSRF error in the card instead of a JSON tab", async () => {
     const tab = {
       close: vi.fn(),
-      location: { replace: vi.fn() },
+      document: {
+        open: vi.fn(),
+        write: vi.fn(),
+        close: vi.fn(),
+      },
       opener: {} as Window | null,
-      addEventListener: vi.fn(),
     };
     vi.stubGlobal(
       "open",
@@ -120,7 +126,7 @@ describe("AdminOnDemandEmailCard", () => {
     expect(await screen.findByText("Invalid origin")).toBeTruthy();
     expect(screen.getByRole("alert").className).toContain("MuiAlert-standardWarning");
     expect(tab.close).toHaveBeenCalledOnce();
-    expect(tab.location.replace).not.toHaveBeenCalled();
+    expect(tab.document.write).not.toHaveBeenCalled();
   });
 
   it("POSTs the note to the send route", async () => {

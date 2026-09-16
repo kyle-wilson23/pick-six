@@ -57,6 +57,7 @@ export async function POST(
       sentAt: result.sentAt?.toISOString() ?? null,
       suppressed: result.suppressed,
       wouldSendCount: result.wouldSendCount,
+      failures: result.failures,
     });
   } catch (e) {
     if (e instanceof LeagueNotFoundError) {

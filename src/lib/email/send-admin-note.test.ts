@@ -62,7 +62,7 @@ const LEAGUE = {
 function memberships(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     id: `mem-${i + 1}`,
-    user: { email: `member${i + 1}@example.com` },
+    user: { email: `member${i + 1}@example.com`, name: `Member ${i + 1}` },
   }));
 }
 
@@ -94,6 +94,7 @@ describe("sendAdminNote", () => {
       failed: 0,
       suppressed: true,
       wouldSendCount: 2,
+      failures: [],
     });
     expect(result.sentAt).toBeInstanceOf(Date);
   });
@@ -113,6 +114,7 @@ describe("sendAdminNote", () => {
       failed: 0,
       suppressed: false,
       wouldSendCount: 0,
+      failures: [],
     });
     expect(result.sentAt).toBeInstanceOf(Date);
 
@@ -134,19 +136,70 @@ describe("sendAdminNote", () => {
   });
 
   it("logs warn when some members fail", async () => {
-    mockResendSend
-      .mockResolvedValueOnce({ error: null })
-      .mockRejectedValueOnce(new Error("bounce"));
+    mockResendSend.mockImplementation(async (payload: { to: string[] }) => {
+      if (payload.to[0] === "member2@example.com") {
+        throw new Error("bounce");
+      }
+      return { error: null };
+    });
 
     const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
 
     expect(result).toMatchObject({ sent: 1, failed: 1, suppressed: false });
+    expect(result.failures).toEqual([
+      {
+        membershipId: "mem-2",
+        email: "member2@example.com",
+        displayName: "Member 2",
+        reason: "provider_error",
+        error: "bounce",
+      },
+    ]);
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "member_send_failed",
+        code: "EMAIL_SEND_FAILED",
+        context: expect.objectContaining({
+          membershipId: "mem-2",
+          email: "member2@example.com",
+          reason: "provider_error",
+          error: "bounce",
+        }),
+      }),
+    );
     expect(logEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "admin_note_complete",
         level: "warn",
         message: "admin note partially sent",
         context: expect.objectContaining({ sent: 1, failed: 1 }),
+      }),
+    );
+  });
+
+  it("records Resend plain-object errors as readable failure details", async () => {
+    mockResendSend.mockResolvedValueOnce({
+      error: { name: "validation_error", statusCode: 422, message: "Invalid `to` field" },
+    });
+    mockMembershipFindMany.mockResolvedValue(memberships(1));
+
+    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+
+    expect(result).toMatchObject({ sent: 0, failed: 1 });
+    expect(result.failures).toEqual([
+      expect.objectContaining({
+        membershipId: "mem-1",
+        email: "member1@example.com",
+        reason: "provider_error",
+        error: "validation_error: 422: Invalid `to` field",
+      }),
+    ]);
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "member_send_failed",
+        context: expect.objectContaining({
+          error: "validation_error: 422: Invalid `to` field",
+        }),
       }),
     );
   });
@@ -205,6 +258,16 @@ describe("sendAdminNote", () => {
         suppressed: false,
         sentAt: null,
       });
+      expect(result.failures).toHaveLength(memberCount);
+      expect(result.failures.some((f) => f.reason === "provider_error")).toBe(true);
+      expect(result.failures.some((f) => f.reason === "circuit_aborted")).toBe(true);
+      expect(logEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "member_send_failed",
+          code: EMAIL_CIRCUIT_OPEN_CODE,
+          message: "admin note member send aborted — circuit open",
+        }),
+      );
       expect(logEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "admin_note_complete",

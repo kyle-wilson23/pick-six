@@ -15,8 +15,27 @@ export type AdminOnDemandEmailCardProps = {
   leagueId: string;
 };
 
+type AdminNoteSendFailure = {
+  membershipId: string;
+  email: string;
+  displayName: string;
+  error: string;
+};
+
 function formatSentAt(iso: string): string {
   return new Date(iso).toLocaleString();
+}
+
+export function formatAdminNoteFailureLine(failure: {
+  displayName: string;
+  email: string;
+  error: string;
+}): string {
+  const who =
+    failure.displayName.trim() === failure.email
+      ? failure.email
+      : `${failure.displayName} (${failure.email})`;
+  return `${who} — ${failure.error}`;
 }
 
 export type OpenAdminNotePreviewResult =
@@ -73,6 +92,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
   const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [sendInfo, setSendInfo] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sendFailures, setSendFailures] = useState<AdminNoteSendFailure[]>([]);
 
   const trimmed = note.trim();
   const canSubmit = trimmed.length > 0 && trimmed.length <= ADMIN_NOTE_MAX_LENGTH;
@@ -85,6 +105,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
     setSendMessage(null);
     setSendInfo(null);
     setSendError(null);
+    setSendFailures([]);
     const result = await openAdminNotePreview(leagueId, note);
     if (!result.ok) {
       setSendError(result.message);
@@ -100,6 +121,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
     setSendMessage(null);
     setSendInfo(null);
     setSendError(null);
+    setSendFailures([]);
     try {
       const res = await fetch(sendUrl, {
         method: "POST",
@@ -112,6 +134,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
         sentAt?: string | null;
         suppressed?: boolean;
         wouldSendCount?: number;
+        failures?: AdminNoteSendFailure[];
         error?: { code: string; message: string };
       };
 
@@ -133,8 +156,10 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
 
       const sent = data.sent ?? 0;
       const failed = data.failed ?? 0;
+      const failures = data.failures ?? [];
 
       if (sent === 0) {
+        setSendFailures(failures);
         setSendError(
           failed > 0
             ? `Send failed — ${failed} member${failed > 1 ? "s" : ""} could not be reached. No emails were delivered.`
@@ -145,6 +170,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
 
       if (failed > 0) {
         const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
+        setSendFailures(failures);
         setSendError(`Sent at ${when} — ${sent} sent, ${failed} failed.`);
       } else {
         const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
@@ -183,6 +209,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
             setSendMessage(null);
             setSendInfo(null);
             setSendError(null);
+            setSendFailures([]);
           }}
           disabled={sending}
           placeholder="Write a message to send now…"
@@ -191,7 +218,33 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
 
         {sendMessage != null ? <Alert severity="success">{sendMessage}</Alert> : null}
         {sendInfo != null ? <Alert severity="info">{sendInfo}</Alert> : null}
-        {sendError != null ? <Alert severity="warning">{sendError}</Alert> : null}
+        {sendError != null ? (
+          <Alert severity="warning">
+            {sendFailures.length === 0 ? (
+              sendError
+            ) : (
+              <Stack spacing={1}>
+                <Typography component="p" variant="body2">
+                  {sendError}
+                </Typography>
+                <Typography component="p" variant="body2">
+                  These never reached Resend (rejected or skipped before delivery):
+                </Typography>
+                <Stack component="ul" spacing={0.5} sx={{ m: 0, pl: 2.5 }}>
+                  {sendFailures.map((failure) => (
+                    <Typography
+                      key={failure.membershipId}
+                      component="li"
+                      variant="body2"
+                    >
+                      {formatAdminNoteFailureLine(failure)}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Stack>
+            )}
+          </Alert>
+        ) : null}
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Button

@@ -155,3 +155,16 @@ Idempotency keys must include a per-send UUID so a second Send Now can deliver.
 - Sliding-window helper for that matcher
   [`rate-limit.ts:126`](../../src/lib/rate-limit.ts#L126)
 
+### Review Findings
+
+- [ ] [Review][Decision] Partial / daily-cap Alert severity — I/O matrix row *Partial / daily cap* says **Warning Alert**, but Always says **Alerts match the composer**, and `AdminEmailComposer` puts `sent > 0 && failed > 0` on `severity="success"`. This card copies that composer path (`setSendMessage` → success Alert). Choose: (1) keep success to match the composer, or (2) use `severity="warning"` to match the matrix. [`src/components/admin/AdminOnDemandEmailCard.tsx:112`]
+- [ ] [Review][Patch] Send route has no `maxDuration` — fan-out + `sendWithRetry` can exceed the default isolate window; a killed handler plus a client/platform retry uses a new per-send UUID and can duplicate mail. Add `export const maxDuration = 300` like `invitations/route.ts`. [`src/app/api/leagues/[leagueId]/email/admin-note/route.ts:17`]
+- [ ] [Review][Patch] Send URL does not encode `leagueId` — preview uses `encodeURIComponent(leagueId)`; `sendUrl` interpolates the raw id. [`src/components/admin/AdminOnDemandEmailCard.tsx:51`]
+- [ ] [Review][Patch] Completion log always says success — `admin_note_complete` logs `level: "info"` and message `"admin note sent"` even when `sent === 0` / all failed / circuit open. [`src/lib/email/send-admin-note.ts:174`]
+- [x] [Review][Defer] Preview errors render as raw JSON in a new tab — form POST `_blank` shows 400/401/403/404/500 bodies with no in-card handling. [`src/app/api/leagues/[leagueId]/email/admin-note-preview/route.ts:19`] — deferred, pre-existing
+- [x] [Review][Defer] Note `white-space: pre-wrap` is stripped by many inboxes — preview can show line breaks recipients never see. [`src/lib/email/templates/AdminNoteEmail.tsx:15`] — deferred, pre-existing
+- [x] [Review][Defer] Membership fan-out is one `findMany` + one request — large leagues risk timeout, which collides with duplicate-send on retry. [`src/lib/email/send-admin-note.ts:49`] — deferred, pre-existing
+- [x] [Review][Defer] `if (error) throw error` passes Resend plain objects — `instanceof Error` logging can show `[object Object]`. [`src/lib/email/send-admin-note.ts:128`] — deferred, pre-existing
+- [x] [Review][Defer] Send `fetch` has no AbortSignal timeout — a hung request leaves Sending… until the browser gives up. [`src/components/admin/AdminOnDemandEmailCard.tsx:70`] — deferred, pre-existing
+- [x] [Review][Defer] League name is not stripped of CR/LF before the Resend subject — preview header sanitizes; `formatEmailSubject` does not. [`src/lib/email/admin-note.ts:12`] — deferred, pre-existing
+

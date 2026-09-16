@@ -2,6 +2,17 @@
 
 Items surfaced during code review that are intentionally deferred. Each entry cites the source review and links back to the story spec.
 
+## Deferred from: code review of spec-admin-on-demand-email.md (2026-09-16)
+
+Pre-existing email/composer patterns copied by the on-demand note, not unique product bugs in this PR.
+
+- **Preview errors render as raw JSON in a new tab** — Save & Preview is a form POST to `_blank`; 400/401/403/404/500 bodies are shown as naked JSON with no in-card error. Same as `tuesday-preview`.
+- **Note `white-space: pre-wrap` is stripped by many inboxes** — Gmail/Outlook often drop the CSS; browser preview can show line breaks recipients never see. Same as `TuesdayDigestEmail` admin note.
+- **Membership fan-out is one `findMany` + one request** — no pagination; the Route Handler holds the request open at concurrency 4. Same as Tuesday digest; MVP league size is small.
+- **`if (error) throw error` passes Resend plain objects** — `instanceof Error` logging can show `[object Object]`. Identical to `send-tuesday-digest`; `sendWithRetry` still classifies 429 via `statusCode`.
+- **Send `fetch` has no AbortSignal timeout** — a hung request leaves Sending… until the browser gives up. Same as `AdminEmailComposer`.
+- **League name is not stripped of CR/LF before the Resend subject** — preview `X-Email-Subject` uses `sanitizeHeaderValue`; `formatEmailSubject` used for actual sends does not. Shared with digest/reminder subjects.
+
 ## Deferred from: spec-cron-tuesday-week-close.md (2026-09-13)
 
 - **Vercel retry after partial week-close** — Results hard-fail still snapshots + jailed (per spec) then returns non-2xx. A platform retry can create another `OddsSnapshotRun`. Spec already allows extra snapshot runs; add a same-day skip if retries show up in prod.

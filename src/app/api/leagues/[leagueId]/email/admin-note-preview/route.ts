@@ -48,19 +48,19 @@ export async function POST(
     );
   }
 
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    select: { name: true, isTestLeague: true },
-  });
-
-  if (!league) {
-    return NextResponse.json(
-      { error: { code: "NOT_FOUND", message: "League not found" } },
-      { status: 404 },
-    );
-  }
-
   try {
+    const league = await prisma.league.findUnique({
+      where: { id: leagueId },
+      select: { name: true, isTestLeague: true },
+    });
+
+    if (!league) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "League not found" } },
+        { status: 404 },
+      );
+    }
+
     const { html, subject } = await renderAdminNotePreviewHtml({
       leagueName: league.name,
       note: parsed.note,
@@ -71,6 +71,8 @@ export async function POST(
     return new Response(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
         "X-Email-Subject": sanitizeHeaderValue(subject),
       },
     });

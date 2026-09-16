@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
@@ -22,8 +22,9 @@ function formatSentAt(iso: string): string {
 export function openAdminNotePreview(leagueId: string, note: string): void {
   const form = document.createElement("form");
   form.method = "POST";
-  form.action = `/api/leagues/${leagueId}/email/admin-note-preview`;
+  form.action = `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note-preview`;
   form.target = "_blank";
+  form.rel = "noopener noreferrer";
   form.acceptCharset = "UTF-8";
 
   const input = document.createElement("input");
@@ -40,6 +41,7 @@ export function openAdminNotePreview(leagueId: string, note: string): void {
 export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps) {
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [sendInfo, setSendInfo] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -56,9 +58,10 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
   }
 
   async function handleSend() {
-    if (!canSubmit) {
+    if (!canSubmit || sendingRef.current) {
       return;
     }
+    sendingRef.current = true;
     setSending(true);
     setSendMessage(null);
     setSendInfo(null);
@@ -107,17 +110,18 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
       }
 
       if (failed > 0) {
-        setSendMessage(
-          `Sent at ${formatSentAt(data.sentAt!)} — ${sent} sent, ${failed} failed.`,
-        );
+        const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
+        setSendMessage(`Sent at ${when} — ${sent} sent, ${failed} failed.`);
       } else {
+        const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
         setSendMessage(
-          `Sent at ${formatSentAt(data.sentAt!)} — ${sent} member${sent > 1 ? "s" : ""} reached.`,
+          `Sent at ${when} — ${sent} member${sent > 1 ? "s" : ""} reached.`,
         );
       }
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }
@@ -140,7 +144,12 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
           minRows={4}
           fullWidth
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => {
+            setNote(e.target.value);
+            setSendMessage(null);
+            setSendInfo(null);
+            setSendError(null);
+          }}
           disabled={sending}
           placeholder="Write a message to send now…"
           slotProps={{ htmlInput: { maxLength: ADMIN_NOTE_MAX_LENGTH } }}

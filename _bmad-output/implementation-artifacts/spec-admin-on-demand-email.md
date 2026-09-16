@@ -2,7 +2,7 @@
 title: 'League admin on-demand participant note email'
 type: 'feature'
 created: '2026-09-16'
-status: 'in-progress'
+status: 'done'
 baseline_commit: 'd6d564dcedd613bf824a502abe2fc17120f26f4a'
 context:
   - '{project-root}/docs/project-context.md'
@@ -111,3 +111,47 @@ Idempotency keys must include a per-send UUID so a second Send Now can deliver.
 
 **Manual checks (if no CLI):**
 - Admin page: card under Email automation status; both buttons disabled until text; Save & Preview shows HTML + subject; Send Now delivers (or suppress Alert in rehearsal).
+
+## Suggested Review Order
+
+**Admin surface**
+
+- Card mounts under Email automation status in the right column
+  [`page.tsx:197`](../../src/app/(app)/leagues/[leagueId]/admin/page.tsx#L197)
+
+- Buttons stay disabled until the note has non-whitespace text
+  [`AdminOnDemandEmailCard.tsx:50`](../../src/components/admin/AdminOnDemandEmailCard.tsx#L50)
+
+- Preview POSTs the current textarea in a new tab (no draft save)
+  [`AdminOnDemandEmailCard.tsx:22`](../../src/components/admin/AdminOnDemandEmailCard.tsx#L22)
+
+**Send + preview APIs**
+
+- League-admin CSRF gate, then Zod 1–2000 note
+  [`route.ts:21`](../../src/app/api/leagues/[leagueId]/email/admin-note/route.ts#L21)
+
+- Fan-out uses digest retry/breaker, not week config or ALREADY_SENT
+  [`send-admin-note.ts:25`](../../src/lib/email/send-admin-note.ts#L25)
+
+- Per-send UUID so a second Send Now can deliver
+  [`send-admin-note.ts:123`](../../src/lib/email/send-admin-note.ts#L123)
+
+- HTML preview with subject banner; no Resend
+  [`admin-note-preview/route.ts:19`](../../src/app/api/leagues/[leagueId]/email/admin-note-preview/route.ts#L19)
+
+**Email chrome**
+
+- Shared EmailLayout, pre-wrap note, Open league CTA
+  [`AdminNoteEmail.tsx:15`](../../src/lib/email/templates/AdminNoteEmail.tsx#L15)
+
+- Auto subject via existing `[TEST]` helper
+  [`admin-note.ts:12`](../../src/lib/email/admin-note.ts#L12)
+
+**Rate limit**
+
+- Dedicated 8/15 min bucket on send only, not preview
+  [`proxy.ts:57`](../../src/proxy.ts#L57)
+
+- Sliding-window helper for that matcher
+  [`rate-limit.ts:126`](../../src/lib/rate-limit.ts#L126)
+

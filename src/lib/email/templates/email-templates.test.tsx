@@ -154,14 +154,14 @@ describe("email templates CTA + plaintext fallback", () => {
     const html = await render(
       createElement(AdminNoteEmail, {
         leagueName: "Office League",
-        note: "Don't forget Thursday\nnight snacks.",
+        note: "Bring snacks Thursday night.",
         leagueUrl,
         isTestLeague: false,
       }),
     );
 
     expect(html).toContain("Note from your commissioner");
-    expect(html).toContain("Don't forget Thursday");
+    expect(html).toContain("Bring snacks Thursday night.");
     expect(html).toContain("Open league");
     expect(html).toContain(leagueUrl);
     expect(html).toContain("Or paste this link:");

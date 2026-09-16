@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import {
+  checkAdminNoteRateLimit,
   checkAvatarRateLimit,
   checkLeagueDeleteRateLimit,
   checkPasswordResetRateLimit,
@@ -52,6 +53,8 @@ const LEAGUE_PICKS_POST = /^\/api\/leagues\/[^/]+\/picks\/?$/;
 const LEAGUE_SINGLE_DELETE = /^\/api\/leagues\/[^/]+\/?$/;
 const PROFILE_AVATAR = /^\/api\/profile\/avatar\/?$/;
 const REPORTS_POST = /^\/api\/reports\/?$/;
+/** Send only — must not match `.../email/admin-note-preview`. */
+const LEAGUE_ADMIN_NOTE_SEND_POST = /^\/api\/leagues\/[^/]+\/email\/admin-note\/?$/;
 
 function shouldRateLimitPost(pathname: string): boolean {
   if (RATE_LIMITED_POST_PATHS.has(pathname)) {
@@ -108,6 +111,15 @@ export function proxy(request: NextRequest) {
 
   if (request.method === "POST" && REPORTS_POST.test(pathname)) {
     if (!checkReportsRateLimit(rateLimitClientKey(request))) {
+      return NextResponse.json(
+        { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+        { status: 429 },
+      );
+    }
+  }
+
+  if (request.method === "POST" && LEAGUE_ADMIN_NOTE_SEND_POST.test(pathname)) {
+    if (!checkAdminNoteRateLimit(rateLimitClientKey(request))) {
       return NextResponse.json(
         { error: { code: "RATE_LIMITED", message: "Too many requests" } },
         { status: 429 },

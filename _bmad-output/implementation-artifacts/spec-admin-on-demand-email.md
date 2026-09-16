@@ -2,7 +2,8 @@
 title: 'League admin on-demand participant note email'
 type: 'feature'
 created: '2026-09-16'
-status: 'draft'
+status: 'in-progress'
+baseline_commit: 'd6d564dcedd613bf824a502abe2fc17120f26f4a'
 context:
   - '{project-root}/docs/project-context.md'
   - '{project-root}/docs/email-provider-decision.md'
@@ -66,13 +67,13 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/lib/email/templates/AdminNoteEmail.tsx` (+ `email-templates.test.tsx`) -- Layout, heading, pre-wrap note, Open league CTA, test-league notice
-- [ ] `src/lib/email/send-admin-note.ts` (+ `send-admin-note.test.ts`) -- League + members; suppress; fan-out; UUID keys; sent/failed/suppressed
-- [ ] `src/app/api/leagues/[leagueId]/email/admin-note/route.ts` -- POST CSRF/admin; Zod `note` 1–2000; I/O send statuses
-- [ ] `src/app/api/leagues/[leagueId]/email/admin-note-preview/route.ts` -- POST CSRF/admin; same Zod; HTML + subject banner; no Resend
-- [ ] `src/lib/rate-limit.ts` + `src/proxy.ts` + `rate-limit.test.ts` -- Dedicated bucket; match send `POST /api/leagues/:id/email/admin-note` only
-- [ ] `src/components/admin/AdminOnDemandEmailCard.tsx` (+ `.test.tsx`) -- Note field; Save & Preview + Send Now disabled until trim nonempty; preview tab; send alerts
-- [ ] `src/app/(app)/leagues/[leagueId]/admin/page.tsx` -- Render immediately under `AdminWeeklyEmailStatus`
+- [x] `src/lib/email/templates/AdminNoteEmail.tsx` (+ `email-templates.test.tsx`) -- Layout, heading, pre-wrap note, Open league CTA, test-league notice
+- [x] `src/lib/email/send-admin-note.ts` (+ `send-admin-note.test.ts`) -- League + members; suppress; fan-out; UUID keys; sent/failed/suppressed
+- [x] `src/app/api/leagues/[leagueId]/email/admin-note/route.ts` -- POST CSRF/admin; Zod `note` 1–2000; I/O send statuses
+- [x] `src/app/api/leagues/[leagueId]/email/admin-note-preview/route.ts` -- POST CSRF/admin; same Zod; HTML + subject banner; no Resend
+- [x] `src/lib/rate-limit.ts` + `src/proxy.ts` + `rate-limit.test.ts` -- Dedicated bucket; match send `POST /api/leagues/:id/email/admin-note` only
+- [x] `src/components/admin/AdminOnDemandEmailCard.tsx` (+ `.test.tsx`) -- Note field; Save & Preview + Send Now disabled until trim nonempty; preview tab; send alerts
+- [x] `src/app/(app)/leagues/[leagueId]/admin/page.tsx` -- Render immediately under `AdminWeeklyEmailStatus`
 
 **Acceptance Criteria:**
 - Given a league admin on `/leagues/{id}/admin`, when the page loads, then a note card sits under Email automation status with the weekly email card’s Paper treatment and both **Save & Preview** and **Send Now**.

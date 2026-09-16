@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  checkAdminNoteRateLimit,
   checkLeagueDeleteRateLimit,
   checkPasswordResetRateLimit,
   checkRegisterRateLimit,
@@ -75,6 +76,24 @@ describe("checkReportsRateLimit", () => {
     const key = `shared-reports-${Math.random()}`;
     for (let i = 0; i < 10; i++) {
       expect(checkReportsRateLimit(key)).toBe(true);
+    }
+    expect(checkSignInRateLimit(key)).toBe(true);
+  });
+});
+
+describe("checkAdminNoteRateLimit", () => {
+  it("allows 8 requests per client key then blocks within the window", () => {
+    const key = `admin-note-${Math.random()}`;
+    for (let i = 0; i < 8; i++) {
+      expect(checkAdminNoteRateLimit(key)).toBe(true);
+    }
+    expect(checkAdminNoteRateLimit(key)).toBe(false);
+  });
+
+  it("does not share bucket with sign-in namespace", () => {
+    const key = `shared-admin-note-${Math.random()}`;
+    for (let i = 0; i < 8; i++) {
+      expect(checkAdminNoteRateLimit(key)).toBe(true);
     }
     expect(checkSignInRateLimit(key)).toBe(true);
   });

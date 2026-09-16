@@ -2,6 +2,9 @@ import { createElement } from "react";
 import { render } from "@react-email/components";
 import { describe, expect, it } from "vitest";
 
+import { TEST_LEAGUE_EMAIL_BODY_NOTICE } from "@/lib/email/test-league-labeling";
+
+import { AdminNoteEmail } from "./AdminNoteEmail";
 import { InvitationEmail } from "./InvitationEmail";
 import { PasswordResetEmail } from "./PasswordResetEmail";
 import { ReminderEmail } from "./ReminderEmail";
@@ -144,6 +147,39 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(slot2).toContain("Or paste this link:");
     expect(slot2).toContain("picks lock Wednesday, September 9 at 8:10 PM ET");
     expect(slot2.toLowerCase()).not.toContain("thursday");
+  });
+
+  it("AdminNoteEmail includes commissioner note, Open league CTA, and plaintext fallback", async () => {
+    const leagueUrl = "https://example.test/leagues/abc";
+    const html = await render(
+      createElement(AdminNoteEmail, {
+        leagueName: "Office League",
+        note: "Don't forget Thursday\nnight snacks.",
+        leagueUrl,
+        isTestLeague: false,
+      }),
+    );
+
+    expect(html).toContain("Note from your commissioner");
+    expect(html).toContain("Don't forget Thursday");
+    expect(html).toContain("Open league");
+    expect(html).toContain(leagueUrl);
+    expect(html).toContain("Or paste this link:");
+    expect(html).not.toContain(TEST_LEAGUE_EMAIL_BODY_NOTICE);
+  });
+
+  it("AdminNoteEmail includes test-league notice when flagged", async () => {
+    const html = await render(
+      createElement(AdminNoteEmail, {
+        leagueName: "Rehearsal League",
+        note: "Practice only",
+        leagueUrl: "https://example.test/leagues/abc",
+        isTestLeague: true,
+      }),
+    );
+
+    expect(html).toContain(TEST_LEAGUE_EMAIL_BODY_NOTICE);
+    expect(html).toContain("Practice only");
   });
 
   it("InvitationEmail includes Accept invitation + signup URL fallback", async () => {

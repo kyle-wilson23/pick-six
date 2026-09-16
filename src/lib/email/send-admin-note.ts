@@ -170,13 +170,19 @@ export async function sendAdminNote({
   }
 
   const sentAt = sent > 0 ? new Date() : null;
+  const allFailed = sent === 0 && failed > 0;
+  const partial = sent > 0 && failed > 0;
 
   logEvent({
-    level: "info",
+    level: allFailed ? "error" : partial ? "warn" : "info",
     domain: "email",
     action: "admin_note_complete",
     leagueId,
-    message: "admin note sent",
+    message: allFailed
+      ? "admin note failed"
+      : partial
+        ? "admin note partially sent"
+        : "admin note sent",
     context: {
       leagueName: league.name,
       sent,

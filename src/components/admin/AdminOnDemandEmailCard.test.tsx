@@ -106,6 +106,65 @@ describe("AdminOnDemandEmailCard", () => {
       );
     });
     expect(await screen.findByText(/2 members reached/)).toBeTruthy();
+    expect(screen.getByRole("alert").className).toContain("MuiAlert-standardSuccess");
+  });
+
+  it("shows a warning Alert when some members fail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          sent: 2,
+          failed: 1,
+          sentAt: "2026-09-16T12:00:00.000Z",
+          suppressed: false,
+          wouldSendCount: 0,
+        }),
+      }),
+    );
+
+    renderCard();
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Kickoff moved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send Now" }));
+
+    expect(await screen.findByText(/2 sent, 1 failed/)).toBeTruthy();
+    expect(screen.getByRole("alert").className).toContain("MuiAlert-standardWarning");
+  });
+
+  it("encodes leagueId in the send URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        sent: 1,
+        failed: 0,
+        sentAt: "2026-09-16T12:00:00.000Z",
+        suppressed: false,
+        wouldSendCount: 0,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ThemeProvider theme={theme}>
+        <AdminOnDemandEmailCard leagueId="league/1" />
+      </ThemeProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Kickoff moved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send Now" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/leagues/league%2F1/email/admin-note",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
   });
 
   it("shows the rehearsal suppress copy", async () => {

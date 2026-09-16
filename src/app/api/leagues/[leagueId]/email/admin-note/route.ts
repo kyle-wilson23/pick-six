@@ -14,6 +14,9 @@ import { sendAdminNote } from "@/lib/email/send-admin-note";
 import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { assertCookieSessionMutationOrigin } from "@/lib/cookie-session-mutation-csrf";
 
+/** Keep the isolate alive while Resend fan-out finishes (Hobby ceiling). */
+export const maxDuration = 300;
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ leagueId: string }> },

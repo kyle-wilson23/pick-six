@@ -116,12 +116,39 @@ describe("sendAdminNote", () => {
     });
     expect(result.sentAt).toBeInstanceOf(Date);
 
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "admin_note_complete",
+        level: "info",
+        message: "admin note sent",
+        context: expect.objectContaining({ sent: 2, failed: 0 }),
+      }),
+    );
+
     const payload = mockResendSend.mock.calls[0]?.[0] as {
       subject: string;
       to: string[];
     };
     expect(payload.subject).toBe("[TEST][Rehearsal League] A note from your commissioner");
     expect(payload.to).toEqual(["member1@example.com"]);
+  });
+
+  it("logs warn when some members fail", async () => {
+    mockResendSend
+      .mockResolvedValueOnce({ error: null })
+      .mockRejectedValueOnce(new Error("bounce"));
+
+    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+
+    expect(result).toMatchObject({ sent: 1, failed: 1, suppressed: false });
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "admin_note_complete",
+        level: "warn",
+        message: "admin note partially sent",
+        context: expect.objectContaining({ sent: 1, failed: 1 }),
+      }),
+    );
   });
 
   it("returns sent 0 when there are no members", async () => {
@@ -178,6 +205,18 @@ describe("sendAdminNote", () => {
         suppressed: false,
         sentAt: null,
       });
+      expect(logEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "admin_note_complete",
+          level: "error",
+          message: "admin note failed",
+          context: expect.objectContaining({
+            sent: 0,
+            failed: memberCount,
+            circuitOpen: true,
+          }),
+        }),
+      );
     });
   });
 });

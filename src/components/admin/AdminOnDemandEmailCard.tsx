@@ -48,7 +48,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
 
   const trimmed = note.trim();
   const canSubmit = trimmed.length > 0 && trimmed.length <= ADMIN_NOTE_MAX_LENGTH;
-  const sendUrl = `/api/leagues/${leagueId}/email/admin-note`;
+  const sendUrl = `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note`;
 
   function handlePreview() {
     if (!canSubmit) {
@@ -111,7 +111,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
 
       if (failed > 0) {
         const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
-        setSendMessage(`Sent at ${when} — ${sent} sent, ${failed} failed.`);
+        setSendError(`Sent at ${when} — ${sent} sent, ${failed} failed.`);
       } else {
         const when = data.sentAt ? formatSentAt(data.sentAt) : "just now";
         setSendMessage(

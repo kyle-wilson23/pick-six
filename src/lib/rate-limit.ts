@@ -10,6 +10,8 @@
  *   irreversible destructive actions; enforced only on `DELETE /api/leagues/[leagueId]` (no subpath).
  * - **Avatar** upload/remove: 20 / 15 minutes per namespace `avatar` — `POST`/`DELETE` `/api/profile/avatar`.
  * - **Reports**: 10 / 15 minutes per namespace `reports` — `POST` `/api/reports`.
+ * - **Admin on-demand note**: 8 / 15 minutes per namespace `admin-note` — `POST`
+ *   `/api/leagues/[leagueId]/email/admin-note` (send only; preview is not in this bucket).
  *
  * **Production / multi-instance:** In-memory store is per instance only. For horizontal scale, use a
  * shared store (e.g. Upstash Redis + `@upstash/ratelimit`) and wire env vars; document until then.
@@ -36,6 +38,10 @@ const AVATAR_MAX_ATTEMPTS = 20;
 const REPORTS_WINDOW_MS = 15 * 60 * 1000;
 /** In-app bug reports — 10 / 15 min per client. */
 const REPORTS_MAX_ATTEMPTS = 10;
+
+const ADMIN_NOTE_WINDOW_MS = 15 * 60 * 1000;
+/** On-demand commissioner note send — 8 / 15 min per client (preview is not limited here). */
+const ADMIN_NOTE_MAX_ATTEMPTS = 8;
 
 const buckets = new Map<string, number[]>();
 
@@ -113,5 +119,15 @@ export function checkReportsRateLimit(clientKey: string): boolean {
     clientKey,
     REPORTS_MAX_ATTEMPTS,
     REPORTS_WINDOW_MS,
+  );
+}
+
+/** `POST` `/api/leagues/[leagueId]/email/admin-note` (send only; not preview). */
+export function checkAdminNoteRateLimit(clientKey: string): boolean {
+  return checkSlidingWindow(
+    "admin-note",
+    clientKey,
+    ADMIN_NOTE_MAX_ATTEMPTS,
+    ADMIN_NOTE_WINDOW_MS,
   );
 }

@@ -7,6 +7,7 @@ import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import { AdminEmailComposer } from "@/components/admin/AdminEmailComposer";
 import { AdminExportCsvButton } from "@/components/admin/AdminExportCsvButton";
 import { AdminJailedVerification } from "@/components/admin/AdminJailedVerification";
+import { AdminOnDemandEmailCard } from "@/components/admin/AdminOnDemandEmailCard";
 import { AdminReminderControls } from "@/components/admin/AdminReminderControls";
 import { AdminSimulationControls } from "@/components/admin/AdminSimulationControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
@@ -192,6 +193,8 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
             status={weeklyEmailStatus}
             loadError={weeklyEmailStatusError}
           />
+
+          <AdminOnDemandEmailCard leagueId={leagueId} />
         </Stack>
       </Stack>
 

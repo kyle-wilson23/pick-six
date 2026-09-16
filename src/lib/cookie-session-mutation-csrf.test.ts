@@ -66,6 +66,27 @@ describe("assertCookieSessionMutationOrigin", () => {
     expect(res?.status).toBe(403);
   });
 
+  it("treats Origin null as missing and allows same-origin Sec-Fetch-Site", () => {
+    const r = req("https://app.example.com/api/x", {
+      method: "POST",
+      headers: { origin: "null", "sec-fetch-site": "same-origin" },
+    });
+    expect(assertCookieSessionMutationOrigin(r)).toBeNull();
+  });
+
+  it("rejects Origin null with no Referer or Sec-Fetch-Site", async () => {
+    const r = req("https://app.example.com/api/x", {
+      method: "POST",
+      headers: { origin: "null" },
+    });
+    const res = assertCookieSessionMutationOrigin(r);
+    expect(res?.status).toBe(403);
+    const body = res ? await res.json() : null;
+    expect(body).toEqual({
+      error: { code: "FORBIDDEN", message: "Missing origin verification" },
+    });
+  });
+
   it("allows POST when Sec-Fetch-Site is same-origin", () => {
     const r = req("https://app.example.com/api/x", {
       method: "POST",

@@ -19,23 +19,51 @@ function formatSentAt(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
-export function openAdminNotePreview(leagueId: string, note: string): void {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note-preview`;
-  form.target = "_blank";
-  form.rel = "noopener noreferrer";
-  form.acceptCharset = "UTF-8";
+export type OpenAdminNotePreviewResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "note";
-  input.value = note;
-  form.appendChild(input);
+/**
+ * Open a blank tab on the click gesture, then POST the note with `fetch` (same Origin
+ * as Send Now). A form POST + `rel="noreferrer"` can send `Origin: null` and 403 CSRF.
+ */
+export async function openAdminNotePreview(
+  leagueId: string,
+  note: string,
+): Promise<OpenAdminNotePreviewResult> {
+  const tab = window.open("about:blank", "_blank");
+  if (!tab) {
+    return { ok: false, message: "Pop-up blocked. Allow pop-ups to preview the email." };
+  }
 
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  try {
+    const res = await fetch(
+      `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note-preview`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note }),
+      },
+    );
+
+    if (!res.ok) {
+      tab.close();
+      const data = (await res.json().catch(() => null)) as
+        | { error?: { message?: string } }
+        | null;
+      return { ok: false, message: data?.error?.message ?? "Preview failed" };
+    }
+
+    const html = await res.text();
+    const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    tab.addEventListener("load", () => URL.revokeObjectURL(blobUrl), { once: true });
+    tab.location.replace(blobUrl);
+    tab.opener = null;
+    return { ok: true };
+  } catch {
+    tab.close();
+    return { ok: false, message: "Preview failed" };
+  }
 }
 
 export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps) {
@@ -50,11 +78,17 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
   const canSubmit = trimmed.length > 0 && trimmed.length <= ADMIN_NOTE_MAX_LENGTH;
   const sendUrl = `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note`;
 
-  function handlePreview() {
+  async function handlePreview() {
     if (!canSubmit) {
       return;
     }
-    openAdminNotePreview(leagueId, note);
+    setSendMessage(null);
+    setSendInfo(null);
+    setSendError(null);
+    const result = await openAdminNotePreview(leagueId, note);
+    if (!result.ok) {
+      setSendError(result.message);
+    }
   }
 
   async function handleSend() {
@@ -163,7 +197,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
           <Button
             variant="outlined"
             color="info"
-            onClick={handlePreview}
+            onClick={() => void handlePreview()}
             disabled={!canSubmit || sending}
             sx={{ whiteSpace: "nowrap" }}
           >

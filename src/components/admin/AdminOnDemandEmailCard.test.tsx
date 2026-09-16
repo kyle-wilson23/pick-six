@@ -51,28 +51,76 @@ describe("AdminOnDemandEmailCard", () => {
     expect(screen.getByRole("button", { name: "Send Now" })).toHaveProperty("disabled", false);
   });
 
-  it("opens preview via a same-origin form POST in a new tab", () => {
-    const originalSubmit = HTMLFormElement.prototype.submit;
-    const submit = vi.fn(function (this: HTMLFormElement) {
-      expect(this.target).toBe("_blank");
-      expect(this.method.toLowerCase()).toBe("post");
-      expect(this.action).toContain("/api/leagues/league-1/email/admin-note-preview");
-      const input = this.querySelector('input[name="note"]') as HTMLInputElement | null;
-      expect(input?.value).toBe("Hello league");
+  it("opens a tab then POSTs the note with fetch", async () => {
+    const tab = {
+      close: vi.fn(),
+      location: { replace: vi.fn() },
+      opener: {} as Window | null,
+      addEventListener: vi.fn(),
+    };
+    const openMock = vi.fn(() => tab);
+    vi.stubGlobal("open", openMock);
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => "<html>preview</html>",
+      json: async () => ({}),
     });
-    HTMLFormElement.prototype.submit = submit;
+    vi.stubGlobal("fetch", fetchMock);
 
-    try {
-      renderCard();
-      fireEvent.change(screen.getByLabelText("Note for participants"), {
-        target: { value: "Hello league" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Save & Preview" }));
+    renderCard();
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Hello league" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save & Preview" }));
 
-      expect(submit).toHaveBeenCalledOnce();
-    } finally {
-      HTMLFormElement.prototype.submit = originalSubmit;
-    }
+    expect(openMock).toHaveBeenCalledWith("about:blank", "_blank");
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/leagues/league-1/email/admin-note-preview",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: "Hello league" }),
+        }),
+      );
+    });
+    expect(tab.location.replace).toHaveBeenCalledOnce();
+    expect(tab.opener).toBeNull();
+  });
+
+  it("shows the CSRF error in the card instead of a JSON tab", async () => {
+    const tab = {
+      close: vi.fn(),
+      location: { replace: vi.fn() },
+      opener: {} as Window | null,
+      addEventListener: vi.fn(),
+    };
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => tab),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { code: "FORBIDDEN", message: "Invalid origin" } }),
+        text: async () => "",
+      }),
+    );
+
+    renderCard();
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Hello league" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save & Preview" }));
+
+    expect(await screen.findByText("Invalid origin")).toBeTruthy();
+    expect(screen.getByRole("alert").className).toContain("MuiAlert-standardWarning");
+    expect(tab.close).toHaveBeenCalledOnce();
+    expect(tab.location.replace).not.toHaveBeenCalled();
   });
 
   it("POSTs the note to the send route", async () => {
@@ -196,15 +244,15 @@ describe("AdminOnDemandEmailCard", () => {
 });
 
 describe("openAdminNotePreview", () => {
-  it("posts the current note without calling fetch", () => {
-    const originalSubmit = HTMLFormElement.prototype.submit;
-    const submit = vi.fn();
-    HTMLFormElement.prototype.submit = submit;
-    try {
-      openAdminNotePreview("abc", "Note body");
-      expect(submit).toHaveBeenCalledOnce();
-    } finally {
-      HTMLFormElement.prototype.submit = originalSubmit;
-    }
+  it("returns a pop-up blocked error when window.open fails", async () => {
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => null),
+    );
+    const result = await openAdminNotePreview("abc", "Note body");
+    expect(result).toEqual({
+      ok: false,
+      message: "Pop-up blocked. Allow pop-ups to preview the email.",
+    });
   });
 });

@@ -18,7 +18,9 @@ const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /**
  * For custom POST/PUT/PATCH/DELETE Route Handlers: verify the request likely came from this app.
  *
- * - If **`Origin`** is present, it must equal the request URL’s origin (strict).
+ * - If **`Origin`** is present and not the literal `"null"`, it must equal the request URL’s origin
+ *   (strict). Browsers send `Origin: null` for privacy-stripped navigations (e.g. `form` +
+ *   `rel="noreferrer"` + `target="_blank"`); treat that as missing and fall through.
  * - Else if **`Referer`** is present, its origin must match (strict).
  * - Else if **`Sec-Fetch-Site`** is `same-origin` or `same-site`, allow — some same-site navigations
  *   omit `Origin`/`Referer` on POST; `same-site` is broader than same-origin (Schemeful Same Site).
@@ -32,7 +34,7 @@ export function assertCookieSessionMutationOrigin(request: NextRequest): NextRes
 
   const expectedOrigin = request.nextUrl.origin;
   const origin = request.headers.get("origin");
-  if (origin) {
+  if (origin && origin !== "null") {
     if (origin !== expectedOrigin) {
       return NextResponse.json(
         { error: { code: "FORBIDDEN", message: "Invalid origin" } },

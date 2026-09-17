@@ -53,11 +53,17 @@ describe("sendWithRetry", () => {
     });
   });
 
-  it("throws immediately on 429 without calling sendFn again", async () => {
-    const rateLimitError = { statusCode: 429, message: "daily quota exceeded" };
-    const sendFn = vi.fn().mockRejectedValueOnce(rateLimitError);
+  it("throws immediately on daily-quota 429 without calling sendFn again", async () => {
+    const quotaError = {
+      statusCode: 429,
+      name: "daily_quota_exceeded",
+      message: "You have exceeded your daily email sending quota.",
+    };
+    const sendFn = vi.fn().mockRejectedValueOnce(quotaError);
 
-    await expect(sendWithRetry(sendFn)).rejects.toBe(rateLimitError);
+    await expect(
+      sendWithRetry(sendFn, { logContext: { membershipId: "mem-11" } }),
+    ).rejects.toBe(quotaError);
     expect(sendFn).toHaveBeenCalledTimes(1);
     expect(mockLogEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -65,7 +71,39 @@ describe("sendWithRetry", () => {
         domain: "email",
         action: "daily_cap_exhausted",
         code: "EMAIL_DAILY_CAP",
+        context: expect.objectContaining({
+          statusCode: 429,
+          quotaKind: "daily_quota",
+          membershipId: "mem-11",
+          error: expect.stringContaining("daily_quota_exceeded"),
+        }),
       }),
+    );
+  });
+
+  it("retries per-second rate-limit 429s", async () => {
+    const rateLimitError = {
+      statusCode: 429,
+      name: "rate_limit_exceeded",
+      message: "Too many requests. Please limit the number of requests per second.",
+    };
+    const sendFn = vi
+      .fn()
+      .mockRejectedValueOnce(rateLimitError)
+      .mockResolvedValueOnce("sent");
+
+    const resultPromise = sendWithRetry(sendFn, { maxRetries: 3, baseDelayMs: 1000 });
+    await vi.runAllTimersAsync();
+    await expect(resultPromise).resolves.toBe("sent");
+    expect(sendFn).toHaveBeenCalledTimes(2);
+    expect(mockLogEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "send_retry_failed",
+        context: { attempt: 1 },
+      }),
+    );
+    expect(mockLogEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: "daily_cap_exhausted" }),
     );
   });
 

@@ -172,7 +172,12 @@ describe("sendAdminNote", () => {
         action: "admin_note_complete",
         level: "warn",
         message: "admin note partially sent",
-        context: expect.objectContaining({ sent: 1, failed: 1 }),
+        context: expect.objectContaining({
+          sent: 1,
+          failed: 1,
+          failureMembershipIds: ["mem-2"],
+          failureReasons: ["provider_error"],
+        }),
       }),
     );
   });

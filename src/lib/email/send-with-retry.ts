@@ -1,4 +1,8 @@
-import { emailSendErrorMessage } from "@/lib/email/email-send-error";
+import {
+  classifyResend429,
+  emailSendErrorMessage,
+  isNonRetryableResendQuota,
+} from "@/lib/email/email-send-error";
 import { logEvent } from "@/lib/logging/log-event";
 
 export type RetryOptions = {
@@ -6,19 +10,12 @@ export type RetryOptions = {
   maxRetries?: number;
   /** Base delay in ms before the first retry (default 1000). Doubles each attempt. */
   baseDelayMs?: number;
+  /** Merged into every failure log (membershipId, leagueId, …). */
+  logContext?: Record<string, unknown>;
 };
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_DELAY_MS = 1000;
-
-function isDailyCapError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "statusCode" in err &&
-    (err as { statusCode: unknown }).statusCode === 429
-  );
-}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -26,9 +23,17 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function failureContext(
+  extra: Record<string, unknown>,
+  logContext?: Record<string, unknown>,
+): Record<string, unknown> {
+  return logContext == null ? extra : { ...logContext, ...extra };
+}
+
 /**
  * Retries a send function with exponential backoff. Pure — no Resend import (unit-testable).
- * Short-circuits on HTTP 429 (daily cap exhausted) without burning retry slots.
+ * Short-circuits on Resend daily/monthly quota 429s. Per-second `rate_limit_exceeded`
+ * 429s still retry — they recover in well under the backoff window.
  */
 export async function sendWithRetry<T>(
   sendFn: () => Promise<T>,
@@ -45,14 +50,27 @@ export async function sendWithRetry<T>(
     } catch (err) {
       lastError = err;
 
-      if (isDailyCapError(err)) {
+      if (isNonRetryableResendQuota(err)) {
+        const kind = classifyResend429(err);
+        const monthly = kind === "monthly_quota";
         logEvent({
           level: "error",
           domain: "email",
-          action: "daily_cap_exhausted",
-          code: "EMAIL_DAILY_CAP",
-          message: "daily cap exhausted — will not retry until midnight UTC reset",
-          context: { statusCode: 429 },
+          action: monthly ? "monthly_cap_exhausted" : "daily_cap_exhausted",
+          code: monthly ? "EMAIL_MONTHLY_CAP" : "EMAIL_DAILY_CAP",
+          message: monthly
+            ? "monthly quota exhausted — will not retry until the monthly reset"
+            : kind === "unknown"
+              ? "Resend 429 without quota/rate-limit name — not retrying (treated as quota)"
+              : "daily quota exhausted — will not retry until the rolling 24h window resets",
+          context: failureContext(
+            {
+              statusCode: 429,
+              quotaKind: kind,
+              error: emailSendErrorMessage(err),
+            },
+            options?.logContext,
+          ),
         });
         throw err;
       }
@@ -62,7 +80,7 @@ export async function sendWithRetry<T>(
         domain: "email",
         action: "send_retry_failed",
         message: `attempt ${attempt + 1} failed: ${emailSendErrorMessage(err)}`,
-        context: { attempt: attempt + 1 },
+        context: failureContext({ attempt: attempt + 1 }, options?.logContext),
       });
 
       if (attempt >= maxRetries) {

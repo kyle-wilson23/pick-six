@@ -131,42 +131,51 @@ export async function sendTuesdayDigest({
     EMAIL_SEND_CONCURRENCY,
     async (member) => {
       try {
-        await sendWithRetry(async () => {
-          const { error } = await resend.emails.send(
-            {
-              from: getResendFrom(),
-              to: [member.email],
-              subject: formatEmailSubject(
-                `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
-                data.isTestLeague,
-              ),
-              react: createElement(TuesdayDigestEmail, {
-                leagueName: data.leagueName,
-                weekNumber: data.weekNumber,
-                standings: data.standings.map((s) => ({
-                  rank: s.rank,
-                  displayName: s.displayName,
-                  imageUrl: s.imageUrl,
-                  totalPoints: s.totalPoints,
-                  wins: s.wins,
-                  losses: s.losses,
-                })),
-                jailedTeamName: data.jailedTeamName,
-                jailedTeamAbbreviation: data.jailedTeamAbbreviation,
-                picksUrl: data.picksUrl,
-                adminNote,
-                isTestLeague: data.isTestLeague,
-              }),
-            },
-            {
-              idempotencyKey: `tuesday-digest:${leagueId}:${data.weekNumber}:${member.membershipId}`,
-            },
-          );
+        await sendWithRetry(
+          async () => {
+            const { error } = await resend.emails.send(
+              {
+                from: getResendFrom(),
+                to: [member.email],
+                subject: formatEmailSubject(
+                  `[${data.leagueName}] Week ${data.weekNumber} — Tuesday Update`,
+                  data.isTestLeague,
+                ),
+                react: createElement(TuesdayDigestEmail, {
+                  leagueName: data.leagueName,
+                  weekNumber: data.weekNumber,
+                  standings: data.standings.map((s) => ({
+                    rank: s.rank,
+                    displayName: s.displayName,
+                    imageUrl: s.imageUrl,
+                    totalPoints: s.totalPoints,
+                    wins: s.wins,
+                    losses: s.losses,
+                  })),
+                  jailedTeamName: data.jailedTeamName,
+                  jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+                  picksUrl: data.picksUrl,
+                  adminNote,
+                  isTestLeague: data.isTestLeague,
+                }),
+              },
+              {
+                idempotencyKey: `tuesday-digest:${leagueId}:${data.weekNumber}:${member.membershipId}`,
+              },
+            );
 
-          if (error) {
-            throw error;
-          }
-        });
+            if (error) {
+              throw error;
+            }
+          },
+          {
+            logContext: {
+              leagueId,
+              weekNumber: data.weekNumber,
+              membershipId: member.membershipId,
+            },
+          },
+        );
         sent += 1;
         recordEmailSendSuccess(breaker);
       } catch (err) {

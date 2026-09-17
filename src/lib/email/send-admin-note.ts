@@ -131,28 +131,31 @@ export async function sendAdminNote({
     async (member) => {
       attempted.add(member.membershipId);
       try {
-        await sendWithRetry(async () => {
-          const { error } = await resend.emails.send(
-            {
-              from: getResendFrom(),
-              to: [member.email],
-              subject,
-              react: createElement(AdminNoteEmail, {
-                leagueName: league.name,
-                note,
-                leagueUrl,
-                isTestLeague: league.isTestLeague,
-              }),
-            },
-            {
-              idempotencyKey: `admin-note:${leagueId}:${sendId}:${member.membershipId}`,
-            },
-          );
+        await sendWithRetry(
+          async () => {
+            const { error } = await resend.emails.send(
+              {
+                from: getResendFrom(),
+                to: [member.email],
+                subject,
+                react: createElement(AdminNoteEmail, {
+                  leagueName: league.name,
+                  note,
+                  leagueUrl,
+                  isTestLeague: league.isTestLeague,
+                }),
+              },
+              {
+                idempotencyKey: `admin-note:${leagueId}:${sendId}:${member.membershipId}`,
+              },
+            );
 
-          if (error) {
-            throw error;
-          }
-        });
+            if (error) {
+              throw error;
+            }
+          },
+          { logContext: { leagueId, membershipId: member.membershipId } },
+        );
         sent += 1;
         recordEmailSendSuccess(breaker);
       } catch (err) {
@@ -208,6 +211,8 @@ export async function sendAdminNote({
       sent,
       failed,
       circuitOpen: breaker.open,
+      failureMembershipIds: failures.map((f) => f.membershipId),
+      failureReasons: failures.map((f) => f.reason),
     },
   });
 

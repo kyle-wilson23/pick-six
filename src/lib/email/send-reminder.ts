@@ -144,33 +144,43 @@ export async function sendReminder({
     EMAIL_SEND_CONCURRENCY,
     async (member) => {
       try {
-        await sendWithRetry(async () => {
-          const { error } = await resend.emails.send(
-            {
-              from: getResendFrom(),
-              to: [member.email],
-              subject: reminderSubject(data, slot),
-              react: createElement(ReminderEmail, {
-                leagueName: data.leagueName,
-                weekNumber: data.weekNumber,
-                recipientDisplayName: member.displayName,
-                jailedTeamName: data.jailedTeamName,
-                jailedTeamAbbreviation: data.jailedTeamAbbreviation,
-                picksUrl: data.picksUrl,
-                slot,
-                pickDeadlineUtc: data.pickDeadlineUtc,
-                isTestLeague: data.isTestLeague,
-              }),
-            },
-            {
-              idempotencyKey: `${slotIdempotencyType(slot)}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
-            },
-          );
+        await sendWithRetry(
+          async () => {
+            const { error } = await resend.emails.send(
+              {
+                from: getResendFrom(),
+                to: [member.email],
+                subject: reminderSubject(data, slot),
+                react: createElement(ReminderEmail, {
+                  leagueName: data.leagueName,
+                  weekNumber: data.weekNumber,
+                  recipientDisplayName: member.displayName,
+                  jailedTeamName: data.jailedTeamName,
+                  jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+                  picksUrl: data.picksUrl,
+                  slot,
+                  pickDeadlineUtc: data.pickDeadlineUtc,
+                  isTestLeague: data.isTestLeague,
+                }),
+              },
+              {
+                idempotencyKey: `${slotIdempotencyType(slot)}-reminder:${leagueId}:${data.weekNumber}:${member.membershipId}`,
+              },
+            );
 
-          if (error) {
-            throw error;
-          }
-        });
+            if (error) {
+              throw error;
+            }
+          },
+          {
+            logContext: {
+              leagueId,
+              weekNumber: data.weekNumber,
+              membershipId: member.membershipId,
+              slot,
+            },
+          },
+        );
         sent += 1;
         recordEmailSendSuccess(breaker);
       } catch (err) {

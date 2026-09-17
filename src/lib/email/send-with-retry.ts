@@ -1,3 +1,4 @@
+import { emailSendErrorMessage } from "@/lib/email/email-send-error";
 import { logEvent } from "@/lib/logging/log-event";
 
 export type RetryOptions = {
@@ -17,16 +18,6 @@ function isDailyCapError(err: unknown): boolean {
     "statusCode" in err &&
     (err as { statusCode: unknown }).statusCode === 429
   );
-}
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  if (typeof err === "object" && err !== null && "message" in err) {
-    return String((err as { message: unknown }).message);
-  }
-  return String(err);
 }
 
 function delay(ms: number): Promise<void> {
@@ -70,7 +61,7 @@ export async function sendWithRetry<T>(
         level: "error",
         domain: "email",
         action: "send_retry_failed",
-        message: `attempt ${attempt + 1} failed: ${errorMessage(err)}`,
+        message: `attempt ${attempt + 1} failed: ${emailSendErrorMessage(err)}`,
         context: { attempt: attempt + 1 },
       });
 

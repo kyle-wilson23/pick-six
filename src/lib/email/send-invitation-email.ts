@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { getAppBaseUrl } from '@/lib/email/app-base-url';
+import { emailSendErrorMessage } from '@/lib/email/email-send-error';
 import { getResendFrom } from '@/lib/email/resend-from';
 import { resend } from '@/lib/email/resend-client';
 import { sendWithRetry } from '@/lib/email/send-with-retry';
@@ -71,7 +72,7 @@ export async function sendInvitationEmail(
       context: {
         to: input.to,
         leagueName: input.leagueName,
-        error: err instanceof Error ? err.message : String(err),
+        error: emailSendErrorMessage(err),
       },
     });
     return false;

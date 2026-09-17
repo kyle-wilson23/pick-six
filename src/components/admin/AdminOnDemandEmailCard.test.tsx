@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AdminOnDemandEmailCard,
+  formatAdminNoteFailureLine,
   openAdminNotePreview,
 } from "./AdminOnDemandEmailCard";
 
@@ -175,6 +176,15 @@ describe("AdminOnDemandEmailCard", () => {
           sentAt: "2026-09-16T12:00:00.000Z",
           suppressed: false,
           wouldSendCount: 0,
+          failures: [
+            {
+              membershipId: "mem-3",
+              email: "pat@example.com",
+              displayName: "Pat Lee",
+              reason: "provider_error",
+              error: "validation_error: 422: Invalid `to` field",
+            },
+          ],
         }),
       }),
     );
@@ -186,6 +196,12 @@ describe("AdminOnDemandEmailCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send Now" }));
 
     expect(await screen.findByText(/2 sent, 1 failed/)).toBeTruthy();
+    expect(
+      screen.getByText(/These never reached Resend \(rejected or skipped before delivery\)/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Pat Lee (pat@example.com) — validation_error: 422: Invalid `to` field"),
+    ).toBeTruthy();
     expect(screen.getByRole("alert").className).toContain("MuiAlert-standardWarning");
   });
 
@@ -246,6 +262,28 @@ describe("AdminOnDemandEmailCard", () => {
     expect(
       await screen.findByText(/would have reached 4 member\(s\)\. No email was sent/),
     ).toBeTruthy();
+  });
+});
+
+describe("formatAdminNoteFailureLine", () => {
+  it("includes display name when it differs from email", () => {
+    expect(
+      formatAdminNoteFailureLine({
+        displayName: "Pat Lee",
+        email: "pat@example.com",
+        error: "daily quota exceeded",
+      }),
+    ).toBe("Pat Lee (pat@example.com) — daily quota exceeded");
+  });
+
+  it("omits a duplicate display name", () => {
+    expect(
+      formatAdminNoteFailureLine({
+        displayName: "pat@example.com",
+        email: "pat@example.com",
+        error: "bounce",
+      }),
+    ).toBe("pat@example.com — bounce");
   });
 });
 

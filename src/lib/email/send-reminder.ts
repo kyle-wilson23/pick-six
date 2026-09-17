@@ -17,6 +17,7 @@ import {
   EMAIL_SEND_CONCURRENCY,
   mapWithConcurrency,
 } from "@/lib/email/map-with-concurrency";
+import { emailSendErrorMessage } from "@/lib/email/email-send-error";
 import { getResendFrom } from "@/lib/email/resend-from";
 import { resend } from "@/lib/email/resend-client";
 import { sendWithRetry } from "@/lib/email/send-with-retry";
@@ -185,7 +186,7 @@ export async function sendReminder({
           context: {
             slot,
             membershipId: member.membershipId,
-            error: err instanceof Error ? err.message : String(err),
+            error: emailSendErrorMessage(err),
           },
         });
 

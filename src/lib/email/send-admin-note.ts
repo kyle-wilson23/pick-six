@@ -16,6 +16,7 @@ import {
 import { LeagueNotFoundError } from "@/lib/email/get-tuesday-digest-data";
 import {
   EMAIL_SEND_CONCURRENCY,
+  EMAIL_SEND_MIN_INTERVAL_MS,
   mapWithConcurrency,
 } from "@/lib/email/map-with-concurrency";
 import { emailSendErrorMessage } from "@/lib/email/email-send-error";
@@ -192,7 +193,7 @@ export async function sendAdminNote({
         }
       }
     },
-    { shouldAbort: () => breaker.open },
+    { shouldAbort: () => breaker.open, minIntervalMs: EMAIL_SEND_MIN_INTERVAL_MS },
   );
 
   for (const member of members) {

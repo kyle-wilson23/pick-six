@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mapWithConcurrency } from "./map-with-concurrency";
+import {
+  EMAIL_SEND_CONCURRENCY,
+  EMAIL_SEND_MIN_INTERVAL_MS,
+  mapWithConcurrency,
+} from "./map-with-concurrency";
 
 describe("mapWithConcurrency", () => {
   it("maps all items and preserves order", async () => {
@@ -45,5 +49,41 @@ describe("mapWithConcurrency", () => {
     const mapper = vi.fn();
     await expect(mapWithConcurrency([], 4, mapper)).resolves.toEqual([]);
     expect(mapper).not.toHaveBeenCalled();
+  });
+
+  it("exports 125ms min interval and keeps concurrency at 4", () => {
+    expect(EMAIL_SEND_MIN_INTERVAL_MS).toBe(125);
+    expect(EMAIL_SEND_CONCURRENCY).toBe(4);
+  });
+
+  it("spaces mapper starts by minIntervalMs even at concurrency 4", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const starts: number[] = [];
+    const items = Array.from({ length: 15 }, (_, i) => i);
+
+    try {
+      const done = mapWithConcurrency(
+        items,
+        EMAIL_SEND_CONCURRENCY,
+        async () => {
+          starts.push(Date.now());
+        },
+        { minIntervalMs: EMAIL_SEND_MIN_INTERVAL_MS },
+      );
+
+      await vi.runAllTimersAsync();
+      await done;
+
+      expect(starts).toHaveLength(15);
+      for (let i = 1; i < starts.length; i++) {
+        expect(starts[i]! - starts[i - 1]!).toBeGreaterThanOrEqual(EMAIL_SEND_MIN_INTERVAL_MS);
+      }
+      expect(starts[14]! - starts[0]!).toBeGreaterThanOrEqual(
+        14 * EMAIL_SEND_MIN_INTERVAL_MS,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -15,6 +15,7 @@ import {
 import { getReminderData, type ReminderData } from "@/lib/email/get-reminder-data";
 import {
   EMAIL_SEND_CONCURRENCY,
+  EMAIL_SEND_MIN_INTERVAL_MS,
   mapWithConcurrency,
 } from "@/lib/email/map-with-concurrency";
 import { emailSendErrorMessage } from "@/lib/email/email-send-error";
@@ -208,7 +209,7 @@ export async function sendReminder({
         }
       }
     },
-    { shouldAbort: () => breaker.open },
+    { shouldAbort: () => breaker.open, minIntervalMs: EMAIL_SEND_MIN_INTERVAL_MS },
   );
 
   // Members the pool never reached because the circuit opened mid-run — count

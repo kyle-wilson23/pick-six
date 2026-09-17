@@ -28,8 +28,10 @@ vi.mock("@/lib/email/resend-from", () => ({
   getResendFrom: () => "test@example.com",
 }));
 
+const mockSendWithRetry = vi.fn((fn: () => Promise<unknown>) => fn());
+
 vi.mock("@/lib/email/send-with-retry", () => ({
-  sendWithRetry: (fn: () => Promise<void>) => fn(),
+  sendWithRetry: (fn: () => Promise<unknown>) => mockSendWithRetry(fn),
 }));
 
 vi.mock("@/lib/email/test-league-email-mode", () => ({
@@ -86,6 +88,7 @@ function sendArgs(
 describe("sendAdminNote", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSendWithRetry.mockImplementation((fn: () => Promise<unknown>) => fn());
     mockLeagueFindUnique.mockResolvedValue(LEAGUE);
     mockMembershipFindMany.mockResolvedValue(memberships(2));
     mockResendSend.mockResolvedValue({ error: null });
@@ -299,6 +302,32 @@ describe("sendAdminNote", () => {
     expect(mockResendSend).toHaveBeenCalledTimes(2);
     expect(result.suppressed).toBe(false);
     expect(result.sent).toBe(2);
+  });
+
+  it("counts a rate-limit 429 that succeeds on retry as sent without tripping the breaker", async () => {
+    const { sendWithRetry } = await vi.importActual<typeof import("./send-with-retry")>(
+      "./send-with-retry",
+    );
+    mockSendWithRetry.mockImplementation((fn) =>
+      sendWithRetry(fn, { maxRetries: 1, baseDelayMs: 1 }),
+    );
+    mockMembershipFindMany.mockResolvedValue(memberships(1));
+    mockResendSend
+      .mockRejectedValueOnce({ statusCode: 429, name: "rate_limit_exceeded" })
+      .mockResolvedValueOnce({ error: null });
+    const breaker = createEmailCircuitBreaker();
+
+    const result = await sendAdminNote(
+      sendArgs({ recipientMembershipIds: ["mem-1"], breaker }),
+    );
+
+    expect(mockResendSend).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ sent: 1, failed: 0, failures: [] });
+    expect(breaker.consecutiveFailures).toBe(0);
+    expect(breaker.open).toBe(false);
+    expect(logEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: "member_send_failed" }),
+    );
   });
 
   describe("circuit breaker", () => {

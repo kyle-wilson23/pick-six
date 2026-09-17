@@ -1,4 +1,7 @@
-import { emailSendErrorMessage } from "@/lib/email/email-send-error";
+import {
+  emailSendErrorMessage,
+  isQuotaExceededError,
+} from "@/lib/email/email-send-error";
 import { logEvent } from "@/lib/logging/log-event";
 
 export type RetryOptions = {
@@ -11,13 +14,15 @@ export type RetryOptions = {
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BASE_DELAY_MS = 1000;
 
-function isDailyCapError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "statusCode" in err &&
-    (err as { statusCode: unknown }).statusCode === 429
-  );
+function retryAfterMs(err: unknown): number | null {
+  if (typeof err !== "object" || err === null) {
+    return null;
+  }
+  const value = (err as { retryAfter?: unknown }).retryAfter;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return value * 1000;
 }
 
 function delay(ms: number): Promise<void> {
@@ -28,7 +33,8 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Retries a send function with exponential backoff. Pure — no Resend import (unit-testable).
- * Short-circuits on HTTP 429 (daily cap exhausted) without burning retry slots.
+ * Short-circuits named daily/monthly quota 429s without burning retry slots.
+ * Per-second `rate_limit_exceeded` and unlabeled 429s retry like other transients.
  */
 export async function sendWithRetry<T>(
   sendFn: () => Promise<T>,
@@ -45,7 +51,7 @@ export async function sendWithRetry<T>(
     } catch (err) {
       lastError = err;
 
-      if (isDailyCapError(err)) {
+      if (isQuotaExceededError(err)) {
         logEvent({
           level: "error",
           domain: "email",
@@ -69,7 +75,10 @@ export async function sendWithRetry<T>(
         break;
       }
 
-      const delayMs = baseDelayMs * 2 ** attempt;
+      const computedBackoff = baseDelayMs * 2 ** attempt;
+      const retryAfter = retryAfterMs(err);
+      const delayMs =
+        retryAfter == null ? computedBackoff : Math.max(retryAfter, computedBackoff);
       await delay(delayMs);
     }
   }

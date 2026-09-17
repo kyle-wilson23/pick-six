@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { ThemeProvider, createTheme } from "@mui/material";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, waitForElementToBeRemoved } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AdminOnDemandEmailCard,
+  adminNoteRecipientSummary,
   formatAdminNoteFailureLine,
   openAdminNotePreview,
 } from "./AdminOnDemandEmailCard";
@@ -16,10 +17,20 @@ afterEach(() => {
 
 const theme = createTheme({ palette: { mode: "dark" } });
 
-function renderCard() {
+const RECIPIENTS = [
+  { membershipId: "mem-1", displayName: "Member 1" },
+  { membershipId: "mem-2", displayName: "Member 2" },
+];
+
+function renderCard(
+  props?: Partial<{ leagueId: string; recipients: typeof RECIPIENTS }>,
+) {
   return render(
     <ThemeProvider theme={theme}>
-      <AdminOnDemandEmailCard leagueId="league-1" />
+      <AdminOnDemandEmailCard
+        leagueId={props?.leagueId ?? "league-1"}
+        recipients={props?.recipients ?? RECIPIENTS}
+      />
     </ThemeProvider>,
   );
 }
@@ -28,11 +39,16 @@ describe("AdminOnDemandEmailCard", () => {
   it("disables Save & Preview and Send Now until the note has text", () => {
     renderCard();
 
+    expect(screen.getByRole("button", { name: "Edit recipients" })).toHaveProperty(
+      "disabled",
+      false,
+    );
     expect(screen.getByRole("button", { name: "Save & Preview" })).toHaveProperty(
       "disabled",
       true,
     );
     expect(screen.getByRole("button", { name: "Send Now" })).toHaveProperty("disabled", true);
+    expect(screen.getByText("All users selected")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Note for participants"), {
       target: { value: "   " },
@@ -156,7 +172,10 @@ describe("AdminOnDemandEmailCard", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ note: "Kickoff moved" }),
+          body: JSON.stringify({
+          note: "Kickoff moved",
+          recipientMembershipIds: ["mem-1", "mem-2"],
+        }),
         }),
       );
     });
@@ -221,7 +240,7 @@ describe("AdminOnDemandEmailCard", () => {
 
     render(
       <ThemeProvider theme={theme}>
-        <AdminOnDemandEmailCard leagueId="league/1" />
+        <AdminOnDemandEmailCard leagueId="league/1" recipients={RECIPIENTS} />
       </ThemeProvider>,
     );
     fireEvent.change(screen.getByLabelText("Note for participants"), {
@@ -262,6 +281,95 @@ describe("AdminOnDemandEmailCard", () => {
     expect(
       await screen.findByText(/would have reached 4 member\(s\)\. No email was sent/),
     ).toBeTruthy();
+  });
+
+  it("keeps Edit recipients enabled when the note is empty", () => {
+    renderCard();
+    expect(screen.getByRole("button", { name: "Edit recipients" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
+  it("lists eligible users checked by default and commits a subset", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        sent: 1,
+        failed: 0,
+        sentAt: "2026-09-16T12:00:00.000Z",
+        suppressed: false,
+        wouldSendCount: 0,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderCard();
+    fireEvent.click(screen.getByRole("button", { name: "Edit recipients" }));
+
+    expect(screen.getByRole("checkbox", { name: "Member 1" })).toHaveProperty("checked", true);
+    expect(screen.getByRole("checkbox", { name: "Member 2" })).toHaveProperty("checked", true);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Member 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitForElementToBeRemoved(() => screen.queryByRole("dialog"));
+
+    expect(screen.getByText("1 users selected")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Kickoff moved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send Now" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/leagues/league-1/email/admin-note",
+        expect.objectContaining({
+          body: JSON.stringify({
+            note: "Kickoff moved",
+            recipientMembershipIds: ["mem-1"],
+          }),
+        }),
+      );
+    });
+  });
+
+  it("disables Send Now when zero recipients are selected", async () => {
+    renderCard();
+    fireEvent.click(screen.getByRole("button", { name: "Edit recipients" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Member 1" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Member 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitForElementToBeRemoved(() => screen.queryByRole("dialog"));
+
+    expect(screen.getByText("0 users selected")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Kickoff moved" },
+    });
+    expect(screen.getByRole("button", { name: "Send Now" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Save & Preview" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
+  it("shows 0 users selected when nobody is eligible", () => {
+    renderCard({ recipients: [] });
+    expect(screen.getByText("0 users selected")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Note for participants"), {
+      target: { value: "Kickoff moved" },
+    });
+    expect(screen.getByRole("button", { name: "Send Now" })).toHaveProperty("disabled", true);
+  });
+});
+
+describe("adminNoteRecipientSummary", () => {
+  it("uses All users selected only when every eligible user is checked", () => {
+    expect(adminNoteRecipientSummary(2, 2)).toBe("All users selected");
+    expect(adminNoteRecipientSummary(1, 2)).toBe("1 users selected");
+    expect(adminNoteRecipientSummary(0, 2)).toBe("0 users selected");
+    expect(adminNoteRecipientSummary(0, 0)).toBe("0 users selected");
   });
 });
 

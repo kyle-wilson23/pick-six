@@ -8,7 +8,11 @@ import {
   recordEmailSendSuccess,
   type EmailCircuitBreaker,
 } from "@/lib/email/circuit-breaker";
-import { adminNoteLeagueUrl, adminNoteSubject } from "@/lib/email/admin-note";
+import {
+  AdminNoteNoRecipientsError,
+  adminNoteLeagueUrl,
+  adminNoteSubject,
+} from "@/lib/email/admin-note";
 import { LeagueNotFoundError } from "@/lib/email/get-tuesday-digest-data";
 import {
   EMAIL_SEND_CONCURRENCY,
@@ -40,10 +44,14 @@ const CIRCUIT_ABORTED_ERROR =
 export async function sendAdminNote({
   leagueId,
   note,
+  actorUserId,
+  recipientMembershipIds,
   breaker: providedBreaker,
 }: {
   leagueId: string;
   note: string;
+  actorUserId: string;
+  recipientMembershipIds: string[];
   breaker?: EmailCircuitBreaker;
 }): Promise<{
   sent: number;
@@ -66,16 +74,23 @@ export async function sendAdminNote({
     where: leaguePlayerMembershipWhere(leagueId),
     select: {
       id: true,
-      user: { select: { email: true, name: true } },
+      user: { select: { id: true, email: true, name: true } },
     },
     orderBy: { createdAt: "asc" },
   });
 
-  const members = memberships.map((m) => ({
-    membershipId: m.id,
-    email: m.user.email,
-    displayName: userDisplayName(m.user),
-  }));
+  const requested = new Set(recipientMembershipIds);
+  const members = memberships
+    .filter((m) => m.user.id !== actorUserId && requested.has(m.id))
+    .map((m) => ({
+      membershipId: m.id,
+      email: m.user.email,
+      displayName: userDisplayName(m.user),
+    }));
+
+  if (members.length === 0) {
+    throw new AdminNoteNoRecipientsError();
+  }
 
   const leagueUrl = adminNoteLeagueUrl(leagueId);
   const subject = adminNoteSubject(league.name, league.isTestLeague);

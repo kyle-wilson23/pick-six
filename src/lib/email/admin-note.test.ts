@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_NOTE_MAX_LENGTH,
   adminNoteBodySchema,
+  adminNoteSendBodySchema,
   adminNoteSubject,
   parseAdminNoteBody,
+  parseAdminNoteSendBody,
 } from "./admin-note";
 
 describe("adminNoteSubject", () => {
@@ -29,6 +31,18 @@ describe("adminNoteBodySchema", () => {
     expect(
       adminNoteBodySchema.safeParse({ note: "x".repeat(ADMIN_NOTE_MAX_LENGTH + 1) }).success,
     ).toBe(false);
+  });
+});
+
+describe("adminNoteSendBodySchema", () => {
+  it("requires recipientMembershipIds alongside a note", () => {
+    expect(
+      adminNoteSendBodySchema.parse({
+        note: "hello",
+        recipientMembershipIds: ["mem-1"],
+      }),
+    ).toEqual({ note: "hello", recipientMembershipIds: ["mem-1"] });
+    expect(adminNoteSendBodySchema.safeParse({ note: "hello" }).success).toBe(false);
   });
 });
 
@@ -64,5 +78,35 @@ describe("parseAdminNoteBody", () => {
       body: JSON.stringify({ note: "   " }),
     });
     await expect(parseAdminNoteBody(request)).resolves.toMatchObject({ ok: false });
+  });
+});
+
+describe("parseAdminNoteSendBody", () => {
+  it("reads JSON note and recipient ids", async () => {
+    const request = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        note: "  Kickoff moved  ",
+        recipientMembershipIds: ["mem-1", "mem-2"],
+      }),
+    });
+    await expect(parseAdminNoteSendBody(request)).resolves.toEqual({
+      ok: true,
+      note: "Kickoff moved",
+      recipientMembershipIds: ["mem-1", "mem-2"],
+    });
+  });
+
+  it("fails when recipientMembershipIds is missing", async () => {
+    const request = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ note: "Kickoff moved" }),
+    });
+    await expect(parseAdminNoteSendBody(request)).resolves.toEqual({
+      ok: false,
+      message: "Select at least one recipient",
+    });
   });
 });

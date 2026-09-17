@@ -47,6 +47,7 @@ import {
   EMAIL_CIRCUIT_OPEN_CODE,
   createEmailCircuitBreaker,
 } from "./circuit-breaker";
+import { AdminNoteNoRecipientsError } from "./admin-note";
 import { LeagueNotFoundError } from "./get-tuesday-digest-data";
 import { sendAdminNote } from "./send-admin-note";
 
@@ -62,8 +63,24 @@ const LEAGUE = {
 function memberships(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     id: `mem-${i + 1}`,
-    user: { email: `member${i + 1}@example.com`, name: `Member ${i + 1}` },
+    user: {
+      id: `user-${i + 1}`,
+      email: `member${i + 1}@example.com`,
+      name: `Member ${i + 1}`,
+    },
   }));
+}
+
+function sendArgs(
+  overrides: Partial<Parameters<typeof sendAdminNote>[0]> = {},
+): Parameters<typeof sendAdminNote>[0] {
+  return {
+    leagueId: LEAGUE_ID,
+    note: NOTE,
+    actorUserId: "admin-user",
+    recipientMembershipIds: ["mem-1", "mem-2"],
+    ...overrides,
+  };
 }
 
 describe("sendAdminNote", () => {
@@ -77,16 +94,14 @@ describe("sendAdminNote", () => {
 
   it("throws when the league is missing", async () => {
     mockLeagueFindUnique.mockResolvedValue(null);
-    await expect(sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE })).rejects.toBeInstanceOf(
-      LeagueNotFoundError,
-    );
+    await expect(sendAdminNote(sendArgs())).rejects.toBeInstanceOf(LeagueNotFoundError);
     expect(mockResendSend).not.toHaveBeenCalled();
   });
 
   it("suppress mode never calls Resend", async () => {
     mockGetTestLeagueEmailMode.mockReturnValue("suppress");
 
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    const result = await sendAdminNote(sendArgs());
 
     expect(mockResendSend).not.toHaveBeenCalled();
     expect(result).toMatchObject({
@@ -100,7 +115,7 @@ describe("sendAdminNote", () => {
   });
 
   it("sends to each member with a unique per-send idempotency key", async () => {
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    const result = await sendAdminNote(sendArgs());
 
     expect(mockResendSend).toHaveBeenCalledTimes(2);
     const keys = mockResendSend.mock.calls.map(
@@ -143,7 +158,7 @@ describe("sendAdminNote", () => {
       return { error: null };
     });
 
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    const result = await sendAdminNote(sendArgs());
 
     expect(result).toMatchObject({ sent: 1, failed: 1, suppressed: false });
     expect(result.failures).toEqual([
@@ -183,7 +198,7 @@ describe("sendAdminNote", () => {
     });
     mockMembershipFindMany.mockResolvedValue(memberships(1));
 
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    const result = await sendAdminNote(sendArgs());
 
     expect(result).toMatchObject({ sent: 0, failed: 1 });
     expect(result.failures).toEqual([
@@ -204,15 +219,74 @@ describe("sendAdminNote", () => {
     );
   });
 
-  it("returns sent 0 when there are no members", async () => {
+  it("throws when no requested members remain after filtering", async () => {
     mockMembershipFindMany.mockResolvedValue([]);
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    await expect(sendAdminNote(sendArgs())).rejects.toBeInstanceOf(AdminNoteNoRecipientsError);
+    expect(mockResendSend).not.toHaveBeenCalled();
+  });
+
+  it("sends only the requested eligible subset", async () => {
+    mockMembershipFindMany.mockResolvedValue(memberships(5));
+    const result = await sendAdminNote(
+      sendArgs({ recipientMembershipIds: ["mem-2", "mem-4"] }),
+    );
+
+    expect(mockResendSend).toHaveBeenCalledTimes(2);
+    expect(mockResendSend.mock.calls.map((call) => (call[0] as { to: string[] }).to[0])).toEqual([
+      "member2@example.com",
+      "member4@example.com",
+    ]);
+    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
+  });
+
+  it("drops unknown ids and still sends the remainder", async () => {
+    const result = await sendAdminNote(
+      sendArgs({ recipientMembershipIds: ["mem-1", "foreign"] }),
+    );
+
+    expect(mockResendSend).toHaveBeenCalledTimes(1);
+    expect((mockResendSend.mock.calls[0]?.[0] as { to: string[] }).to).toEqual([
+      "member1@example.com",
+    ]);
+    expect(result.sent).toBe(1);
+  });
+
+  it("never emails the acting admin even if their membership id is requested", async () => {
+    const result = await sendAdminNote(
+      sendArgs({
+        actorUserId: "user-1",
+        recipientMembershipIds: ["mem-1", "mem-2"],
+      }),
+    );
+
+    expect(mockResendSend).toHaveBeenCalledTimes(1);
+    expect((mockResendSend.mock.calls[0]?.[0] as { to: string[] }).to).toEqual([
+      "member2@example.com",
+    ]);
+    expect(result.sent).toBe(1);
+  });
+
+  it("throws when the remainder is empty after unknown ids", async () => {
+    await expect(
+      sendAdminNote(sendArgs({ recipientMembershipIds: ["foreign"] })),
+    ).rejects.toBeInstanceOf(AdminNoteNoRecipientsError);
+    expect(mockResendSend).not.toHaveBeenCalled();
+  });
+
+  it("uses the filtered set for suppress wouldSendCount", async () => {
+    mockGetTestLeagueEmailMode.mockReturnValue("suppress");
+    mockMembershipFindMany.mockResolvedValue(memberships(5));
+
+    const result = await sendAdminNote(
+      sendArgs({ recipientMembershipIds: ["mem-1", "mem-3"] }),
+    );
+
     expect(mockResendSend).not.toHaveBeenCalled();
     expect(result).toMatchObject({
+      suppressed: true,
+      wouldSendCount: 2,
       sent: 0,
       failed: 0,
-      sentAt: null,
-      suppressed: false,
     });
   });
 
@@ -220,7 +294,7 @@ describe("sendAdminNote", () => {
     mockGetTestLeagueEmailMode.mockReturnValue("suppress");
     mockLeagueFindUnique.mockResolvedValue({ ...LEAGUE, isTestLeague: false, name: "Prod" });
 
-    const result = await sendAdminNote({ leagueId: LEAGUE_ID, note: NOTE });
+    const result = await sendAdminNote(sendArgs());
 
     expect(mockResendSend).toHaveBeenCalledTimes(2);
     expect(result.suppressed).toBe(false);
@@ -238,11 +312,10 @@ describe("sendAdminNote", () => {
       mockMembershipFindMany.mockResolvedValue(memberships(memberCount));
       const breaker = createEmailCircuitBreaker();
 
-      const result = await sendAdminNote({
-        leagueId: LEAGUE_ID,
-        note: NOTE,
-        breaker,
-      });
+      const ids = memberships(memberCount).map((m) => m.id);
+      const result = await sendAdminNote(
+        sendArgs({ recipientMembershipIds: ids, breaker }),
+      );
 
       expect(breaker.open).toBe(true);
       expect(mockResendSend.mock.calls.length).toBeLessThan(memberCount);

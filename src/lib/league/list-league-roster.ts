@@ -6,6 +6,7 @@ import { userDisplayName } from "@/lib/user-display-name";
 
 export type LeagueRosterEntry = {
   membershipId: string;
+  userId: string;
   role: LeagueMembershipRole;
   displayName: string;
   imageUrl: string | null;
@@ -33,13 +34,14 @@ export function compareLeagueRosterMembers(
 export async function listLeagueRoster(leagueId: string): Promise<LeagueRosterEntry[]> {
   const memberships = await prisma.leagueMembership.findMany({
     where: leaguePlayerMembershipWhere(leagueId),
-    include: { user: { select: { name: true, email: true, image: true } } },
+    include: { user: { select: { id: true, name: true, email: true, image: true } } },
   });
 
   return [...memberships]
     .sort(compareLeagueRosterMembers)
     .map((m) => ({
       membershipId: m.id,
+      userId: m.user.id,
       role: m.role,
       user: { name: m.user.name, email: m.user.email },
       displayName: userDisplayName(m.user),

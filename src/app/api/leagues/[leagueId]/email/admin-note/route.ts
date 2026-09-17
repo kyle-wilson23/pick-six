@@ -8,7 +8,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { parseAdminNoteBody } from "@/lib/email/admin-note";
+import {
+  AdminNoteNoRecipientsError,
+  parseAdminNoteSendBody,
+} from "@/lib/email/admin-note";
 import { LeagueNotFoundError } from "@/lib/email/get-tuesday-digest-data";
 import { sendAdminNote } from "@/lib/email/send-admin-note";
 import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
@@ -41,7 +44,7 @@ export async function POST(
     return forbiddenAdminJson();
   }
 
-  const parsed = await parseAdminNoteBody(request);
+  const parsed = await parseAdminNoteSendBody(request);
   if (!parsed.ok) {
     return NextResponse.json(
       { error: { code: "VALIDATION_ERROR", message: parsed.message } },
@@ -50,7 +53,12 @@ export async function POST(
   }
 
   try {
-    const result = await sendAdminNote({ leagueId, note: parsed.note });
+    const result = await sendAdminNote({
+      leagueId,
+      note: parsed.note,
+      actorUserId: session.user.id,
+      recipientMembershipIds: parsed.recipientMembershipIds,
+    });
     return NextResponse.json({
       sent: result.sent,
       failed: result.failed,
@@ -60,6 +68,12 @@ export async function POST(
       failures: result.failures,
     });
   } catch (e) {
+    if (e instanceof AdminNoteNoRecipientsError) {
+      return NextResponse.json(
+        { error: { code: "VALIDATION_ERROR", message: e.message } },
+        { status: 400 },
+      );
+    }
     if (e instanceof LeagueNotFoundError) {
       return NextResponse.json(
         { error: { code: "NOT_FOUND", message: "League not found" } },

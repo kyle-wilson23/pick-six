@@ -26,6 +26,7 @@ import {
 } from "@/lib/admin/build-submission-status";
 import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
+import { listLeagueRoster } from "@/lib/league/list-league-roster";
 import { resolveCurrentSeasonForLeague } from "@/lib/league/resolve-current-season";
 import { logEvent } from "@/lib/logging/log-event";
 import { appContentWidthSx } from "@/theme/app-content-width";
@@ -53,12 +54,14 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   let overrideData: Awaited<ReturnType<typeof buildAdminOverrideData>>;
   let auditEntries: Awaited<ReturnType<typeof getAuditLog>>;
   let season: Awaited<ReturnType<typeof resolveCurrentSeasonForLeague>>;
+  let roster: Awaited<ReturnType<typeof listLeagueRoster>>;
   try {
-    [payload, overrideData, auditEntries, season] = await Promise.all([
+    [payload, overrideData, auditEntries, season, roster] = await Promise.all([
       buildSubmissionStatus({ leagueId, viewerUserId: session.user.id }),
       buildAdminOverrideData({ leagueId }),
       getAuditLog({ leagueId }),
       resolveCurrentSeasonForLeague(prisma.season, leagueId),
+      listLeagueRoster(leagueId),
     ]);
   } catch {
     notFound();
@@ -71,6 +74,12 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
   const outstandingCount = participants.filter((p) => p.submittedPick === null).length;
   const allSubmitted =
     weekNumber != null && participants.length > 0 && outstandingCount === 0;
+  const noteRecipients = roster
+    .filter((entry) => entry.userId !== session.user.id)
+    .map((entry) => ({
+      membershipId: entry.membershipId,
+      displayName: entry.displayName,
+    }));
 
   let weeklyEmailStatus: Awaited<ReturnType<typeof getWeeklyEmailStatus>> | undefined;
   let weeklyEmailStatusError = false;
@@ -194,7 +203,7 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
             loadError={weeklyEmailStatusError}
           />
 
-          <AdminOnDemandEmailCard leagueId={leagueId} />
+          <AdminOnDemandEmailCard leagueId={leagueId} recipients={noteRecipients} />
         </Stack>
       </Stack>
 

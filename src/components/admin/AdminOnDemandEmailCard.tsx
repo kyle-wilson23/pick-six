@@ -4,6 +4,12 @@ import { useRef, useState } from "react";
 
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -11,8 +17,14 @@ import Typography from "@mui/material/Typography";
 
 import { ADMIN_NOTE_MAX_LENGTH } from "@/lib/email/admin-note";
 
+export type AdminNoteRecipientOption = {
+  membershipId: string;
+  displayName: string;
+};
+
 export type AdminOnDemandEmailCardProps = {
   leagueId: string;
+  recipients: AdminNoteRecipientOption[];
 };
 
 type AdminNoteSendFailure = {
@@ -36,6 +48,16 @@ export function formatAdminNoteFailureLine(failure: {
       ? failure.email
       : `${failure.displayName} (${failure.email})`;
   return `${who} — ${failure.error}`;
+}
+
+export function adminNoteRecipientSummary(
+  selectedCount: number,
+  eligibleCount: number,
+): string {
+  if (eligibleCount > 0 && selectedCount === eligibleCount) {
+    return "All users selected";
+  }
+  return `${selectedCount} users selected`;
 }
 
 export type OpenAdminNotePreviewResult =
@@ -85,8 +107,19 @@ export async function openAdminNotePreview(
   }
 }
 
-export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps) {
+function allRecipientIds(recipients: AdminNoteRecipientOption[]): string[] {
+  return recipients.map((recipient) => recipient.membershipId);
+}
+
+export function AdminOnDemandEmailCard({
+  leagueId,
+  recipients,
+}: AdminOnDemandEmailCardProps) {
+  const eligibleIds = allRecipientIds(recipients);
   const [note, setNote] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>(eligibleIds);
+  const [draftIds, setDraftIds] = useState<string[]>(eligibleIds);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
@@ -94,18 +127,43 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendFailures, setSendFailures] = useState<AdminNoteSendFailure[]>([]);
 
+  const selectedEligibleIds = eligibleIds.filter((id) => selectedIds.includes(id));
   const trimmed = note.trim();
-  const canSubmit = trimmed.length > 0 && trimmed.length <= ADMIN_NOTE_MAX_LENGTH;
+  const hasNote = trimmed.length > 0 && trimmed.length <= ADMIN_NOTE_MAX_LENGTH;
+  const canSend = hasNote && selectedEligibleIds.length > 0;
   const sendUrl = `/api/leagues/${encodeURIComponent(leagueId)}/email/admin-note`;
 
-  async function handlePreview() {
-    if (!canSubmit) {
-      return;
-    }
+  function clearSendFeedback() {
     setSendMessage(null);
     setSendInfo(null);
     setSendError(null);
     setSendFailures([]);
+  }
+
+  function openPicker() {
+    setDraftIds([...selectedIds]);
+    setPickerOpen(true);
+  }
+
+  function commitPicker() {
+    setSelectedIds([...draftIds]);
+    setPickerOpen(false);
+    clearSendFeedback();
+  }
+
+  function toggleDraft(membershipId: string) {
+    setDraftIds((current) =>
+      current.includes(membershipId)
+        ? current.filter((id) => id !== membershipId)
+        : [...current, membershipId],
+    );
+  }
+
+  async function handlePreview() {
+    if (!hasNote) {
+      return;
+    }
+    clearSendFeedback();
     const result = await openAdminNotePreview(leagueId, note);
     if (!result.ok) {
       setSendError(result.message);
@@ -113,20 +171,18 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
   }
 
   async function handleSend() {
-    if (!canSubmit || sendingRef.current) {
+    if (!canSend || sendingRef.current) {
       return;
     }
     sendingRef.current = true;
     setSending(true);
-    setSendMessage(null);
-    setSendInfo(null);
-    setSendError(null);
-    setSendFailures([]);
+    clearSendFeedback();
     try {
+      const recipientMembershipIds = selectedEligibleIds;
       const res = await fetch(sendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note }),
+        body: JSON.stringify({ note, recipientMembershipIds }),
       });
       const data = (await res.json()) as {
         sent?: number;
@@ -194,7 +250,7 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
             Message participants
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Sends immediately to all current participants — not the weekly digest.
+            Sends immediately — not the weekly digest.
           </Typography>
         </Stack>
 
@@ -206,15 +262,16 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
           value={note}
           onChange={(e) => {
             setNote(e.target.value);
-            setSendMessage(null);
-            setSendInfo(null);
-            setSendError(null);
-            setSendFailures([]);
+            clearSendFeedback();
           }}
           disabled={sending}
           placeholder="Write a message to send now…"
           slotProps={{ htmlInput: { maxLength: ADMIN_NOTE_MAX_LENGTH } }}
         />
+
+        <Typography variant="body2" color="text.secondary">
+          {adminNoteRecipientSummary(selectedEligibleIds.length, recipients.length)}
+        </Typography>
 
         {sendMessage != null ? <Alert severity="success">{sendMessage}</Alert> : null}
         {sendInfo != null ? <Alert severity="info">{sendInfo}</Alert> : null}
@@ -249,9 +306,18 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Button
             variant="outlined"
+            color="secondary"
+            onClick={openPicker}
+            disabled={sending}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Edit recipients
+          </Button>
+          <Button
+            variant="outlined"
             color="info"
             onClick={() => void handlePreview()}
-            disabled={!canSubmit || sending}
+            disabled={!hasNote || sending}
             sx={{ whiteSpace: "nowrap" }}
           >
             Save & Preview
@@ -260,12 +326,43 @@ export function AdminOnDemandEmailCard({ leagueId }: AdminOnDemandEmailCardProps
             variant="contained"
             color="primary"
             onClick={() => void handleSend()}
-            disabled={!canSubmit || sending}
+            disabled={!canSend || sending}
           >
             {sending ? "Sending…" : "Send Now"}
           </Button>
         </Stack>
       </Stack>
+
+      <Dialog
+        open={pickerOpen}
+        onClose={commitPicker}
+        aria-labelledby="edit-recipients-title"
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle id="edit-recipients-title">Edit recipients</DialogTitle>
+        <DialogContent>
+          <Stack spacing={0.5} sx={{ pt: 1 }}>
+            {recipients.map((recipient) => (
+              <FormControlLabel
+                key={recipient.membershipId}
+                control={
+                  <Checkbox
+                    checked={draftIds.includes(recipient.membershipId)}
+                    onChange={() => toggleDraft(recipient.membershipId)}
+                  />
+                }
+                label={recipient.displayName}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={commitPicker}>
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

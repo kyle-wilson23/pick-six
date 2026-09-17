@@ -32,8 +32,8 @@ function failureContext(
 
 /**
  * Retries a send function with exponential backoff. Pure — no Resend import (unit-testable).
- * Short-circuits on Resend daily/monthly quota 429s. Per-second `rate_limit_exceeded`
- * 429s still retry — they recover in well under the backoff window.
+ * Short-circuits only on named Resend daily/monthly quota 429s. Per-second
+ * `rate_limit_exceeded` and unlabeled 429s retry — a 429 is not proof the 100/day cap is hit.
  */
 export async function sendWithRetry<T>(
   sendFn: () => Promise<T>,
@@ -60,9 +60,7 @@ export async function sendWithRetry<T>(
           code: monthly ? "EMAIL_MONTHLY_CAP" : "EMAIL_DAILY_CAP",
           message: monthly
             ? "monthly quota exhausted — will not retry until the monthly reset"
-            : kind === "unknown"
-              ? "Resend 429 without quota/rate-limit name — not retrying (treated as quota)"
-              : "daily quota exhausted — will not retry until the rolling 24h window resets",
+            : "daily quota exhausted — will not retry until the rolling 24h window resets",
           context: failureContext(
             {
               statusCode: 429,

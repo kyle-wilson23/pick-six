@@ -92,8 +92,8 @@ export function classifyResend429(err: unknown): Resend429Kind | null {
   return "unknown";
 }
 
-/** Daily/monthly quota (and unlabeled 429s) will not recover on a 1–4s backoff. */
+/** Daily/monthly quota will not recover on a 1–4s backoff. Bare/rate-limit 429s should retry. */
 export function isNonRetryableResendQuota(err: unknown): boolean {
   const kind = classifyResend429(err);
-  return kind === "daily_quota" || kind === "monthly_quota" || kind === "unknown";
+  return kind === "daily_quota" || kind === "monthly_quota";
 }

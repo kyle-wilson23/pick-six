@@ -107,6 +107,19 @@ describe("sendWithRetry", () => {
     );
   });
 
+  it("retries unlabeled 429s instead of treating them as daily quota", async () => {
+    const unlabeled = { statusCode: 429 };
+    const sendFn = vi.fn().mockRejectedValueOnce(unlabeled).mockResolvedValueOnce("sent");
+
+    const resultPromise = sendWithRetry(sendFn, { maxRetries: 3, baseDelayMs: 1000 });
+    await vi.runAllTimersAsync();
+    await expect(resultPromise).resolves.toBe("sent");
+    expect(sendFn).toHaveBeenCalledTimes(2);
+    expect(mockLogEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: "daily_cap_exhausted" }),
+    );
+  });
+
   it("rethrows the final error when all retries are exhausted", async () => {
     const finalError = new Error("persistent failure");
     const sendFn = vi.fn().mockRejectedValue(finalError);

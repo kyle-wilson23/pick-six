@@ -67,7 +67,7 @@ describe("classifyResend429", () => {
     ).toBe("rate_limit");
   });
 
-  it("treats unlabeled 429s as unknown (historical daily-cap short-circuit)", () => {
+  it("classifies unlabeled 429s as unknown so they can be retried", () => {
     expect(classifyResend429({ statusCode: 429, message: "daily quota exceeded" })).toBe(
       "daily_quota",
     );
@@ -76,14 +76,14 @@ describe("classifyResend429", () => {
 });
 
 describe("isNonRetryableResendQuota", () => {
-  it("short-circuits quota and unknown 429s, not per-second rate limits", () => {
+  it("short-circuits only named quota 429s", () => {
     expect(
       isNonRetryableResendQuota({ statusCode: 429, name: "daily_quota_exceeded" }),
     ).toBe(true);
     expect(
       isNonRetryableResendQuota({ statusCode: 429, name: "monthly_quota_exceeded" }),
     ).toBe(true);
-    expect(isNonRetryableResendQuota({ statusCode: 429 })).toBe(true);
+    expect(isNonRetryableResendQuota({ statusCode: 429 })).toBe(false);
     expect(
       isNonRetryableResendQuota({ statusCode: 429, name: "rate_limit_exceeded" }),
     ).toBe(false);

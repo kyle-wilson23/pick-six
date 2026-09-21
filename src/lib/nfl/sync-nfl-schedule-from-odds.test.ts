@@ -278,4 +278,139 @@ describe("syncNflScheduleFromOdds", () => {
       2,
     );
   });
+
+  it("full-slate sync uses the mapped week, not a leftover DB week", async () => {
+    const { teams, events } = buildFullSlateEvents(200);
+    fetchEvents.mockResolvedValue(events);
+
+    const upsert = vi.fn().mockResolvedValue({});
+    const findManyGames = vi.fn().mockResolvedValue([
+      {
+        id: "wrong-week",
+        weekNumber: 9,
+        homeTeamId: "t0",
+        awayTeamId: "t1",
+      },
+    ]);
+    const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
+
+    const prisma = {
+      team: { findMany: vi.fn().mockResolvedValue(teams) },
+      nflGame: {
+        findFirst: vi.fn().mockResolvedValue({ kickoffAt: new Date("2026-09-11T00:15:00.000Z") }),
+      },
+      $transaction: vi.fn(async (fn: (tx: unknown) => Promise<void>) => {
+        await fn({ nflGame: { upsert, findMany: findManyGames, deleteMany } });
+      }),
+    };
+
+    const result = await syncNflScheduleFromOdds(prisma as never, {
+      apiKey: "k",
+      nflSeasonYear: 2026,
+    });
+    expect(result.ok).toBe(true);
+    const t0t1 = upsert.mock.calls.find(
+      (c) =>
+        c[0]?.where?.nflSeasonYear_weekNumber_homeTeamId_awayTeamId?.homeTeamId === "t0" &&
+        c[0]?.where?.nflSeasonYear_weekNumber_homeTeamId_awayTeamId?.awayTeamId === "t1",
+    );
+    expect(t0t1?.[0]?.where.nflSeasonYear_weekNumber_homeTeamId_awayTeamId.weekNumber).toBe(1);
+    expect(deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["wrong-week"] } } });
+  });
+
+  it("without a week-1 opener, does not insert a new leftover-live matchup", async () => {
+    fetchEvents.mockResolvedValue([
+      {
+        id: "mnf",
+        sport_key: "americanfootball_nfl",
+        commence_time: "2026-09-22T00:15:00Z",
+        home_team: "Los Angeles Rams",
+        away_team: "New York Giants",
+      },
+      {
+        id: "tnf",
+        sport_key: "americanfootball_nfl",
+        commence_time: "2026-09-25T00:15:00Z",
+        home_team: "Kansas City Chiefs",
+        away_team: "Los Angeles Chargers",
+      },
+    ]);
+
+    const upsert = vi.fn().mockResolvedValue({});
+    const prisma = {
+      team: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "lar", abbreviation: "LAR", name: "Los Angeles Rams" },
+          { id: "nyg", abbreviation: "NYG", name: "New York Giants" },
+          { id: "kc", abbreviation: "KC", name: "Kansas City Chiefs" },
+          { id: "lac", abbreviation: "LAC", name: "Los Angeles Chargers" },
+        ]),
+      },
+      nflGame: { findFirst: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn(async (fn: (tx: unknown) => Promise<void>) => {
+        await fn({
+          nflGame: {
+            upsert,
+            findMany: vi.fn().mockResolvedValue([
+              { id: "week2-mnf", weekNumber: 2, homeTeamId: "lar", awayTeamId: "nyg" },
+            ]),
+            deleteMany: vi.fn(),
+          },
+        });
+      }),
+    };
+
+    const result = await syncNflScheduleFromOdds(prisma as never, {
+      apiKey: "k",
+      nflSeasonYear: 2026,
+    });
+    expect(result).toEqual({ ok: true, upserted: 1, deleted: 0 });
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert.mock.calls[0]?.[0]?.where.nflSeasonYear_weekNumber_homeTeamId_awayTeamId).toEqual({
+      nflSeasonYear: 2026,
+      weekNumber: 2,
+      homeTeamId: "lar",
+      awayTeamId: "nyg",
+    });
+  });
+
+  it("when the same matchup exists in two weeks, leftover-live keeps the later week", async () => {
+    fetchEvents.mockResolvedValue([
+      {
+        id: "mnf",
+        sport_key: "americanfootball_nfl",
+        commence_time: "2026-09-22T00:15:00Z",
+        home_team: "Los Angeles Rams",
+        away_team: "New York Giants",
+      },
+    ]);
+
+    const upsert = vi.fn().mockResolvedValue({});
+    const findManyGames = vi.fn().mockResolvedValue([
+      { id: "bogus-week1", weekNumber: 1, homeTeamId: "lar", awayTeamId: "nyg" },
+      { id: "week2-mnf", weekNumber: 2, homeTeamId: "lar", awayTeamId: "nyg" },
+    ]);
+    const deleteMany = vi.fn();
+
+    const prisma = {
+      team: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "lar", abbreviation: "LAR", name: "Los Angeles Rams" },
+          { id: "nyg", abbreviation: "NYG", name: "New York Giants" },
+        ]),
+      },
+      nflGame: {
+        findFirst: vi.fn().mockResolvedValue({ kickoffAt: new Date("2026-09-10T00:20:00.000Z") }),
+      },
+      $transaction: vi.fn(async (fn: (tx: unknown) => Promise<void>) => {
+        await fn({ nflGame: { upsert, findMany: findManyGames, deleteMany } });
+      }),
+    };
+
+    await syncNflScheduleFromOdds(prisma as never, { apiKey: "k", nflSeasonYear: 2026 });
+    expect(upsert.mock.calls[0]?.[0]?.where.nflSeasonYear_weekNumber_homeTeamId_awayTeamId.weekNumber).toBe(
+      2,
+    );
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
 });

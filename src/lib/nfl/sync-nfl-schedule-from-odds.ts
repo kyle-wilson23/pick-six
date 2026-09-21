@@ -79,6 +79,7 @@ export async function syncNflScheduleFromOdds(
     const allowOrphanDelete = mapped.rows.length >= FULL_SEASON_MIN_GAMES;
 
     let deleted = 0;
+    let upserted = 0;
     // ~272 sequential upserts exceed Prisma's default 5s interactive transaction timeout on Neon.
     const UPSERT_CHUNK = 25;
     await prisma.$transaction(
@@ -95,15 +96,37 @@ export async function syncNflScheduleFromOdds(
         const existingByMatchup = new Map<string, number>();
         for (const g of existing) {
           const key = `${g.homeTeamId}|${g.awayTeamId}`;
-          if (!existingByMatchup.has(key)) {
+          const prev = existingByMatchup.get(key);
+          // Leftover-live inserts the lower week; if duplicates exist, keep the later one.
+          if (prev == null || g.weekNumber > prev) {
             existingByMatchup.set(key, g.weekNumber);
           }
         }
 
-        const rowsToUpsert = mapped.rows.map((r) => ({
-          ...r,
-          weekNumber: retainExistingMatchupWeek(r, existingByMatchup),
-        }));
+        const seasonAlreadyPopulated = existingByMatchup.size > 0;
+        const rowsToUpsert = mapped.rows.flatMap((r) => {
+          const matchupKey = `${r.homeTeamId}|${r.awayTeamId}`;
+          // Incomplete feed with no week-1 opener: do not create new matchups (would number
+          // remaining games from the earliest leftover kickoff). Still update known pairs.
+          if (
+            !week1Anchor &&
+            !allowOrphanDelete &&
+            seasonAlreadyPopulated &&
+            !existingByMatchup.has(matchupKey)
+          ) {
+            return [];
+          }
+          return [
+            {
+              ...r,
+              // Full slate is schedule authority; leftover-live Monday must not move weeks.
+              weekNumber: allowOrphanDelete
+                ? r.weekNumber
+                : retainExistingMatchupWeek(r, existingByMatchup),
+            },
+          ];
+        });
+        upserted = rowsToUpsert.length;
         const keepKeys = new Set(
           rowsToUpsert.map((r) => `${r.weekNumber}|${r.homeTeamId}|${r.awayTeamId}`),
         );
@@ -154,7 +177,7 @@ export async function syncNflScheduleFromOdds(
       { maxWait: 15_000, timeout: 60_000 },
     );
 
-    return { ok: true, upserted: mapped.rows.length, deleted };
+    return { ok: true, upserted, deleted };
   } catch (e) {
     if (e instanceof TheOddsApiError) {
       console.error(

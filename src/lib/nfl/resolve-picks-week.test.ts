@@ -97,6 +97,34 @@ describe("resolvePicksWeekNumber", () => {
     ];
     expect(resolvePicksWeekNumber(season, games, d("2026-09-05T12:00:00.000Z"))).toBe(5);
   });
+
+  it("Monday of week 2 stays on week 2 while MNF has not kicked off", () => {
+    const season: MinimalSeasonForPicksWeek = {
+      preSeasonInitializedAt: d("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+    };
+    const games: MinimalNflGameForPicksWeek[] = [
+      { weekNumber: 1, kickoffAt: d("2026-09-10T00:20:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-18T00:15:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-22T00:15:00.000Z") },
+      { weekNumber: 3, kickoffAt: d("2026-09-25T00:15:00.000Z") },
+    ];
+    expect(resolvePicksWeekNumber(season, games, d("2026-09-21T15:30:00.000Z"))).toBe(2);
+  });
+
+  it("a stray future week-1 kickoff (mis-synced MNF) pulls the resolved week back to 1", () => {
+    const season: MinimalSeasonForPicksWeek = {
+      preSeasonInitializedAt: d("2026-08-01T00:00:00.000Z"),
+      firstCompetitionWeek: 1,
+    };
+    const games: MinimalNflGameForPicksWeek[] = [
+      { weekNumber: 1, kickoffAt: d("2026-09-10T00:20:00.000Z") },
+      { weekNumber: 1, kickoffAt: d("2026-09-22T00:15:00.000Z") },
+      { weekNumber: 2, kickoffAt: d("2026-09-22T00:15:00.000Z") },
+      { weekNumber: 3, kickoffAt: d("2026-09-25T00:15:00.000Z") },
+    ];
+    expect(resolvePicksWeekNumber(season, games, d("2026-09-21T15:30:00.000Z"))).toBe(1);
+  });
 });
 
 describe("computePickWindowOpenUtc", () => {

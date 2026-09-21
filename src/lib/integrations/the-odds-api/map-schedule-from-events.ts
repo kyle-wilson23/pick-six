@@ -56,6 +56,18 @@ function resolveTeamIdByName(
   return lookup.byCanonicalNameLower.get(canonical.trim().toLowerCase()) ?? null;
 }
 
+export type MapOddsEventsToScheduleOptions = {
+  /**
+   * Kickoff used to locate week 1's Tuesday 00:00 ET.
+   *
+   * `/events` is live/pre-match — completed games drop off. If week 1 is inferred from the
+   * earliest remaining event, a Monday feed (MNF + next week) relabels MNF as week 1 and
+   * inserts duplicate rows under the wrong week. Pass the season's real week-1 opener when
+   * it is already in the DB.
+   */
+  week1AnchorKickoff?: Date | null;
+};
+
 /**
  * Map Odds `/events` rows to schedule upserts. Fails entirely if any event has an unknown team
  * or missing kickoff (no partial season commit).
@@ -64,6 +76,7 @@ export function mapOddsEventsToScheduleUpserts(
   events: TheOddsApiScheduleEvent[],
   nflSeasonYear: number,
   teams: { id: string; abbreviation: string; name: string }[],
+  options?: MapOddsEventsToScheduleOptions,
 ): { ok: true; rows: ScheduleUpsertInput[] } | { ok: false; errors: ScheduleMapError[] } {
   const lookup = buildTeamLookup(teams);
   const errors: ScheduleMapError[] = [];
@@ -125,7 +138,7 @@ export function mapOddsEventsToScheduleUpserts(
   }
 
   withKickoff.sort((a, b) => a.kickoffAt.getTime() - b.kickoffAt.getTime());
-  const week1Tue = week1TuesdayEtMs(withKickoff[0]!.kickoffAt);
+  const week1Tue = week1TuesdayEtMs(options?.week1AnchorKickoff ?? withKickoff[0]!.kickoffAt);
   const deduped = new Map<string, ScheduleUpsertInput>();
 
   for (const g of withKickoff) {

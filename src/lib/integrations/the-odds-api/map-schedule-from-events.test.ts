@@ -78,4 +78,53 @@ describe("mapOddsEventsToScheduleUpserts", () => {
     if (mapped.ok) return;
     expect(mapped.errors[0]?.message).toBe("unknown_team");
   });
+
+  it("anchors week numbers on a stored week-1 opener, not the earliest remaining live event", () => {
+    // Monday 2026-09-21 leftover-live feed: week 2 MNF + week 3 TNF. Inferring from the
+    // earliest remaining kickoff would label these week 1 and week 2.
+    const mapped = mapOddsEventsToScheduleUpserts(
+      [
+        {
+          id: "mnf",
+          sport_key: "americanfootball_nfl",
+          commence_time: "2026-09-22T00:15:00Z",
+          home_team: "Philadelphia Eagles",
+          away_team: "Dallas Cowboys",
+        },
+        {
+          id: "tnf",
+          sport_key: "americanfootball_nfl",
+          commence_time: "2026-09-25T00:15:00Z",
+          home_team: "Kansas City Chiefs",
+          away_team: "Los Angeles Chargers",
+        },
+      ],
+      2026,
+      TEAMS,
+      { week1AnchorKickoff: new Date("2026-09-10T00:20:00.000Z") },
+    );
+    expect(mapped.ok).toBe(true);
+    if (!mapped.ok) return;
+    expect(mapped.rows.find((r) => r.homeTeamId === "phi")?.weekNumber).toBe(2);
+    expect(mapped.rows.find((r) => r.homeTeamId === "kc")?.weekNumber).toBe(3);
+  });
+
+  it("without a week-1 anchor, a leftover-live Monday feed labels MNF as week 1", () => {
+    const mapped = mapOddsEventsToScheduleUpserts(
+      [
+        {
+          id: "mnf",
+          sport_key: "americanfootball_nfl",
+          commence_time: "2026-09-22T00:15:00Z",
+          home_team: "Philadelphia Eagles",
+          away_team: "Dallas Cowboys",
+        },
+      ],
+      2026,
+      TEAMS,
+    );
+    expect(mapped.ok).toBe(true);
+    if (!mapped.ok) return;
+    expect(mapped.rows[0]?.weekNumber).toBe(1);
+  });
 });

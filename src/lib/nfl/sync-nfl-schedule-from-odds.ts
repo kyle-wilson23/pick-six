@@ -2,10 +2,23 @@ import type { PrismaClient } from "@prisma/client";
 
 import { fetchAmericanFootballNflEvents, TheOddsApiError } from "@/lib/integrations/the-odds-api/client";
 import { mapOddsEventsToScheduleUpserts } from "@/lib/integrations/the-odds-api/map-schedule-from-events";
+import type { ScheduleUpsertInput } from "@/lib/nfl/team-lookup";
 
 export type SyncNflScheduleFromOddsResult =
   | { ok: true; upserted: number; deleted: number }
   | { ok: false; code: string; message: string; httpStatus: number };
+
+/**
+ * If this matchup already exists in another week, keep that week instead of inserting a
+ * duplicate under the inferred week. Mid-season `/events` feeds otherwise create a second
+ * row (same home/away, wrong weekNumber) because the unique key includes week.
+ */
+export function retainExistingMatchupWeek(
+  row: Pick<ScheduleUpsertInput, "weekNumber" | "homeTeamId" | "awayTeamId">,
+  existingByMatchup: Map<string, number>,
+): number {
+  return existingByMatchup.get(`${row.homeTeamId}|${row.awayTeamId}`) ?? row.weekNumber;
+}
 
 /**
  * Full-season schedule sync from The Odds API `/events`.
@@ -20,8 +33,17 @@ export async function syncNflScheduleFromOdds(
 ): Promise<SyncNflScheduleFromOddsResult> {
   try {
     const events = await fetchAmericanFootballNflEvents(opts.apiKey);
-    const teams = await prisma.team.findMany({ select: { id: true, abbreviation: true, name: true } });
-    const mapped = mapOddsEventsToScheduleUpserts(events, opts.nflSeasonYear, teams);
+    const [teams, week1Anchor] = await Promise.all([
+      prisma.team.findMany({ select: { id: true, abbreviation: true, name: true } }),
+      prisma.nflGame.findFirst({
+        where: { nflSeasonYear: opts.nflSeasonYear, weekNumber: 1 },
+        orderBy: { kickoffAt: "asc" },
+        select: { kickoffAt: true },
+      }),
+    ]);
+    const mapped = mapOddsEventsToScheduleUpserts(events, opts.nflSeasonYear, teams, {
+      week1AnchorKickoff: week1Anchor?.kickoffAt,
+    });
 
     if (!mapped.ok) {
       for (const err of mapped.errors) {
@@ -51,9 +73,6 @@ export async function syncNflScheduleFromOdds(
       };
     }
 
-    const keepKeys = new Set(
-      mapped.rows.map((r) => `${r.weekNumber}|${r.homeTeamId}|${r.awayTeamId}`),
-    );
     // `/events` is live/pre-match — mid-season feeds are incomplete. Only orphan-delete when
     // the mapped slate looks like a full regular season (avoids wiping completed weeks).
     const FULL_SEASON_MIN_GAMES = 200;
@@ -64,8 +83,33 @@ export async function syncNflScheduleFromOdds(
     const UPSERT_CHUNK = 25;
     await prisma.$transaction(
       async (tx) => {
-        for (let i = 0; i < mapped.rows.length; i += UPSERT_CHUNK) {
-          const chunk = mapped.rows.slice(i, i + UPSERT_CHUNK);
+        const existing = await tx.nflGame.findMany({
+          where: { nflSeasonYear: opts.nflSeasonYear },
+          select: {
+            id: true,
+            weekNumber: true,
+            homeTeamId: true,
+            awayTeamId: true,
+          },
+        });
+        const existingByMatchup = new Map<string, number>();
+        for (const g of existing) {
+          const key = `${g.homeTeamId}|${g.awayTeamId}`;
+          if (!existingByMatchup.has(key)) {
+            existingByMatchup.set(key, g.weekNumber);
+          }
+        }
+
+        const rowsToUpsert = mapped.rows.map((r) => ({
+          ...r,
+          weekNumber: retainExistingMatchupWeek(r, existingByMatchup),
+        }));
+        const keepKeys = new Set(
+          rowsToUpsert.map((r) => `${r.weekNumber}|${r.homeTeamId}|${r.awayTeamId}`),
+        );
+
+        for (let i = 0; i < rowsToUpsert.length; i += UPSERT_CHUNK) {
+          const chunk = rowsToUpsert.slice(i, i + UPSERT_CHUNK);
           await Promise.all(
             chunk.map((r) =>
               tx.nflGame.upsert({
@@ -96,16 +140,6 @@ export async function syncNflScheduleFromOdds(
           return;
         }
 
-        const existing = await tx.nflGame.findMany({
-          where: { nflSeasonYear: opts.nflSeasonYear },
-          select: {
-            id: true,
-            weekNumber: true,
-            homeTeamId: true,
-            awayTeamId: true,
-            status: true,
-          },
-        });
         // Full-slate sync is schedule authority: remove any DB game (including FINAL seed /
         // rehearsal leftovers) whose natural key is absent from the provider map. Mid-season
         // safety is the ≥200 gate above — partial /events feeds skip this delete entirely.

@@ -825,3 +825,21 @@ Split from implementing research `technical-league-scoped-vs-canonical-nfl-sched
 - **Story artifacts 3-5 and 3-6 still document the removed Thursday rule as normative AC** — `_bmad-output/implementation-artifacts/3-5-deadline-enforcement-server-authority.md:27` still reads `pickDeadline = min(lockByFirstGame, lockByThursdayDefault)`. Only `epics.md` was amended, so the repo holds two contradictory AC records. Defensible if story artifacts are immutable historical records, but then the proposal's §2 story-impact table ("AC amended") overstates what was done.
 - **Pass 1 must not reach production without Rule C (same *deploy*, not just same commit)** — resolved 2026-09-02: Kyle is not shipping pass 1 standalone. Rationale to preserve: pass 1 flips `isAutomatedEmailWeekActive` to true for 2026 Week 1 from Wed Sep 2 20:15 ET, while the pre-Rule-C `vercel.json` still schedules `thursday-reminder` at `0 0 * * 5` UTC (Thu 20:00 EDT, admitted by `isInEasternWindow(now, 4, 17, 21)`). Deployed alone, that tick would send `"Final reminder — the pick deadline is in about one hour"` to every league from `getActiveLeagueIds` six days before the real Wed Sep 9 20:10 ET deadline, and `sendReminder` would stamp `thursdayReminderSentAt` (it upserts whenever `sent > 0`), burning Week 1's idempotency key. Rule C removes that cron and slot-anchors sends, so every tick from Sep 3 through Sep 7 16:00 ET falls before the `deadline − 48h` anchor (Mon Sep 7 20:10 ET) and self-suppresses; first send is slot 1 on Tue Sep 8 07:00 ET. Guard: confirm the Vercel production branch does not auto-deploy `main` from a pass-1-only commit.
 - **`ReminderEmail` copy still says "before Thursday's deadline"** — `src/lib/email/templates/ReminderEmail.tsx:40-43`. FR26 as amended makes this false for 2026 Weeks 1, 12 and 18; the slot-2 string `"the pick deadline is in about one hour"` is also wrong under Rule C's `deadline − 12h` slot (its own coverage table shows ~4–7h margins). Left for pass 2 because Rule C replaces the `reminderType` prop with slot 1 / slot 2 and would otherwise require editing this copy twice.
+
+## Deferred from: one-shot review of spec-remove-matchup-spread-subtext.md (2026-10-01)
+
+Pre-existing matchup-card issues. Removing the repeated spread footer did not introduce them.
+
+- **Pick'em renders as `+0`** — `MatchupCard` formats `homeSpreadPoints === 0` with `signDisplay: "always"`, so both sides look like they are receiving points. No PK/EVEN treatment.
+- **Spread display rounds to one decimal** — `maximumFractionDigits: 1` turns 3.25 into 3.3.
+- **Non-finite spreads still render** — `homeSpreadPts !== null` lets `NaN` and `Infinity` through; the moneyline formatter already treats `NaN` as missing.
+- **Locale-default `Intl.NumberFormat`** — created once at module load, so server and browser can disagree on the decimal separator or sign glyph.
+- **Saved pick is not keyboard-focusable after lock** — `isLocked` sets `aria-disabled` and `tabIndex={-1}` on the selected side too.
+- **Blocked sides stay pointer-clickable** — jailed, already-picked, and locked sides are off the tab order but still fire `onClick`.
+- **Radios are not in a radiogroup** — no roving tabindex or arrow keys; every open side is its own tab stop.
+- **Focus ring missing on non-selectable sides** — `outline: "none"` is unconditional, and the glow ring only applies to selected or selectable sides.
+- **Jailed side does not mute the line** — only the team name uses `text.disabled`; moneyline and spread stay full emphasis.
+- **"2 PTS" chip does not name the team** — card-level chip, and a jailed border still wins over the selected border.
+- **Retractable-roof note is tooltip-only** — the chip is not focusable, so keyboard and touch users never get it.
+- **In-flight submit blocks every card** — `pointer-events: none` on the whole list, not just the card being saved.
+- **MatchupCard still has no coverage for the other card states** — `MatchupCard.test.tsx` covers the removed footer and the per-side spread. Sign-flip edge cases, null spread, pick'em `+0`, and the interaction bugs above are still untested.

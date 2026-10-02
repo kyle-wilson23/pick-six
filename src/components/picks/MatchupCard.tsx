@@ -219,6 +219,7 @@ export function MatchupCard(props: MatchupCardProps) {
     const ariaLabel = buildTeamPickAriaLabel({
       teamName: team.name,
       moneylineLabel: formatDecimalMoneyline(moneylineAmerican),
+      spreadLabel: spreadStr,
       state,
       pickedInWeek: otherWeek,
     });
@@ -406,10 +407,6 @@ export function MatchupCard(props: MatchupCardProps) {
             spreadStr: homeSpreadStr,
           })}
         </Stack>
-
-        <Typography variant="body2" color="text.secondary" component="p">
-          Spread · Home {homeSpreadStr ?? "–"} · Away {awaySpreadStr ?? "–"} (home perspective)
-        </Typography>
       </Stack>
     </Card>
   );

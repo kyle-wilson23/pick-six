@@ -43,4 +43,16 @@ describe("buildTeamPickAriaLabel", () => {
       "Kansas City Chiefs, moneyline -150, locked",
     );
   });
+
+  it("includes the spread when a line is posted", () => {
+    expect(buildTeamPickAriaLabel({ ...base, state: "default", spreadLabel: "-5.5" })).toBe(
+      "Kansas City Chiefs, moneyline -150, spread -5.5",
+    );
+  });
+
+  it("omits the spread when the line is missing", () => {
+    expect(buildTeamPickAriaLabel({ ...base, state: "selected", spreadLabel: null })).toBe(
+      "Kansas City Chiefs, moneyline -150, selected",
+    );
+  });
 });

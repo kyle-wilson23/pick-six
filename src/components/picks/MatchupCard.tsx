@@ -245,6 +245,7 @@ export function MatchupCard(props: MatchupCardProps) {
     return (
       <Stack
         spacing={0.75}
+        useFlexGap
         alignItems="flex-start"
         role={role}
         tabIndex={tabIndex}
@@ -284,7 +285,8 @@ export function MatchupCard(props: MatchupCardProps) {
             {team.name}
           </Typography>
         </Stack>
-        <Typography variant="body2" fontWeight={500} sx={{ ml: 5 }}>
+        {/* Pin odds to the bottom of a stretched side so wrapped names stay aligned. */}
+        <Typography variant="body2" fontWeight={500} sx={{ ml: 5, mt: { sm: "auto" } }}>
           ML {formatDecimalMoneyline(moneylineAmerican)}
           {spreadStr ? ` · ${spreadStr}` : ""}
         </Typography>
@@ -379,7 +381,7 @@ export function MatchupCard(props: MatchupCardProps) {
         <Stack
           direction={{ xs: "column", sm: "row" }}
           sx={{ gap: { xs: 1, sm: 2 } }}
-          alignItems={{ xs: "stretch", sm: "flex-start" }}
+          alignItems="stretch"
           justifyContent="space-between"
         >
           {renderTeamSide({

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { getLeagueAccess } from "@/lib/league/get-league-access";
 import { getCurrentNflSeasonYear } from "@/lib/league/nfl-season";
 import { getLeagueStandings } from "@/lib/scoring/get-league-standings";
+import { rankBiggestLosers } from "@/lib/scoring/rank-biggest-losers";
 import { appContentWidthSx } from "@/theme/app-content-width";
 import { skipTargetMainSx } from "@/theme/focus-visible-ring";
 
@@ -29,6 +30,7 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
   }
   const nflSeasonYear = getCurrentNflSeasonYear();
   const standings = await getLeagueStandings(prisma, { leagueId, nflSeasonYear });
+  const currentMembershipId = access.membership?.id ?? "";
 
   return (
     <Stack
@@ -49,7 +51,20 @@ export default async function LeagueStandingsPage({ params }: PageProps) {
 
       {access.league.isTestLeague ? <TestLeagueBanner /> : null}
 
-      <StandingsTable standings={standings} currentMembershipId={access.membership?.id ?? ""} />
+      <StandingsTable standings={standings} currentMembershipId={currentMembershipId} />
+
+      {standings.length > 0 ? (
+        <Stack spacing={1}>
+          <Typography variant="h6" component="h2">
+            Biggest Loser
+          </Typography>
+          <StandingsTable
+            variant="biggest-loser"
+            standings={rankBiggestLosers(standings)}
+            currentMembershipId={currentMembershipId}
+          />
+        </Stack>
+      ) : null}
     </Stack>
   );
 }

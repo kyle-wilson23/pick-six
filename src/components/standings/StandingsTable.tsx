@@ -11,9 +11,12 @@ import Typography from "@mui/material/Typography";
 import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import type { StandingsEntry } from "@/lib/scoring/get-league-standings";
 
+type StandingsTableVariant = "points" | "biggest-loser";
+
 type StandingsTableProps = {
   standings: StandingsEntry[];
   currentMembershipId: string;
+  variant?: StandingsTableVariant;
 };
 
 const tabularNums = { fontVariantNumeric: "tabular-nums" } as const;
@@ -28,7 +31,11 @@ function hasNoScoredResults(standings: StandingsEntry[]): boolean {
   );
 }
 
-export function StandingsTable({ standings, currentMembershipId }: StandingsTableProps) {
+export function StandingsTable({
+  standings,
+  currentMembershipId,
+  variant = "points",
+}: StandingsTableProps) {
   if (isStandingsEmpty(standings)) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -37,6 +44,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
     );
   }
 
+  const isBiggestLoser = variant === "biggest-loser";
   const hasTies = standings.some((s) => s.ties > 0);
   const noResultsYet = hasNoScoredResults(standings);
 
@@ -45,7 +53,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
       <TableContainer sx={{ width: "100%", overflowX: "hidden" }}>
         <Table
           size="small"
-          aria-label="League standings"
+          aria-label={isBiggestLoser ? "Biggest loser" : "League standings"}
           sx={{ tableLayout: "fixed", width: "100%" }}
         >
           <TableHead>
@@ -53,8 +61,15 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
               <TableCell sx={{ width: 36, ...tabularNums }}>#</TableCell>
               <TableCell>Participant</TableCell>
               <TableCell sx={{ width: 72, whiteSpace: "nowrap", ...tabularNums }}>Record</TableCell>
-              <TableCell align="right" sx={{ width: 44, ...tabularNums }}>
-                Pts
+              <TableCell
+                align="right"
+                sx={
+                  isBiggestLoser
+                    ? { width: 132, whiteSpace: "nowrap", ...tabularNums }
+                    : { width: 44, ...tabularNums }
+                }
+              >
+                {isBiggestLoser ? "Valid losses" : "Pts"}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -114,11 +129,11 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
                     align="right"
                     sx={{
                       ...tabularNums,
-                      color: "primary.main",
+                      color: isBiggestLoser ? "error.main" : "primary.main",
                       fontWeight: 700,
                     }}
                   >
-                    {entry.totalPoints}
+                    {isBiggestLoser ? entry.losses : entry.totalPoints}
                   </TableCell>
                 </TableRow>
               );
@@ -126,7 +141,7 @@ export function StandingsTable({ standings, currentMembershipId }: StandingsTabl
           </TableBody>
         </Table>
       </TableContainer>
-      {noResultsYet && (
+      {!isBiggestLoser && noResultsYet && (
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
           No results scored yet
         </Typography>

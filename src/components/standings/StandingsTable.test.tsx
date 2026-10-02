@@ -30,6 +30,7 @@ const fixtureStandings: StandingsEntry[] = [
     wins: 6,
     losses: 2,
     ties: 0,
+    missedWeeks: 0,
     rank: 1,
   },
   {
@@ -40,6 +41,7 @@ const fixtureStandings: StandingsEntry[] = [
     wins: 5,
     losses: 3,
     ties: 0,
+    missedWeeks: 0,
     rank: 2,
   },
 ];
@@ -135,6 +137,20 @@ describe("StandingsTable variants", () => {
 
     rerender(
       <ThemeProvider theme={darkTheme}>
+        <StandingsTable
+          standings={[{ ...unscored[0], missedWeeks: 1 }]}
+          currentMembershipId="m-you"
+        />
+      </ThemeProvider>,
+    );
+
+    expect(container.textContent).not.toContain("No results scored yet");
+    expect(container.querySelectorAll("tbody tr")[0]?.querySelectorAll("td")[2]?.textContent).toBe(
+      "0-1",
+    );
+
+    rerender(
+      <ThemeProvider theme={darkTheme}>
         <StandingsTable variant="biggest-loser" standings={unscored} currentMembershipId="m-you" />
       </ThemeProvider>,
     );
@@ -143,5 +159,43 @@ describe("StandingsTable variants", () => {
     expect(container.querySelectorAll("tbody tr")[0]?.querySelectorAll("td")[3]?.textContent).toBe(
       "0",
     );
+  });
+
+  it("adds missed weeks to the record and keeps valid losses at zero", () => {
+    const jack: StandingsEntry[] = [
+      {
+        membershipId: "m-jack",
+        displayName: "Jack Quirke",
+        imageUrl: null,
+        totalPoints: 2,
+        wins: 2,
+        losses: 0,
+        ties: 0,
+        missedWeeks: 1,
+        rank: 1,
+      },
+    ];
+
+    const { container, rerender } = render(
+      <ThemeProvider theme={darkTheme}>
+        <StandingsTable standings={jack} currentMembershipId="m-jack" />
+      </ThemeProvider>,
+    );
+
+    const pointsCells = container.querySelectorAll("tbody tr")[0]?.querySelectorAll("td");
+    expect(pointsCells?.[2]?.textContent).toBe("2-1");
+    expect(pointsCells?.[3]?.textContent).toBe("2");
+
+    rerender(
+      <ThemeProvider theme={darkTheme}>
+        <StandingsTable variant="biggest-loser" standings={jack} currentMembershipId="m-jack" />
+      </ThemeProvider>,
+    );
+
+    const loserTable = container.querySelector("table");
+    expect(loserTable?.querySelectorAll("th")[3]?.textContent).toBe("Valid losses");
+    const loserCells = container.querySelectorAll("tbody tr")[0]?.querySelectorAll("td");
+    expect(loserCells?.[2]?.textContent).toBe("2-1");
+    expect(loserCells?.[3]?.textContent).toBe("0");
   });
 });

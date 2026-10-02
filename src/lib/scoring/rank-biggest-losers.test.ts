@@ -12,6 +12,7 @@ function entry(
     totalPoints: 0,
     wins: 0,
     ties: 0,
+    missedWeeks: 0,
     rank: 1,
     ...overrides,
   };
@@ -48,6 +49,31 @@ describe("rankBiggestLosers", () => {
     expect(result.map((row) => row.displayName)).toEqual(["Amy", "Zoe", "Chris"]);
     expect(result.map((row) => row.rank)).toEqual([1, 1, 3]);
     expect(result.map((row) => row.losses)).toEqual([4, 4, 1]);
+  });
+
+  it("ranks a peer with more valid losses above a player who only missed a week", () => {
+    const input = [
+      entry({
+        membershipId: "jack",
+        displayName: "Jack",
+        losses: 0,
+        wins: 2,
+        missedWeeks: 1,
+      }),
+      entry({
+        membershipId: "peer",
+        displayName: "Peer",
+        losses: 1,
+        wins: 0,
+        missedWeeks: 0,
+      }),
+    ];
+
+    const result = rankBiggestLosers(input);
+
+    expect(result.map((row) => row.displayName)).toEqual(["Peer", "Jack"]);
+    expect(result[0]).toMatchObject({ losses: 1, missedWeeks: 0, rank: 1 });
+    expect(result[1]).toMatchObject({ losses: 0, missedWeeks: 1, rank: 2 });
   });
 
   it("sorts a tie game as zero valid losses", () => {

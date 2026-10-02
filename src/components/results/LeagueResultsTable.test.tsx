@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { ThemeProvider } from "@mui/material";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { LeaguePeerPickHistory, PeerPickEntry } from "@/lib/scoring/get-league-peer-pick-history";
@@ -150,6 +150,86 @@ describe("LeagueResultsTable", () => {
     expect(screen.getByText("KC")).toBeTruthy();
     expect(screen.getByText("2 PTS")).toBeTruthy();
     expect(screen.getByTitle("KC Kansas City Chiefs")).toBeTruthy();
+  });
+
+  it("shows Jack's season record 2-1 on a revealed miss without a LOSS chip", () => {
+    renderTable(
+      history([
+        {
+          weekNumber: 1,
+          isRevealed: true,
+          entries: [
+            entry({
+              membershipId: "mem-jack",
+              displayName: "Jack Quirke",
+              outcome: "WIN",
+              pointsEarned: 1,
+            }),
+          ],
+        },
+        {
+          weekNumber: 2,
+          isRevealed: true,
+          entries: [
+            entry({
+              membershipId: "mem-jack",
+              displayName: "Jack Quirke",
+              hasPick: false,
+              teamAbbreviation: null,
+              teamName: null,
+              antiJailedBonus: false,
+              outcome: "LOSS",
+              pointsEarned: 0,
+            }),
+          ],
+        },
+        {
+          weekNumber: 3,
+          isRevealed: true,
+          entries: [
+            entry({
+              membershipId: "mem-jack",
+              displayName: "Jack Quirke",
+              outcome: "WIN",
+              pointsEarned: 1,
+            }),
+          ],
+        },
+        {
+          weekNumber: 4,
+          isRevealed: false,
+          entries: [
+            entry({
+              membershipId: "mem-jack",
+              displayName: "Jack Quirke",
+              hasPick: false,
+              teamAbbreviation: null,
+              teamName: null,
+              antiJailedBonus: false,
+              outcome: "PENDING",
+              pointsEarned: null,
+            }),
+          ],
+        },
+      ]),
+    );
+
+    const week2 = screen.getByRole("table", { name: "League results week 2" });
+    const missRow = within(week2).getByText("No pick").closest("tr");
+    expect(missRow?.textContent).toContain("2-1");
+    expect(missRow?.textContent).toContain("No pick");
+    expect(missRow?.textContent).toContain("—");
+    expect(missRow?.textContent).toContain("0");
+    expect(missRow?.textContent).not.toContain("LOSS");
+    expect(within(week2).getByRole("columnheader", { name: "Participant" })).toBeTruthy();
+    expect(within(week2).getByRole("columnheader", { name: "Team" })).toBeTruthy();
+    expect(within(week2).getByRole("columnheader", { name: "Result" })).toBeTruthy();
+    expect(within(week2).getByRole("columnheader", { name: "Record" })).toBeTruthy();
+    expect(within(week2).getByRole("columnheader", { name: "Pts" })).toBeTruthy();
+    expect(screen.queryByText("LOSS")).toBeNull();
+
+    const week4 = screen.getByRole("table", { name: "League results week 4" });
+    expect(week4.querySelector("tbody tr")?.textContent).toContain("2-1");
   });
 
   it("shows empty-state copy and no table when there are no weeks", () => {

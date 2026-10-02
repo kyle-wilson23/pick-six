@@ -18,6 +18,11 @@ import type {
   PeerPickEntry,
 } from "@/lib/scoring/get-league-peer-pick-history";
 import type { PickHistoryOutcome } from "@/lib/scoring/get-personal-pick-history";
+import {
+  formatWinLossRecord,
+  tallySeasonRecordsFromRevealedWeeks,
+  type SeasonRecordTally,
+} from "@/lib/scoring/format-win-loss-record";
 
 type LeagueResultsTableProps = {
   history: LeaguePeerPickHistory;
@@ -25,6 +30,21 @@ type LeagueResultsTableProps = {
 };
 
 const tabularNums = { fontVariantNumeric: "tabular-nums" } as const;
+
+const ZERO_RECORD: SeasonRecordTally = {
+  wins: 0,
+  validLosses: 0,
+  ties: 0,
+  missedWeeks: 0,
+};
+
+const recordCellSx = {
+  width: 72,
+  minWidth: 72,
+  px: 0.5,
+  whiteSpace: "nowrap",
+  ...tabularNums,
+} as const;
 
 const ellipsisCellSx = {
   maxWidth: 0,
@@ -176,6 +196,9 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
     );
   }
 
+  const seasonRecords = tallySeasonRecordsFromRevealedWeeks(history.weeks);
+  const includeTies = [...seasonRecords.values()].some((record) => record.ties > 0);
+
   return (
     <Stack spacing={3}>
       {history.weeks.map((week) => (
@@ -198,11 +221,12 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
               <TableHead>
                 <TableRow>
                   <TableCell>Participant</TableCell>
-                  <TableCell sx={{ width: "38%" }}>Team</TableCell>
-                  <TableCell sx={{ width: 96, minWidth: 96, px: 1, whiteSpace: "nowrap" }}>
+                  <TableCell sx={{ width: "30%" }}>Team</TableCell>
+                  <TableCell sx={{ width: 80, minWidth: 72, px: 0.5, whiteSpace: "nowrap" }}>
                     Result
                   </TableCell>
-                  <TableCell align="right" sx={{ width: 44, minWidth: 44, px: 1, ...tabularNums }}>
+                  <TableCell sx={recordCellSx}>Record</TableCell>
+                  <TableCell align="right" sx={{ width: 40, minWidth: 36, px: 0.5, ...tabularNums }}>
                     Pts
                   </TableCell>
                 </TableRow>
@@ -210,6 +234,10 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
               <TableBody>
                 {week.entries.map((entry) => {
                   const isCurrentUser = entry.membershipId === currentMembershipId;
+                  const record = formatWinLossRecord(
+                    seasonRecords.get(entry.membershipId) ?? ZERO_RECORD,
+                    { includeTies },
+                  );
 
                   return (
                     <TableRow
@@ -229,10 +257,11 @@ export function LeagueResultsTable({ history, currentMembershipId }: LeagueResul
                       <TableCell title={teamCellTitle(entry)} sx={ellipsisCellSx}>
                         <TeamCell entry={entry} />
                       </TableCell>
-                      <TableCell sx={{ width: 96, minWidth: 96, px: 1, whiteSpace: "nowrap" }}>
-                        <ResultCell outcome={entry.outcome} />
+                      <TableCell sx={{ width: 80, minWidth: 72, px: 0.5, whiteSpace: "nowrap" }}>
+                        <ResultCell outcome={entry.hasPick ? entry.outcome : "PENDING"} />
                       </TableCell>
-                      <TableCell align="right" sx={{ width: 44, minWidth: 44, px: 1 }}>
+                      <TableCell sx={recordCellSx}>{record}</TableCell>
+                      <TableCell align="right" sx={{ width: 40, minWidth: 36, px: 0.5 }}>
                         {entry.pointsEarned == null ? (
                           <Typography variant="body2" color="text.secondary" sx={tabularNums}>
                             —

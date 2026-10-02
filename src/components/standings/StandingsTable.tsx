@@ -10,6 +10,7 @@ import Typography from "@mui/material/Typography";
 
 import { UserIdentityCell } from "@/components/user/UserIdentityCell";
 import type { StandingsEntry } from "@/lib/scoring/get-league-standings";
+import { formatWinLossRecord } from "@/lib/scoring/format-win-loss-record";
 
 type StandingsTableVariant = "points" | "biggest-loser";
 
@@ -27,7 +28,12 @@ function isStandingsEmpty(standings: StandingsEntry[]): boolean {
 
 function hasNoScoredResults(standings: StandingsEntry[]): boolean {
   return standings.every(
-    (s) => s.totalPoints === 0 && s.wins === 0 && s.losses === 0 && s.ties === 0,
+    (s) =>
+      s.totalPoints === 0 &&
+      s.wins === 0 &&
+      s.losses === 0 &&
+      s.ties === 0 &&
+      s.missedWeeks === 0,
   );
 }
 
@@ -76,9 +82,15 @@ export function StandingsTable({
           <TableBody>
             {standings.map((entry) => {
               const isCurrentUser = entry.membershipId === currentMembershipId;
-              const record = hasTies
-                ? `${entry.wins}-${entry.losses}-${entry.ties}`
-                : `${entry.wins}-${entry.losses}`;
+              const record = formatWinLossRecord(
+                {
+                  wins: entry.wins,
+                  validLosses: entry.losses,
+                  ties: entry.ties,
+                  missedWeeks: entry.missedWeeks,
+                },
+                { includeTies: hasTies },
+              );
 
               return (
                 <TableRow

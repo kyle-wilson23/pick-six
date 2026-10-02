@@ -1,7 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
-import { userDisplayName } from "@/lib/user-display-name";
 import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
+import { resolveGamesForLeague } from "@/lib/nfl/resolve-games-for-league";
+import { userDisplayName } from "@/lib/user-display-name";
+
+import { countMissedWeeks, finalizedCompetitionWeekNumbers } from "./record-tally";
 
 export type StandingsEntry = {
   membershipId: string;
@@ -11,6 +14,8 @@ export type StandingsEntry = {
   wins: number;
   losses: number;
   ties: number;
+  /** Finalized competition weeks with no Pick row. Display-only; not a valid loss. */
+  missedWeeks: number;
   rank: number;
 };
 
@@ -18,30 +23,60 @@ export async function getLeagueStandings(
   prisma: PrismaClient,
   opts: { leagueId: string; nflSeasonYear: number },
 ): Promise<StandingsEntry[]> {
-  const season = await prisma.season.findFirst({
-    where: { leagueId: opts.leagueId, nflSeasonYear: opts.nflSeasonYear },
-    select: { id: true },
-  });
+  const [season, league] = await Promise.all([
+    prisma.season.findFirst({
+      where: { leagueId: opts.leagueId, nflSeasonYear: opts.nflSeasonYear },
+      select: { id: true, firstCompetitionWeek: true },
+    }),
+    prisma.league.findUnique({
+      where: { id: opts.leagueId },
+      select: { isTestLeague: true },
+    }),
+  ]);
 
-  const memberships = await prisma.leagueMembership.findMany({
-    where: leaguePlayerMembershipWhere(opts.leagueId),
-    include: {
-      user: { select: { name: true, email: true, image: true } },
-      picks: season
-        ? {
-            where: { seasonId: season.id, scoredAt: { not: null } },
-            select: { outcome: true, pointsEarned: true },
-          }
-        : false,
-    },
-  });
+  const [games, memberships] = await Promise.all([
+    season && league
+      ? resolveGamesForLeague(prisma, {
+          leagueId: opts.leagueId,
+          nflSeasonYear: opts.nflSeasonYear,
+          isTestLeague: league.isTestLeague,
+        })
+      : Promise.resolve([]),
+    prisma.leagueMembership.findMany({
+      where: leaguePlayerMembershipWhere(opts.leagueId),
+      include: {
+        user: { select: { name: true, email: true, image: true } },
+        picks: season
+          ? {
+              where: { seasonId: season.id },
+              select: {
+                nflWeekNumber: true,
+                outcome: true,
+                pointsEarned: true,
+                scoredAt: true,
+              },
+            }
+          : false,
+      },
+    }),
+  ]);
+
+  const finalizedWeeks =
+    season && league
+      ? finalizedCompetitionWeekNumbers(games, season.firstCompetitionWeek)
+      : [];
 
   const unsorted: Omit<StandingsEntry, "rank">[] = memberships.map((m) => {
     const picks = season ? (m.picks ?? []) : [];
-    const totalPoints = picks.reduce((s, p) => s + (p.pointsEarned ?? 0), 0);
-    const wins = picks.filter((p) => p.outcome === "WIN").length;
-    const losses = picks.filter((p) => p.outcome === "LOSS").length;
-    const ties = picks.filter((p) => p.outcome === "TIE").length;
+    const scoredPicks = picks.filter((pick) => pick.scoredAt != null);
+    const totalPoints = scoredPicks.reduce((sum, pick) => sum + (pick.pointsEarned ?? 0), 0);
+    const wins = scoredPicks.filter((pick) => pick.outcome === "WIN").length;
+    const losses = scoredPicks.filter((pick) => pick.outcome === "LOSS").length;
+    const ties = scoredPicks.filter((pick) => pick.outcome === "TIE").length;
+    const missedWeeks = countMissedWeeks(
+      finalizedWeeks,
+      picks.map((pick) => pick.nflWeekNumber),
+    );
     return {
       membershipId: m.id,
       displayName: userDisplayName(m.user),
@@ -50,6 +85,7 @@ export async function getLeagueStandings(
       wins,
       losses,
       ties,
+      missedWeeks,
     };
   });
 

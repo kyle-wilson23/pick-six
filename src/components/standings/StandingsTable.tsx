@@ -1,5 +1,6 @@
 "use client";
 
+import Box from "@mui/material/Box";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -21,6 +22,39 @@ type StandingsTableProps = {
 };
 
 const tabularNums = { fontVariantNumeric: "tabular-nums" } as const;
+
+/** Phones stack the header; sm+ keeps one line. Narrower column frees name space. */
+const validLossesColumnSx = {
+  width: { xs: 56, sm: 132 },
+  px: { xs: 0.5, sm: 2 },
+  ...tabularNums,
+} as const;
+
+const biggestLoserHeaderAlignSx = {
+  verticalAlign: { xs: "bottom", sm: "middle" },
+} as const;
+
+const validLossesHeaderSx = {
+  ...validLossesColumnSx,
+  whiteSpace: { xs: "normal", sm: "nowrap" },
+  lineHeight: 1.15,
+  verticalAlign: { xs: "bottom", sm: "middle" },
+} as const;
+
+const stackedHeaderWordSx = { display: { xs: "block", sm: "inline" } } as const;
+
+function ValidLossesHeading() {
+  return (
+    <>
+      <Box component="span" sx={stackedHeaderWordSx}>
+        Valid
+      </Box>
+      <Box component="span" sx={stackedHeaderWordSx}>
+        {" losses"}
+      </Box>
+    </>
+  );
+}
 
 function isStandingsEmpty(standings: StandingsEntry[]): boolean {
   return standings.length === 0;
@@ -62,20 +96,51 @@ export function StandingsTable({
           aria-label={isBiggestLoser ? "Biggest loser" : "League standings"}
           sx={{ tableLayout: "fixed", width: "100%" }}
         >
+          {isBiggestLoser ? (
+            <colgroup>
+              <col style={{ width: 40 }} />
+              <col />
+              <col style={{ width: 72 }} />
+              <Box component="col" sx={{ width: { xs: 56, sm: 132 } }} />
+            </colgroup>
+          ) : null}
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: 36, ...tabularNums }}>#</TableCell>
-              <TableCell>Participant</TableCell>
-              <TableCell sx={{ width: 72, whiteSpace: "nowrap", ...tabularNums }}>Record</TableCell>
               <TableCell
-                align="right"
+                sx={{
+                  width: isBiggestLoser ? 40 : 36,
+                  px: isBiggestLoser ? 1 : undefined,
+                  ...tabularNums,
+                  ...(isBiggestLoser ? biggestLoserHeaderAlignSx : {}),
+                }}
+              >
+                #
+              </TableCell>
+              <TableCell
                 sx={
                   isBiggestLoser
-                    ? { width: 132, whiteSpace: "nowrap", ...tabularNums }
-                    : { width: 44, ...tabularNums }
+                    ? { width: "100%", ...biggestLoserHeaderAlignSx }
+                    : undefined
                 }
               >
-                {isBiggestLoser ? "Valid losses" : "Pts"}
+                Participant
+              </TableCell>
+              <TableCell
+                sx={{
+                  width: 72,
+                  px: isBiggestLoser ? 1 : undefined,
+                  whiteSpace: "nowrap",
+                  ...tabularNums,
+                  ...(isBiggestLoser ? biggestLoserHeaderAlignSx : {}),
+                }}
+              >
+                Record
+              </TableCell>
+              <TableCell
+                align="right"
+                sx={isBiggestLoser ? validLossesHeaderSx : { width: 44, ...tabularNums }}
+              >
+                {isBiggestLoser ? <ValidLossesHeading /> : "Pts"}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -102,10 +167,13 @@ export function StandingsTable({
                       : undefined
                   }
                 >
-                  <TableCell sx={tabularNums}>{entry.rank}</TableCell>
+                  <TableCell sx={{ ...tabularNums, ...(isBiggestLoser ? { px: 1 } : {}) }}>
+                    {entry.rank}
+                  </TableCell>
                   <TableCell
                     title={entry.displayName}
                     sx={{
+                      width: isBiggestLoser ? "100%" : undefined,
                       maxWidth: 0,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -136,11 +204,19 @@ export function StandingsTable({
                       </Typography>
                     ) : null}
                   </TableCell>
-                  <TableCell sx={{ whiteSpace: "nowrap", ...tabularNums }}>{record}</TableCell>
+                  <TableCell
+                    sx={{
+                      whiteSpace: "nowrap",
+                      ...tabularNums,
+                      ...(isBiggestLoser ? { px: 1 } : {}),
+                    }}
+                  >
+                    {record}
+                  </TableCell>
                   <TableCell
                     align="right"
                     sx={{
-                      ...tabularNums,
+                      ...(isBiggestLoser ? validLossesColumnSx : tabularNums),
                       color: isBiggestLoser ? "error.main" : "primary.main",
                       fontWeight: 700,
                     }}

@@ -19,6 +19,7 @@ function entry(overrides: Partial<PeerPickEntry> = {}): PeerPickEntry {
     membershipId: "mem-peer",
     displayName: "Peer",
     imageUrl: null,
+    hasPick: true,
     teamAbbreviation: "KC",
     teamName: "Kansas City Chiefs",
     antiJailedBonus: false,
@@ -49,6 +50,7 @@ describe("LeagueResultsTable", () => {
           isRevealed: false,
           entries: [
             entry({
+              hasPick: true,
               teamAbbreviation: null,
               teamName: null,
               antiJailedBonus: false,
@@ -58,6 +60,7 @@ describe("LeagueResultsTable", () => {
             entry({
               membershipId: "mem-partial",
               displayName: "Partial",
+              hasPick: true,
               teamAbbreviation: "KC",
               teamName: "",
               outcome: "PENDING",
@@ -74,6 +77,40 @@ describe("LeagueResultsTable", () => {
     expect(screen.getByRole("table", { name: "League results week 5" })).toBeTruthy();
     expect(screen.queryByTitle("KC")).toBeNull();
     expect(screen.queryByTitle("Kansas City Chiefs")).toBeNull();
+    expect(screen.queryByText("No pick")).toBeNull();
+  });
+
+  it("shows No pick without a submitted check when the player did not pick", () => {
+    renderTable(
+      history([
+        {
+          weekNumber: 5,
+          isRevealed: true,
+          entries: [
+            entry({
+              membershipId: "mem-miss",
+              displayName: "Miss",
+              hasPick: false,
+              teamAbbreviation: null,
+              teamName: null,
+              antiJailedBonus: false,
+              outcome: "PENDING",
+              pointsEarned: 0,
+            }),
+          ],
+        },
+      ]),
+    );
+
+    const row = screen.getByText("Miss").closest("tr");
+    expect(row).toBeTruthy();
+    expect(row?.textContent).toContain("No pick");
+    expect(row?.textContent).not.toContain("Submitted");
+    expect(row?.textContent).not.toContain("Pick submitted");
+    expect(screen.getByText("No pick")).toBeTruthy();
+    expect(screen.queryByText("Submitted")).toBeNull();
+    expect(screen.queryByLabelText("Pick submitted")).toBeNull();
+    expect(screen.queryByTitle("KC")).toBeNull();
   });
 
   it("exposes a labeled table per week and a title for long names", () => {

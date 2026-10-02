@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 
 import { computePickDeadlineUtc } from "@/lib/domain/pick-deadline";
+import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
 
 import { getLeaguePeerPickHistory } from "./get-league-peer-pick-history";
 
@@ -14,6 +15,7 @@ function makePick(overrides: {
   nflWeekNumber: number;
   membershipId?: string;
   displayName?: string;
+  email?: string;
   imageUrl?: string | null;
   outcome?: PickOutcome | null;
   pointsEarned?: number | null;
@@ -32,24 +34,54 @@ function makePick(overrides: {
       id: membershipId,
       user: {
         name: displayName,
-        email: `${membershipId}@example.com`,
+        email: overrides.email ?? `${membershipId}@example.com`,
         image: overrides.imageUrl ?? null,
       },
     },
   };
 }
 
+function makeMembership(overrides: {
+  id: string;
+  displayName: string;
+  email?: string;
+  imageUrl?: string | null;
+}) {
+  return {
+    id: overrides.id,
+    user: {
+      name: overrides.displayName,
+      email: overrides.email ?? `${overrides.id}@example.com`,
+      image: overrides.imageUrl ?? null,
+    },
+  };
+}
+
 function makePrisma({
-  season = { id: SEASON_ID },
+  season,
   isTestLeague = false,
   games = [],
   picks = [],
+  memberships,
 }: {
-  season?: { id: string; simulatedCurrentWeek?: number | null } | null;
+  season?: {
+    id: string;
+    firstCompetitionWeek?: number;
+    simulatedCurrentWeek?: number | null;
+  } | null;
   isTestLeague?: boolean;
   games?: Array<{ weekNumber: number; status: string; kickoffAt?: Date }>;
   picks?: ReturnType<typeof makePick>[];
+  memberships?: ReturnType<typeof makeMembership>[];
 } = {}) {
+  const resolvedSeason =
+    season === null
+      ? null
+      : {
+          id: SEASON_ID,
+          firstCompetitionWeek: 1,
+          ...season,
+        };
   const mappedGames = games.map((g) => ({
     id: `g-${g.weekNumber}`,
     nflSeasonYear: SEASON_YEAR,
@@ -62,9 +94,12 @@ function makePrisma({
     awayScore: null,
     finalizedAt: null,
   }));
+  const resolvedMemberships =
+    memberships ??
+    [...new Map(picks.map((pick) => [pick.leagueMembership.id, pick.leagueMembership])).values()];
   return {
     season: {
-      findUnique: vi.fn().mockResolvedValue(season),
+      findUnique: vi.fn().mockResolvedValue(resolvedSeason),
     },
     league: {
       findUnique: vi.fn().mockResolvedValue({ isTestLeague }),
@@ -77,6 +112,9 @@ function makePrisma({
     },
     pick: {
       findMany: vi.fn().mockResolvedValue(picks),
+    },
+    leagueMembership: {
+      findMany: vi.fn().mockResolvedValue(resolvedMemberships),
     },
   } as unknown as PrismaClient;
 }
@@ -120,6 +158,7 @@ describe("getLeaguePeerPickHistory", () => {
       "https://example.com/alice.jpg",
       null,
     ]);
+    expect(result.weeks[0].entries.map((e) => e.hasPick)).toEqual([true, true]);
   });
 
   it("excludes unrevealed week picks for non-admin callers", async () => {
@@ -174,6 +213,7 @@ describe("getLeaguePeerPickHistory", () => {
     expect(result.weeks).toHaveLength(1);
     expect(result.weeks[0]).toMatchObject({ weekNumber: 5, isRevealed: false });
     expect(result.weeks[0].entries).toHaveLength(1);
+    expect(result.weeks[0].entries[0]).toMatchObject({ hasPick: true });
   });
 
   it("maps outcomes, pending picks, and antiJailedBonus", async () => {
@@ -216,10 +256,16 @@ describe("getLeaguePeerPickHistory", () => {
     });
 
     const byWeek = Object.fromEntries(result.weeks.map((w) => [w.weekNumber, w.entries[0]]));
-    expect(byWeek[1]).toMatchObject({ outcome: "WIN", pointsEarned: 1, antiJailedBonus: false });
-    expect(byWeek[2]).toMatchObject({ outcome: "LOSS", pointsEarned: 0 });
-    expect(byWeek[3]).toMatchObject({ outcome: "TIE", pointsEarned: 0 });
+    expect(byWeek[1]).toMatchObject({
+      hasPick: true,
+      outcome: "WIN",
+      pointsEarned: 1,
+      antiJailedBonus: false,
+    });
+    expect(byWeek[2]).toMatchObject({ hasPick: true, outcome: "LOSS", pointsEarned: 0 });
+    expect(byWeek[3]).toMatchObject({ hasPick: true, outcome: "TIE", pointsEarned: 0 });
     expect(byWeek[4]).toMatchObject({
+      hasPick: true,
       outcome: "PENDING",
       pointsEarned: null,
       antiJailedBonus: true,
@@ -349,10 +395,12 @@ describe("getLeaguePeerPickHistory", () => {
     expect(result.weeks).toHaveLength(1);
     const byId = Object.fromEntries(result.weeks[0].entries.map((e) => [e.membershipId, e]));
     expect(byId["mem-admin"]).toMatchObject({
+      hasPick: true,
       teamAbbreviation: "KC",
       teamName: "Kansas City Chiefs",
     });
     expect(byId["mem-peer"]).toMatchObject({
+      hasPick: true,
       teamAbbreviation: null,
       teamName: null,
       antiJailedBonus: false,
@@ -386,6 +434,7 @@ describe("getLeaguePeerPickHistory", () => {
     });
 
     expect(result.weeks[0]?.entries[0]).toMatchObject({
+      hasPick: true,
       teamAbbreviation: "BUF",
       teamName: "Buffalo Bills",
       antiJailedBonus: true,
@@ -455,15 +504,324 @@ describe("getLeaguePeerPickHistory", () => {
 
     const byWeek = Object.fromEntries(result.weeks.map((w) => [w.weekNumber, w]));
     expect(byWeek[1]?.entries[0]).toMatchObject({
+      hasPick: true,
       teamAbbreviation: "BUF",
       teamName: "Buffalo Bills",
       outcome: "WIN",
       pointsEarned: 1,
     });
     expect(byWeek[2]?.entries[0]).toMatchObject({
+      hasPick: true,
       teamAbbreviation: null,
       teamName: null,
       outcome: "PENDING",
     });
+  });
+
+  it("lists a missed player with zero points on a revealed week and keeps the saved pick", async () => {
+    const prisma = makePrisma({
+      games: [
+        { weekNumber: 5, status: "FINAL" },
+        { weekNumber: 5, status: "FINAL" },
+      ],
+      memberships: [
+        makeMembership({ id: "mem-1", displayName: "Alice" }),
+        makeMembership({ id: "mem-2", displayName: "Bob" }),
+      ],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-1",
+          displayName: "Alice",
+          outcome: PickOutcome.WIN,
+          pointsEarned: 1,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+    });
+
+    expect(result.weeks).toHaveLength(1);
+    expect(result.weeks[0]).toMatchObject({ weekNumber: 5, isRevealed: true });
+    expect(result.weeks[0].entries).toHaveLength(2);
+    const byId = Object.fromEntries(result.weeks[0].entries.map((e) => [e.membershipId, e]));
+    expect(byId["mem-1"]).toMatchObject({
+      hasPick: true,
+      teamAbbreviation: "KC",
+      teamName: "Kansas City Chiefs",
+      outcome: "WIN",
+      pointsEarned: 1,
+    });
+    expect(byId["mem-2"]).toMatchObject({
+      hasPick: false,
+      teamAbbreviation: null,
+      teamName: null,
+      antiJailedBonus: false,
+      outcome: "PENDING",
+      pointsEarned: 0,
+    });
+    expect(result.weeks[0].entries.filter((e) => e.membershipId === "mem-1")).toHaveLength(1);
+  });
+
+  it("redacts a saved pick and lists a no-pick peer while the window is open", async () => {
+    const kickoff = new Date("2026-09-14T17:00:00.000Z");
+    const now = new Date(computePickDeadlineUtc(kickoff).getTime() - 1);
+    const prisma = makePrisma({
+      games: [{ weekNumber: 5, status: "SCHEDULED", kickoffAt: kickoff }],
+      memberships: [
+        makeMembership({ id: "mem-admin", displayName: "Admin" }),
+        makeMembership({ id: "mem-peer", displayName: "Peer" }),
+        makeMembership({ id: "mem-miss", displayName: "Miss" }),
+      ],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-admin",
+          displayName: "Admin",
+          team: { abbreviation: "KC", name: "Kansas City Chiefs" },
+        }),
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-peer",
+          displayName: "Peer",
+          team: { abbreviation: "BUF", name: "Buffalo Bills" },
+          antiJailedBonus: true,
+          outcome: PickOutcome.WIN,
+          pointsEarned: 2,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.ADMIN,
+      callerMembershipId: "mem-admin",
+      now,
+    });
+
+    expect(result.weeks).toHaveLength(1);
+    expect(result.weeks[0].isRevealed).toBe(false);
+    const byId = Object.fromEntries(result.weeks[0].entries.map((e) => [e.membershipId, e]));
+    expect(byId["mem-peer"]).toMatchObject({
+      hasPick: true,
+      teamAbbreviation: null,
+      teamName: null,
+      antiJailedBonus: false,
+      outcome: "PENDING",
+      pointsEarned: null,
+    });
+    expect(byId["mem-miss"]).toMatchObject({
+      hasPick: false,
+      teamAbbreviation: null,
+      teamName: null,
+      antiJailedBonus: false,
+      outcome: "PENDING",
+      pointsEarned: null,
+    });
+    expect(byId["mem-miss"].teamName).not.toBe("No pick");
+  });
+
+  it("omits an open week for members even when the roster includes someone with no pick", async () => {
+    const prisma = makePrisma({
+      games: [
+        { weekNumber: 5, status: "FINAL" },
+        { weekNumber: 5, status: "SCHEDULED" },
+      ],
+      memberships: [
+        makeMembership({ id: "mem-1", displayName: "Alice" }),
+        makeMembership({ id: "mem-2", displayName: "Bob" }),
+      ],
+      picks: [
+        makePick({
+          nflWeekNumber: 5,
+          membershipId: "mem-1",
+          displayName: "Alice",
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+    });
+
+    expect(result.weeks).toHaveLength(0);
+  });
+
+  it("lists every player as no-pick on a finalized week with zero picks", async () => {
+    const prisma = makePrisma({
+      games: [{ weekNumber: 3, status: "FINAL" }],
+      memberships: [
+        makeMembership({ id: "mem-2", displayName: "Bob" }),
+        makeMembership({ id: "mem-1", displayName: "Alice" }),
+      ],
+      picks: [],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+    });
+
+    expect(result.weeks).toHaveLength(1);
+    expect(result.weeks[0]).toMatchObject({ weekNumber: 3, isRevealed: true });
+    expect(result.weeks[0].entries.map((e) => e.displayName)).toEqual(["Alice", "Bob"]);
+    expect(result.weeks[0].entries).toEqual([
+      expect.objectContaining({
+        membershipId: "mem-1",
+        hasPick: false,
+        teamAbbreviation: null,
+        teamName: null,
+        outcome: "PENDING",
+        pointsEarned: 0,
+      }),
+      expect.objectContaining({
+        membershipId: "mem-2",
+        hasPick: false,
+        teamAbbreviation: null,
+        teamName: null,
+        outcome: "PENDING",
+        pointsEarned: 0,
+      }),
+    ]);
+  });
+
+  it("omits weeks before firstCompetitionWeek", async () => {
+    const prisma = makePrisma({
+      season: { id: SEASON_ID, firstCompetitionWeek: 4 },
+      games: [
+        { weekNumber: 3, status: "FINAL" },
+        { weekNumber: 4, status: "FINAL" },
+      ],
+      memberships: [makeMembership({ id: "mem-1", displayName: "Alice" })],
+      picks: [
+        makePick({
+          nflWeekNumber: 3,
+          membershipId: "mem-1",
+          displayName: "Alice",
+          outcome: PickOutcome.WIN,
+          pointsEarned: 1,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+    });
+
+    expect(result.weeks.map((w) => w.weekNumber)).toEqual([4]);
+    expect(result.weeks[0].entries[0]).toMatchObject({
+      membershipId: "mem-1",
+      hasPick: false,
+      teamAbbreviation: null,
+      teamName: null,
+      outcome: "PENDING",
+      pointsEarned: 0,
+    });
+  });
+
+  it("excludes the configured superuser", async () => {
+    const previous = process.env.SUPERUSER_EMAIL;
+    process.env.SUPERUSER_EMAIL = "root@example.com";
+    try {
+      const prisma = makePrisma({
+        games: [{ weekNumber: 5, status: "FINAL" }],
+        memberships: [
+          makeMembership({ id: "mem-1", displayName: "Alice" }),
+          makeMembership({
+            id: "mem-root",
+            displayName: "Root",
+            email: "root@example.com",
+          }),
+        ],
+        picks: [
+          makePick({
+            nflWeekNumber: 5,
+            membershipId: "mem-1",
+            displayName: "Alice",
+            outcome: PickOutcome.WIN,
+            pointsEarned: 1,
+          }),
+          makePick({
+            nflWeekNumber: 5,
+            membershipId: "mem-root",
+            displayName: "Root",
+            email: "root@example.com",
+            outcome: PickOutcome.WIN,
+            pointsEarned: 1,
+          }),
+        ],
+      });
+
+      const result = await getLeaguePeerPickHistory(prisma, {
+        leagueId: LEAGUE_ID,
+        nflSeasonYear: SEASON_YEAR,
+        callerRole: LeagueMembershipRole.ADMIN,
+      });
+
+      expect(prisma.leagueMembership.findMany).toHaveBeenCalledWith({
+        where: leaguePlayerMembershipWhere(LEAGUE_ID),
+        select: {
+          id: true,
+          user: { select: { name: true, email: true, image: true } },
+        },
+      });
+      expect(result.weeks).toHaveLength(1);
+      expect(result.weeks[0].entries.map((e) => e.membershipId)).toEqual(["mem-1"]);
+      expect(result.weeks[0].entries[0]).toMatchObject({ hasPick: true, displayName: "Alice" });
+    } finally {
+      if (previous === undefined) delete process.env.SUPERUSER_EMAIL;
+      else process.env.SUPERUSER_EMAIL = previous;
+    }
+  });
+
+  it("sorts pickers and non-pickers together A-Z by display name", async () => {
+    const prisma = makePrisma({
+      games: [{ weekNumber: 2, status: "FINAL" }],
+      memberships: [
+        makeMembership({ id: "mem-cara", displayName: "Cara" }),
+        makeMembership({ id: "mem-alice", displayName: "Alice" }),
+        makeMembership({ id: "mem-bob", displayName: "Bob" }),
+      ],
+      picks: [
+        makePick({
+          nflWeekNumber: 2,
+          membershipId: "mem-cara",
+          displayName: "Cara",
+          outcome: PickOutcome.LOSS,
+          pointsEarned: 0,
+        }),
+        makePick({
+          nflWeekNumber: 2,
+          membershipId: "mem-alice",
+          displayName: "Alice",
+          outcome: PickOutcome.WIN,
+          pointsEarned: 1,
+        }),
+      ],
+    });
+
+    const result = await getLeaguePeerPickHistory(prisma, {
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: SEASON_YEAR,
+      callerRole: LeagueMembershipRole.MEMBER,
+    });
+
+    expect(result.weeks[0].entries.map((e) => [e.displayName, e.hasPick])).toEqual([
+      ["Alice", true],
+      ["Bob", false],
+      ["Cara", true],
+    ]);
+    expect(result.weeks[0].entries.filter((e) => e.membershipId === "mem-alice")).toHaveLength(1);
+    expect(result.weeks[0].entries.filter((e) => e.membershipId === "mem-bob")).toHaveLength(1);
   });
 });

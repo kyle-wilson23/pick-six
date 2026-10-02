@@ -119,6 +119,14 @@ function teamCellTitle(entry: PeerPickEntry): string | undefined {
 }
 
 function TeamCell({ entry }: { entry: PeerPickEntry }) {
+  if (entry.hasPick === false) {
+    return (
+      <Typography variant="body2" noWrap>
+        No pick
+      </Typography>
+    );
+  }
+
   if (!hasTeamIdentity(entry)) {
     return (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>

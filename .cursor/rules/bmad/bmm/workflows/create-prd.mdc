@@ -1,7 +1,0 @@
----
-description: BMAD BMM Agent: create-prd
-globs:
-alwaysApply: false
----
-
-IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: Read `{project-root}/.cursor/skills/bmad-create-prd/SKILL.md`, then LOAD the FULL `{project-root}/.cursor/skills/bmad-create-prd/workflow.md`, READ its entire contents and follow its directions exactly!

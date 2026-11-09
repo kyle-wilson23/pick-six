@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: '2026-09-02' # correct-course: Week 1 pick window never opens → pre-week-1 blockers added
+last_updated: 11-08-2026 23:02 # pre-week-1 group closed; shipped before the live 2026 season (week 9 in production)
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -154,16 +154,28 @@ development_status:
   post-epic-9-resend-domain-and-from-address: done # After web DNS; verify sending domain (SPF/DKIM); RESEND_FROM; optional DMARC — send.nflpickem.cc Verified; webhook live
   post-epic-9-production-smoke-test: done # After web + email live; real inbox: invite + Tuesday digest + reminders; Resend dashboard; rows 1–10 Pass on www.nflpickem.cc; row 11 cron curl skipped
 
-  # Pre-Week-1 — BLOCKING production defect (correct-course 2026-09-02)
-  # Source of truth: _bmad-output/planning-artifacts/sprint-change-proposal-2026-09-02.md
-  # Week 1 picks can never be submitted: preview opens at first kickoff (always AFTER the deadline),
-  # and the Wed 2026-09-09 opener made the Thursday anchor resolve to Thu 2026-09-03 (6-day early lockout).
-  # Rev 2: the Thursday anchor is removed entirely — it also breaks Wk 12 (Thanksgiving, Wed 11-25 opener,
-  # locks Thu 11-19 = 6 days early) and Wk 18 (no Thursday game, locks 2.7 days early). 15 of 18 weeks unchanged.
-  # HARD DEADLINE: ship before Wed 2026-09-09 20:10 ET; ideally before Tue 2026-09-08 07:00 ET (slot-1 reminder).
-  # Execute in order — 1 is lowest risk, 2 has the widest blast radius (picks UI + email activation share the helper).
-  pre-week-1-kickoff-anchored-deadline: review # Rule B: deadline = firstKickoff − 5min, NO weekday anchor. DELETE lockByThursdayDefaultUtc + THURSDAY_LOCK_HOUR/MINUTE + 4 obsolete tests. Assert 15 Thursday-opener weeks byte-identical; Wk 1/12/18 move later only (FR26, NFR24)
-  pre-week-1-pick-window-open-rule: review # Rule A: FR26a window-open (Tue 00:00 ET of game week; first competition week = firstKickoff − 7d); per-week preview; RETAIN preSeasonInitializedAt gate. Replaces the buggy "false when in-window after earliest competition kickoff" test
-  pre-week-1-deadline-anchored-reminders: backlog # Rule C: ALL weeks deadline-anchored — slot 1 = first tick ≥ deadline−48h, slot 2 = first tick ≥ deadline−12h; universal never-send-past-deadline guard incl. Tuesday digest; extract shouldSendWeeklyReminder; TWO daily ticks 0 11 * * * + 0 20 * * * (Hobby limits interval per job, not job count). Old fixed Wed/Thu windows sent ZERO reminders for Wk 12 and 18 (FR37, FR38)
-  pre-week-1-user-facing-deadline-copy: review # rules/page.tsx: drop "typically Thursday around 8:10 PM Eastern" → "Picks lock 5 minutes before the first kickoff of the NFL week."; same for league-rules.ts doc-comment table (FR7)
-  pre-week-1-production-preflight: backlog # Kyle: mark real league ready for season; verify Week 1 jailed team computed + 16 games of odds; confirm both cron ticks deploy + appear in Vercel dashboard; confirm countdown reads Wed 2026-09-09 20:10 ET; rules page no longer says Thursday
+  # Pre-Week-1 — closed 2026-11-08. Shipped before the live 2026 season (correct-course 2026-09-02).
+  # Source: _bmad-output/planning-artifacts/sprint-change-proposal-2026-09-02.md
+  # Kickoff-anchored deadline, FR26a window open, deadline-anchored reminders, and rules copy are in src/.
+  # Production preflight is satisfied by the real league running through week 9.
+  pre-week-1-kickoff-anchored-deadline: done # Rule B: deadline = firstKickoff − 5min, no weekday anchor (FR26, NFR24)
+  pre-week-1-pick-window-open-rule: done # Rule A: Tue 00:00 ET of game week; first competition week = firstKickoff − 7d (FR26a)
+  pre-week-1-deadline-anchored-reminders: done # Rule C: slot 1 = deadline−48h, slot 2 = deadline−12h; ticks 0 11 and 0 20 UTC (FR37, FR38)
+  pre-week-1-user-facing-deadline-copy: done # Rules page and league-rules.ts: lock 5 minutes before first kickoff (FR7)
+  pre-week-1-production-preflight: done # Live league through week 9; week-1 checklist (jailed team, odds, cron ticks, countdown) already passed
+
+  # Epic 10 — AI weekly results commentary (epics-ai-weekly-results-commentary.md)
+  epic-10: backlog
+  10-1-turn-weekly-commentary-on-or-off: backlog
+  10-2-show-the-checked-note-in-the-tuesday-digest: backlog
+  10-3-set-the-league-s-weekly-dollar-ceiling: backlog
+  10-4-hold-the-note-on-the-league-admin-email-screen: backlog
+  10-5-count-the-loaded-book-as-one-history: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11 — Past seasons in the book
+  epic-11: backlog
+  11-1-print-one-screenshot-season: backlog
+  11-2-accept-a-mapped-season-into-the-book: backlog
+  11-3-leave-a-missing-year-out: backlog
+  epic-11-retrospective: optional

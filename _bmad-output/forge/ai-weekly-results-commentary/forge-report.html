@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hardened — weekly results commentary</title>
+<style>
+  :root {
+    --ink: #1c1410;
+    --paper: #f4efe6;
+    --rule: #c4b49a;
+    --wax: #8e1d2a;
+    --wax-deep: #5c1018;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 17px/1.45 Georgia, "Iowan Old Style", serif;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+  h1 { font-size: 1.8rem; font-weight: normal; letter-spacing: -0.02em; margin: 0 0 0.25rem; }
+  h2 { font-size: 1.05rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 2.2rem 0 0.6rem; }
+  p, li { margin: 0.4rem 0; }
+  ul { padding-left: 1.2rem; }
+  .lede { font-size: 1.15rem; }
+  .seal-wrap { display: flex; justify-content: center; margin: 0 0 1.5rem; }
+  .meta { color: #5c5148; font-size: 0.95rem; }
+  .reject { border-top: 1px solid var(--rule); padding-top: 0.2rem; }
+  .voices { list-style: none; padding: 0; }
+  .voices li { padding: 0.45rem 0; border-bottom: 1px solid var(--rule); }
+  .who { font-weight: bold; }
+</style>
+</head>
+<body>
+<main>
+  <div class="seal-wrap" aria-hidden="true">
+    <svg width="168" height="168" viewBox="0 0 168 168">
+      <defs>
+        <radialGradient id="wax" cx="38%" cy="32%" r="70%">
+          <stop offset="0%" stop-color="#c4474f"/>
+          <stop offset="55%" stop-color="#8e1d2a"/>
+          <stop offset="100%" stop-color="#5c1018"/>
+        </radialGradient>
+      </defs>
+      <path fill="url(#wax)" d="M84 8c6 10 14 12 22 8 4 12 16 16 24 12 2 12 12 20 22 18-2 12 4 22 14 26-8 10-6 20 0 28-12 2-18 12-16 22-12-2-20 6-24 16-8-8-18-8-26-2-6 10-16 12-26 6-4-12-16-14-24-8-4 10-16 12-26 6 2-12-6-22-16-26 10-6 12-18 6-28 12-4 16-16 10-26-8 4-18 2-24-8 10-6 14-16 10-26-6 8-16 10-26 4 4-12 2-22-6-30 12 0 20-8 22-18C62 20 74 16 84 8z"/>
+      <circle cx="84" cy="86" r="46" fill="none" stroke="#f4efe6" stroke-width="2" opacity="0.85"/>
+      <text x="84" y="82" text-anchor="middle" fill="#f4efe6" font-family="Georgia, serif" font-size="13" letter-spacing="1.5">HARDENED</text>
+      <text x="84" y="100" text-anchor="middle" fill="#f4efe6" font-family="Georgia, serif" font-size="9" letter-spacing="0.5">WEEKLY NOTE</text>
+    </svg>
+  </div>
+  <h1>Weekly results commentary</h1>
+  <p class="meta">Pick Six · hardened 1 Nov 2026</p>
+  <p class="lede">It holds, on a budget, as a weekly note. It does not hold as an open-ended agent with a database login.</p>
+
+  <h2>Outcome</h2>
+  <p>Every league can have it. It ships off. A league admin turns it on. Kyle pays, at $1 per enabled league per week unless he sets a different ceiling on that league. The model may ask about this week or the loaded history and mention what it finds interesting. Up to 3 confirmed items. It does not pad. The app types every name and number. If nothing confirms, the line is “Quiet week. Nothing new for the record book,” and the model does not write it. The note sits under the standings and in the Tuesday digest.</p>
+
+  <h2>Locked</h2>
+  <ul>
+    <li>Look across one week or the whole loaded history. Surface what seems worth saying. Three at most, and only as many as actually check out.</li>
+    <li>The published figure is the one the app calculated. A comparison that was not confirmed is dropped.</li>
+    <li>This production league gets one screenshot import, then never again. The filename is the season year, and none of the shots are the current season. Green is a win for 1. Pale blue is a win against the jailed team for 2. Red with a team is a loss for 0. An empty red cell is no pick and counts as a loss. Yellow or orange is an invalid pick for 0.</li>
+    <li>Go-live waits until those screenshots are in hand and every first name is mapped: a current member, or a past member who still counts.</li>
+    <li>New leagues do not import spreadsheets. Their book starts with their first season in the app.</li>
+    <li>When this league is renewed later, the imported years stay, including people who do not come back.</li>
+    <li>A missing year is named. The words “league history” and “all-time” wait until the set is complete. A missing year is not expected here.</li>
+  </ul>
+
+  <h2>Rejected, and why</h2>
+  <ul class="reject">
+    <li>The model types the number. A true query can still be retold as the wrong figure.</li>
+    <li>The model writes the quiet week. That is where it starts sounding like a status report.</li>
+    <li>An unbounded hunt for something interesting. It has no stop, and the bill follows the loop.</li>
+    <li>A league admin sets the dollar amount. That is a slider on Kyle’s invoice.</li>
+    <li>A general database login. Passwords and sessions live in that database.</li>
+    <li>A values-only CSV. The outcome is the cell color, and a CSV drops it.</li>
+    <li>Reading a cell by eye and trusting it. Watson’s Week 14 was read as a team in a gold cell. It is an empty red cell, a loss.</li>
+    <li>Spreadsheet import as a feature for later leagues. This league is the one that used to live in a workbook.</li>
+  </ul>
+
+  <h2>Still soft</h2>
+  <ul>
+    <li>“Interesting” is still the model’s taste. The cap and the check limit the damage. They do not define taste.</li>
+    <li>Any future league admin can turn the feature on and spend Kyle’s money, up to that league’s ceiling.</li>
+    <li>A new league’s “history” may be three weeks long. The sentence will be true, and it will sound bigger than the book.</li>
+    <li>The screenshots are the source. The import prints what it read, and a person checks that reading before any row is written. A cell whose color is ambiguous does not get a guessed team or a guessed point value. The row total is the check.</li>
+  </ul>
+
+  <h2>Who pressed on it</h2>
+  <ul class="voices">
+    <li><span class="who">🏗️ Winston</span> — architect. An agent is a loop that chooses tools. The import writes seasons onto this league and then goes away.</li>
+    <li><span class="who">📋 John</span> — product. Name the ceiling in units you can say out loud. What survived is a weekly note with a circuit breaker.</li>
+    <li><span class="who">💻 Amelia</span> — engineer. The number the reader sees is filled from the result. The importer reads the fill, not a memory.</li>
+    <li><span class="who">📊 Mary</span> — analyst. “League history” is only true when the loaded years are the complete set. Grey has to count the same way on both sides of a comparison.</li>
+    <li><span class="who">🎨 Sally</span> — UX. One short block under the standings. The admin’s screen stays one switch. The dollar field stays on the superuser’s screen.</li>
+    <li><span class="who">Renee Palacios</span> — league treasurer. One wrong record and the league stops reading the mail.</li>
+    <li><span class="who">Chris Delgado</span> — asked for the feature. He wanted the thing nobody would have queried, said like a text, not a row.</li>
+    <li><span class="who">Priya Raman</span> — ships text-to-SQL. She trusts the query log, not the paragraph. An open search has no natural stop.</li>
+    <li><span class="who">Morgan Ellis</span> — pays the invoice. One predictable line can sit on a card. A loop until the model is satisfied cannot.</li>
+    <li><span class="who">Helen Briggs</span> — reads the bill once a month. She wants one figure in dollars, set by the person who pays.</li>
+    <li><span class="who">Len Cho</span> — a commissioner who would enable it the day it exists, without asking what it costs.</li>
+    <li><span class="who">Ruth Keller</span> — the superuser six months later, who raised one league for a test and forgot.</li>
+    <li><span class="who">Lynn</span> — built the old sheet. The color is the result. Pale blue is the 2-point win. Yellow or orange is an invalid pick. An empty red cell is no pick.</li>
+    <li><span class="who">Pete Lang</span> — kept the workbook. Commentary that cannot see those years is only this season, which the standings already show.</li>
+    <li><span class="who">Gina Alvarez</span> — a nickname on the old sheet and a different email in the app.</li>
+    <li><span class="who">Denise Okonkwo</span> — left in 2021. She can be a past member who still counts. She cannot be required to become a user.</li>
+    <li><span class="who">Doug</span> — some years he only saved the final standings. Those years cannot support a weekly record.</li>
+    <li><span class="who">Omar Shah</span> — will not type a win from memory. The fill already has the result, so the slate is not required.</li>
+    <li><span class="who">Phil</span> — reads the digest aloud. He will mock a status report. He will let a plain sentence pass.</li>
+    <li><span class="who">Andrea</span> — does not open the app. If it is not in the email, she does not see it.</li>
+    <li><span class="who">Ron</span> — remembers a bigger week from a year whose file never arrived.</li>
+    <li><span class="who">Pat</span> — may not rejoin, and may also be a brand-new league. Old records stay. A new book starts small.</li>
+  </ul>
+</main>
+</body>
+</html>

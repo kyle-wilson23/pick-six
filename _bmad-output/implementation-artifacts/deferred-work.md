@@ -843,3 +843,7 @@ Pre-existing matchup-card issues. Removing the repeated spread footer did not in
 - **Retractable-roof note is tooltip-only** — the chip is not focusable, so keyboard and touch users never get it.
 - **In-flight submit blocks every card** — `pointer-events: none` on the whole list, not just the card being saved.
 - **MatchupCard still has no coverage for the other card states** — `MatchupCard.test.tsx` covers the removed footer and the per-side spread. Sign-flip edge cases, null spread, pick'em `+0`, and the interaction bugs above are still untested.
+
+## Deferred from: code review of spec-10-1-turn-weekly-commentary-on-or-off.md (2026-11-12)
+
+- **Default-off commentary is only pinned by source text** — `src/lib/league/commentary-enabled-default.test.ts`. The test reads migration SQL, `schema.prisma`, and the source between `tx.league.create` and `tx.season.create`. It never runs the migration or `POST /api/leagues`. A create payload built before that slice can set `commentaryEnabled: true` and the test stays green. Vitest here does not execute migrations or league inserts, so a column read-back would be a new database harness. Current create data is `{ name, isTestLeague }`, and the migration is `BOOLEAN NOT NULL DEFAULT false`.

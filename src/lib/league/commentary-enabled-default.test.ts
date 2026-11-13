@@ -28,6 +28,8 @@ describe("League.commentaryEnabled default", () => {
     const route = readFileSync(join(process.cwd(), "src/app/api/leagues/route.ts"), "utf8");
     const createStart = route.indexOf("tx.league.create");
     const createEnd = route.indexOf("tx.season.create");
+    expect(createStart).toBeGreaterThanOrEqual(0);
+    expect(createEnd).toBeGreaterThan(createStart);
     const createCall = route.slice(createStart, createEnd);
     expect(createCall).not.toContain("commentaryEnabled");
     expect(createCall).not.toContain("commentary_enabled");

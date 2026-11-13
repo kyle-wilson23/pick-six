@@ -74,6 +74,28 @@ context:
 - Given a league admin saves on or off, when the league is read again, then that value remains, and a non-admin save leaves it unchanged.
 - Given the Tuesday digest runs while the flag is off or on, when this story’s code handles the send, then the email has no commentary section, no run is stored, and nothing is spent.
 
+### Review Findings
+
+- [x] [Review][Patch] Fail the default-off source test when the league create call is missing [src/lib/league/commentary-enabled-default.test.ts:29]
+- [x] [Review][Defer] Default-off commentary is only pinned by source text [src/lib/league/commentary-enabled-default.test.ts:6] — deferred: vitest does not execute migrations or league inserts, so proving a stored false would be a new database harness
+
+### Rejected
+
+- `false` — Live Tuesday sends omit `commentaryEnabled`. The field is optional and documented as off when omitted, and both arms of the send spread add nothing, so omitted, false, and true stay scores-only.
+- `false` — `sendTuesdayDigest` reads the flag and discards it. That empty spread is the specified no-op; story 10.2 owns the first real branch. The contradictory implementation notes are in the spec under review.
+- `low` — A late refresh or a league change can paint another flag on `CommentarySwitch`. The switch is disabled until the request settles, so this needs a second toggle or a navigation during an in-flight refresh. The fix is an in-flight guard.
+- `false` — The switch has no caption that the email stays scores-only. The spec places “Weekly commentary” in Weekly Email and does not require that sentence. The control still persists the boolean.
+- `low` — The digest test looks for the words “commentary” and “Quiet week” and mocks a `commentaryRun` model that does not exist. The send adds no section, and a real run call would fail typecheck. Widening the oracle is new test surface.
+- `false` — Nothing writes the column and reads it back through `leagueSelect`. `leagueSelect` includes `commentaryEnabled` and `LeagueAccessLeague` requires it, so dropping the column fails typecheck. `resolveLeagueAccess` is pure.
+- `low` — Spec frontmatter says `done` while sprint status says `review`, and the triage log is stale. The fix edits the spec under review.
+- `low` — Route and switch tests skip empty body, a mismatched Origin, a thrown update, the unknown-league JSON body, a superuser whose league row is missing, `auth()` skipped on a non-boolean, a failure that starts from on, and disabled-while-saving. Those paths already match the spec or the shared admin-save pattern. Covering them is new test surface.
+- `low` — A save that finishes after the admin opens another league can show one league’s flag on the other. Same in-flight window as the refresh race; the fix is a generation guard.
+- `low` — An older `router.refresh()` can flip the switch back during a newer toggle. Same race. The switch is disabled for the request itself, and the fix adds a guard.
+- `low` — A fetch that throws after the server has saved reverts the switch and shows “Request failed” while the stored flag is the new value. That needs the response to be lost after commit. Refreshing in `catch` is a new branch.
+- `low` — A commentary save that never settles leaves the switch disabled. Same `saving` flag as the other admin saves, and a timeout is new complexity.
+- `low` — A save error can remain after a league change when both leagues share the same boolean. That needs a failed save still on screen, and the fix is another effect guard.
+- `low` — Tests never rerender `commentaryEnabled` during a save, so they miss the stale-refresh overwrite. Same race as above, and the fix is a guard rather than a correction of current send behavior.
+
 ## Implementation Notes
 
 - `commentaryEnabled` is a non-null boolean on `League`, mapped to `commentary_enabled`, default false. Migration `prisma/migrations/20261112140000_add_league_commentary_enabled/migration.sql`. `npm run db:migrate` did not apply: this workspace has no `DATABASE_URL` or `DIRECT_URL`, so no existing row was read back.

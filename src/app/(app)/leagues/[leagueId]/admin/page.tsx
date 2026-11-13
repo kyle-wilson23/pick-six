@@ -12,6 +12,7 @@ import { AdminReminderControls } from "@/components/admin/AdminReminderControls"
 import { AdminSimulationControls } from "@/components/admin/AdminSimulationControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { AdminWeeklyEmailStatus } from "@/components/admin/AdminWeeklyEmailStatus";
+import { CommentarySwitch } from "@/components/admin/CommentarySwitch";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import { getAuditLog } from "@/lib/admin/get-audit-log";
@@ -177,6 +178,10 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
             <Typography variant="h5" component="h2">
               Weekly Email
             </Typography>
+            <CommentarySwitch
+              leagueId={leagueId}
+              commentaryEnabled={league.commentaryEnabled}
+            />
             <AdminEmailComposer
               leagueId={leagueId}
               weekNumber={weekNumber}

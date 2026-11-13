@@ -19,6 +19,8 @@ export type TuesdayDigestData = {
   leagueName: string;
   leagueId: string;
   isTestLeague: boolean;
+  /** When omitted, the send treats commentary as off. Both values skip a section in this story. */
+  commentaryEnabled?: boolean;
   nflSeasonYear: number;
   weekNumber: number;
   /** True when competition has not started (picks preview). Cron skips; admin may still send. */

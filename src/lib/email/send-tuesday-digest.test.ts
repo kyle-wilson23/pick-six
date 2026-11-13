@@ -1,7 +1,12 @@
+import type { ReactElement } from "react";
+import { render } from "@react-email/components";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLeagueWeekEmailConfigFindUnique = vi.fn();
 const mockLeagueWeekEmailConfigUpsert = vi.fn();
+const mockCommentaryRunCreate = vi.fn();
+const mockCommentaryRunUpdate = vi.fn();
+const mockCommentaryRunUpsert = vi.fn();
 const mockResendSend = vi.fn();
 const mockGetTestLeagueEmailMode = vi.fn();
 
@@ -10,6 +15,11 @@ vi.mock("@/lib/db", () => ({
     leagueWeekEmailConfig: {
       findUnique: (...args: unknown[]) => mockLeagueWeekEmailConfigFindUnique(...args),
       upsert: (...args: unknown[]) => mockLeagueWeekEmailConfigUpsert(...args),
+    },
+    commentaryRun: {
+      create: (...args: unknown[]) => mockCommentaryRunCreate(...args),
+      update: (...args: unknown[]) => mockCommentaryRunUpdate(...args),
+      upsert: (...args: unknown[]) => mockCommentaryRunUpsert(...args),
     },
   },
 }));
@@ -147,6 +157,44 @@ describe("sendTuesdayDigest", () => {
     });
     expect(result.sentAt).toBeInstanceOf(Date);
   });
+
+  it.each([false, true])(
+    "send with commentaryEnabled %s adds no commentary section, run, or spend",
+    async (commentaryEnabled) => {
+      mockGetTestLeagueEmailMode.mockReturnValue("send");
+
+      const result = await sendTuesdayDigest({
+        leagueId: LEAGUE_ID,
+        preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled },
+      });
+
+      expect(result).toMatchObject({
+        sent: 2,
+        failed: 0,
+        suppressed: false,
+        wouldSendCount: 0,
+      });
+      expect(mockCommentaryRunCreate).not.toHaveBeenCalled();
+      expect(mockCommentaryRunUpdate).not.toHaveBeenCalled();
+      expect(mockCommentaryRunUpsert).not.toHaveBeenCalled();
+      expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledOnce();
+
+      const payloads = mockResendSend.mock.calls.map((call) => call[0] as { react?: ReactElement });
+      expect(payloads).toHaveLength(PRELOADED_DATA.members.length);
+      for (const payload of payloads) {
+        if (!payload.react) {
+          throw new Error("expected Tuesday digest email element");
+        }
+        expect(payload.react.props).not.toHaveProperty("commentary");
+        expect(payload.react.props).not.toHaveProperty("commentaryEnabled");
+        const html = await render(payload.react);
+        expect(html).toContain("Standings");
+        expect(html).toContain("Jailed team");
+        expect(html.toLowerCase()).not.toContain("commentary");
+        expect(html).not.toContain("Quiet week");
+      }
+    },
+  );
 
   it("production league always uses the normal Resend path regardless of suppress mode", async () => {
     mockGetTestLeagueEmailMode.mockReturnValue("suppress");

@@ -157,6 +157,8 @@ export async function sendTuesdayDigest({
                 picksUrl: data.picksUrl,
                 adminNote,
                 isTestLeague: data.isTestLeague,
+                // On and off both skip commentary. Story 10.2 is the first branch that may add a section.
+                ...(data.commentaryEnabled ? {} : {}),
               }),
             },
             {

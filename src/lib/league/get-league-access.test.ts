@@ -7,6 +7,7 @@ const league = {
   id: "lg-1",
   name: "Test",
   isTestLeague: false,
+  commentaryEnabled: false,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
@@ -73,7 +74,18 @@ describe("resolveLeagueAccess", () => {
       isSuperuser: false,
       isAdmin: true,
       isParticipant: true,
+      league: { commentaryEnabled: false },
     });
+  });
+
+  it("returns the saved commentaryEnabled value on a later read", () => {
+    const access = resolveLeagueAccess({
+      userEmail: "admin@example.com",
+      membership: adminMembership,
+      league: { ...league, commentaryEnabled: true },
+      env,
+    });
+    expect(access?.league.commentaryEnabled).toBe(true);
   });
 
   it("keeps a normal member as participant, not admin", () => {

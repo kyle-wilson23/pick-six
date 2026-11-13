@@ -61,6 +61,8 @@ model League {
   name         String   @unique
   /// Epic 8: rehearsal/practice league (create-time only; not flipped post-create).
   isTestLeague Boolean  @default(false) @map("is_test_league")
+  /// Epic 10: weekly results commentary. Off until a league admin turns it on.
+  commentaryEnabled Boolean @default(false) @map("commentary_enabled")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

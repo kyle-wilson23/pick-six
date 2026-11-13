@@ -16,6 +16,7 @@ export type LeagueAccessLeague = {
   id: string;
   name: string;
   isTestLeague: boolean;
+  commentaryEnabled: boolean;
   createdAt: Date;
 };
 
@@ -32,6 +33,7 @@ const leagueSelect = {
   id: true,
   name: true,
   isTestLeague: true,
+  commentaryEnabled: true,
   createdAt: true,
 } as const;
 

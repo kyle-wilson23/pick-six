@@ -39,8 +39,6 @@ export type TuesdayDigestEmailProps = {
   jailedTeamAbbreviation: string | null;
   picksUrl: string;
   adminNote: string | null;
-  /** Stored settled note. Null, omitted, or blank renders no Weekly note section. */
-  weeklyNote?: string | null;
   isTestLeague?: boolean;
 };
 
@@ -87,7 +85,6 @@ export function TuesdayDigestEmail({
   jailedTeamAbbreviation,
   picksUrl,
   adminNote,
-  weeklyNote = null,
   isTestLeague = false,
 }: TuesdayDigestEmailProps) {
   const jailedLabel =
@@ -145,15 +142,6 @@ export function TuesdayDigestEmail({
         </Heading>
         <Text style={textStyle}>{jailedLabel}</Text>
       </Section>
-
-      {weeklyNote != null && weeklyNote.trim() !== "" ? (
-        <Section style={sectionStyle}>
-          <Heading as="h2" style={subheadingStyle}>
-            Weekly note
-          </Heading>
-          <Text style={{ ...textStyle, whiteSpace: "pre-wrap" }}>{weeklyNote}</Text>
-        </Section>
-      ) : null}
 
       <PrimaryCta href={picksUrl} label="Make your picks" />
 

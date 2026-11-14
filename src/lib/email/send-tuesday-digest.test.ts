@@ -9,7 +9,6 @@ const mockCommentaryRunUpdate = vi.fn();
 const mockCommentaryRunUpsert = vi.fn();
 const mockResendSend = vi.fn();
 const mockGetTestLeagueEmailMode = vi.fn();
-const mockRunWeeklyCommentary = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -47,10 +46,6 @@ vi.mock("@/lib/email/test-league-email-mode", () => ({
 
 vi.mock("@/lib/logging/log-event", () => ({
   logEvent: vi.fn(),
-}));
-
-vi.mock("@/lib/commentary/runner", () => ({
-  runWeeklyCommentary: (...args: unknown[]) => mockRunWeeklyCommentary(...args),
 }));
 
 import { logEvent } from "@/lib/logging/log-event";
@@ -105,7 +100,6 @@ describe("sendTuesdayDigest", () => {
     mockLeagueWeekEmailConfigFindUnique.mockResolvedValue(null);
     mockLeagueWeekEmailConfigUpsert.mockResolvedValue({});
     mockResendSend.mockResolvedValue({ error: null });
-    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: null });
   });
 
   it("suppress mode never calls Resend but still upserts sentAt", async () => {
@@ -117,7 +111,6 @@ describe("sendTuesdayDigest", () => {
     });
 
     expect(mockResendSend).not.toHaveBeenCalled();
-    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
     expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
       sent: 0,
@@ -165,7 +158,7 @@ describe("sendTuesdayDigest", () => {
     expect(result.sentAt).toBeInstanceOf(Date);
   });
 
-  it.each([false, undefined])(
+  it.each([false, true])(
     "send with commentaryEnabled %s adds no commentary section, run, or spend",
     async (commentaryEnabled) => {
       mockGetTestLeagueEmailMode.mockReturnValue("send");
@@ -181,15 +174,12 @@ describe("sendTuesdayDigest", () => {
         suppressed: false,
         wouldSendCount: 0,
       });
-      expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
       expect(mockCommentaryRunCreate).not.toHaveBeenCalled();
       expect(mockCommentaryRunUpdate).not.toHaveBeenCalled();
       expect(mockCommentaryRunUpsert).not.toHaveBeenCalled();
       expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledOnce();
 
-      const payloads = mockResendSend.mock.calls.map(
-        (call) => call[0] as { react?: ReactElement<{ weeklyNote?: string | null }> },
-      );
+      const payloads = mockResendSend.mock.calls.map((call) => call[0] as { react?: ReactElement });
       expect(payloads).toHaveLength(PRELOADED_DATA.members.length);
       for (const payload of payloads) {
         if (!payload.react) {
@@ -197,134 +187,14 @@ describe("sendTuesdayDigest", () => {
         }
         expect(payload.react.props).not.toHaveProperty("commentary");
         expect(payload.react.props).not.toHaveProperty("commentaryEnabled");
-        expect(payload.react.props.weeklyNote).toBeNull();
         const html = await render(payload.react);
         expect(html).toContain("Standings");
         expect(html).toContain("Jailed team");
-        expect(html).not.toContain("Weekly note");
+        expect(html.toLowerCase()).not.toContain("commentary");
         expect(html).not.toContain("Quiet week");
       }
     },
   );
-
-  it("a suppressed test league with commentary on does not run or spend", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("suppress");
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: { ...PRELOADED_DATA, commentaryEnabled: true },
-    });
-
-    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
-    expect(mockCommentaryRunCreate).not.toHaveBeenCalled();
-    expect(mockResendSend).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ suppressed: true, sent: 0, wouldSendCount: 2 });
-  });
-
-  it("a delivering send with commentary on runs once and renders the settled note", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("send");
-    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: "Alex won the week." });
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
-    });
-
-    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
-    expect(mockRunWeeklyCommentary).toHaveBeenCalledTimes(1);
-    expect(mockRunWeeklyCommentary).toHaveBeenCalledWith({
-      leagueId: LEAGUE_ID,
-      nflSeasonYear: PRELOADED_DATA.nflSeasonYear,
-      weekNumber: PRELOADED_DATA.weekNumber,
-    });
-
-    const payloads = mockResendSend.mock.calls.map(
-      (call) => call[0] as { react?: ReactElement<{ weeklyNote?: string | null }> },
-    );
-    for (const payload of payloads) {
-      if (!payload.react) {
-        throw new Error("expected Tuesday digest email element");
-      }
-      expect(payload.react.props.weeklyNote).toBe("Alex won the week.");
-      const html = await render(payload.react);
-      expect(html).toContain("Weekly note");
-      expect(html).toContain("Alex won the week.");
-      expect(html.indexOf("Weekly note")).toBeLessThan(html.indexOf("Make your picks"));
-    }
-  });
-
-  it("an abnormal commentary run still sends scores and omits the section", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("send");
-    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: null });
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
-    });
-
-    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
-    expect(mockRunWeeklyCommentary).toHaveBeenCalledTimes(1);
-    const html = await render((mockResendSend.mock.calls[0]?.[0] as { react: ReactElement }).react);
-    expect(html).not.toContain("Weekly note");
-    expect(html).not.toContain("Quiet week");
-    expect(html).toContain("Standings");
-  });
-
-  it("a runner failure still sends the scores email without a note", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("send");
-    mockRunWeeklyCommentary.mockRejectedValue(new Error("commentary down"));
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
-    });
-
-    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
-    expect(mockResendSend).toHaveBeenCalledTimes(2);
-    const html = await render((mockResendSend.mock.calls[0]?.[0] as { react: ReactElement }).react);
-    expect(html).not.toContain("Weekly note");
-    expect(logEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        level: "error",
-        action: "commentary_run_failed",
-        leagueId: LEAGUE_ID,
-      }),
-    );
-  });
-
-  it("does not run commentary when the circuit is already open", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("send");
-    const breaker = createEmailCircuitBreaker();
-    breaker.open = true;
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
-      breaker,
-    });
-
-    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
-    expect(mockResendSend).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ sent: 0, failed: 2, suppressed: false });
-  });
-
-  it("does not run commentary when the send has no recipients", async () => {
-    mockGetTestLeagueEmailMode.mockReturnValue("send");
-
-    const result = await sendTuesdayDigest({
-      leagueId: LEAGUE_ID,
-      preloadedData: {
-        ...PRELOADED_DATA,
-        isTestLeague: false,
-        commentaryEnabled: true,
-        members: [],
-      },
-    });
-
-    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
-    expect(mockResendSend).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ sent: 0, failed: 0, suppressed: false });
-  });
 
   it("production league always uses the normal Resend path regardless of suppress mode", async () => {
     mockGetTestLeagueEmailMode.mockReturnValue("suppress");

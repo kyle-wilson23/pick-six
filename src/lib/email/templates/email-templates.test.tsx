@@ -39,7 +39,6 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(html).toContain(picksUrl);
     expect(html).toContain("Or paste this link:");
     expect(html).toContain("#2ECC71");
-    expect(html).not.toContain("Weekly note");
     // CTA should appear before commissioner note in HTML source order
     expect(html.indexOf("Make your picks")).toBeLessThan(
       html.indexOf("Note from your commissioner"),
@@ -106,53 +105,6 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(html).not.toContain("not-a-url");
     // Null/blank/non-http imageUrl must not emit an empty img src
     expect(html).not.toMatch(/src=["']\s*["']/);
-  });
-
-  it("TuesdayDigestEmail shows the stored weekly note and not cells or a stop reason", async () => {
-    const quiet = "Quiet week. Nothing new for the record book.";
-    const quietHtml = await render(
-      createElement(TuesdayDigestEmail, {
-        leagueName: "Office League",
-        weekNumber: 3,
-        standings: [],
-        jailedTeamName: "Eagles",
-        jailedTeamAbbreviation: "PHI",
-        picksUrl: "https://example.test/leagues/abc/picks",
-        adminNote: "Have fun this week!",
-        weeklyNote: quiet,
-        isTestLeague: false,
-      }),
-    );
-    expect(quietHtml).toContain("Weekly note");
-    expect(quietHtml).toContain(quiet);
-    expect(quietHtml.indexOf("Weekly note")).toBeLessThan(quietHtml.indexOf("Make your picks"));
-    expect(quietHtml.indexOf("Make your picks")).toBeLessThan(
-      quietHtml.indexOf("Note from your commissioner"),
-    );
-    expect(quietHtml).not.toContain("missing_price");
-    expect(quietHtml).not.toContain("model_error");
-    expect(quietHtml).not.toContain("leaguePersonId");
-
-    const kept = "Alex won the week.\nSam tied the Eagles.";
-    const keptHtml = await render(
-      createElement(TuesdayDigestEmail, {
-        leagueName: "Office League",
-        weekNumber: 3,
-        standings: [],
-        jailedTeamName: null,
-        jailedTeamAbbreviation: null,
-        picksUrl: "https://example.test/leagues/abc/picks",
-        adminNote: null,
-        weeklyNote: kept,
-        isTestLeague: false,
-      }),
-    );
-    expect(keptHtml).toContain("Weekly note");
-    expect(keptHtml).toContain("Alex won the week.");
-    expect(keptHtml).toContain("Sam tied the Eagles.");
-    expect(keptHtml).not.toContain("WIN");
-    expect(keptHtml).not.toContain("missing_price");
-    expect(keptHtml).not.toContain("model_error");
   });
 
   it("ReminderEmail slot 1 / slot 2 keep labels + plaintext fallback and name the lock time", async () => {

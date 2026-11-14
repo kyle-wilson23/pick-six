@@ -1,0 +1,2553 @@
+diff --git a/.env.example b/.env.example
+index 0e05652..7df1291 100644
+--- a/.env.example
++++ b/.env.example
+@@ -80,6 +80,15 @@ REPORTS_OPERATOR_EMAIL=""
+ # suppress → rehearsal leagues never call Resend; admin UI shows would-send count; sentAt still recorded.
+ # TEST_LEAGUE_EMAIL_MODE=
+ 
++# --- Weekly commentary — server-only; never NEXT_PUBLIC_ ---
++# Used only by the Tuesday digest runner. A missing value, or a price that is not a finite number >= 0,
++# stores an abnormal stop and does not call the model. Each environment chooses its own model id and prices.
++# Do not put a model id or a token price in this example.
++COMMENTARY_API_KEY=""
++COMMENTARY_MODEL_ID=""
++COMMENTARY_INPUT_USD_PER_MILLION=""
++COMMENTARY_OUTPUT_USD_PER_MILLION=""
++
+ # --- Creator superuser (debug observer) — server-only; never NEXT_PUBLIC_ ---
+ # Optional singleton. Set to the login email of a dedicated account created at /create-account
+ # (choose your own password; there is no seeded/default password). That user can see every
+diff --git a/_bmad-output/implementation-artifacts/spec-10-2-show-the-checked-note-in-the-tuesday-digest.md b/_bmad-output/implementation-artifacts/spec-10-2-show-the-checked-note-in-the-tuesday-digest.md
+new file mode 100644
+index 0000000..29c86d0
+--- /dev/null
++++ b/_bmad-output/implementation-artifacts/spec-10-2-show-the-checked-note-in-the-tuesday-digest.md
+@@ -0,0 +1,106 @@
++---
++title: 'Show the checked note in the Tuesday digest'
++type: 'feature'
++created: '2026-11-13'
++status: 'in-review'
++review_loop_iteration: 0
++baseline_revision: '964967780b015eac2bae2f92baf68b10e0c1789d'
++followup_review_recommended: false
++context:
++  - '{project-root}/_bmad-output/implementation-artifacts/epic-10-context.md'
++warnings:
++  - oversized
++deferred: []
++---
++
++<intent-contract>
++
++## Intent
++
++**Problem:** With weekly commentary on, a delivering Tuesday digest still has no checked note. Members cannot read this week's confirmed lines, and a line whose cells do not match the database can still be imagined as part of that note.
++
++**Approach:** On a delivering send with commentary on, link current players to league persons, store one run for that league-week, call the model once, keep only sentences whose cited cells match a fresh database read, and render that stored outcome in the digest. The email never calls the model.
++
++## Boundaries & Constraints
++
++**Always:**
++- One `CommentaryRun` per `(leagueId, nflSeasonYear, weekNumber)`, the digest's existing key. Insert it before the model call with status `PENDING`, then update that same row. A later send that finds any row does not call the model and does not overwrite the row.
++- The model is called only through the Vercel AI SDK (`ai`), once, for a Zod list of at most 3 lines. Each line is the model's sentence plus cells. A cell is league person, year, week, outcome (`WIN` | `LOSS` | `TIE`), points, and team abbreviation when the model sends one.
++- Spend is decimal dollars: `(inputTokens / 1_000_000) * COMMENTARY_INPUT_USD_PER_MILLION + (outputTokens / 1_000_000) * COMMENTARY_OUTPUT_USD_PER_MILLION`. The ceiling in force is `$1`. Do not start a second call for any reason, including unused room under `$1` or a short list.
++- The checker re-reads every cited cell from `Pick` for that season and week. A match is the same league person, year, week, outcome, and points. When the cell includes a team abbreviation, that must match too. The stored sentence is the model's text, unchanged. Drop a mismatch, a sentence containing `league history` or `all-time` (any case), a season comparison with no 4-digit year (`last year`, `previous year`, `prior year`, `year before`, `previous season`), or a 4-digit year that is not the year on a cell that matched. Do not rewrite and do not pad.
++- A normal finish with zero kept lines stores exactly `Quiet week. Nothing new for the record book.` The model does not write that sentence. The digest shows a section only for a `SETTLED` row: the kept sentences, or that quiet sentence.
++- Missing or non-numeric `COMMENTARY_API_KEY`, `COMMENTARY_MODEL_ID`, or either price stores `ABNORMAL` / `missing_price`, does not call, does not store the quiet line, and leaves the digest without a section. A thrown or Zod-invalid call stores `ABNORMAL` / `model_error` the same way. `PENDING` or `ABNORMAL` renders no section. The scores email still sends. That week is not attempted again.
++- Before the insert, link every membership from `leaguePlayerMembershipWhere` to one `LeaguePerson`. Create the person when the membership has none. `membershipId` is unique.
++
++**Never:**
++- Do not add a provider SDK package, a hardcoded model id, or a hardcoded token price. Do not add the dollar-ceiling column or setter (story 10.3), the debug flag, or the admin-email commentary panel (story 10.4). Do not add book rows or fold another year into the view (story 10.5). Do not show commentary on a member page or call the model from a page, preview, or cron route.
++- Do not run on commentary off, or on a suppressed test-league send. Do not pass passwords, sessions, emails, or credentials in the view. Do not use `getLeaguePeerPickHistory` (it hides teams). Do not change commissioner `bodyText`, `sentAt`, cron league selection, or test-league suppression.
++
++## I/O & Edge-Case Matrix
++
++| Scenario | Input / State | Expected Output / Behavior | Error Handling |
++|----------|--------------|---------------------------|----------------|
++| Delivering send, commentary on, no row | Flag true, mail will send, config present | Link persons, insert `PENDING`, one SDK call, update that row to `SETTLED` with kept sentences or the quiet sentence, and the call's spend | Scores send either way |
++| Row already present | `PENDING`, `SETTLED`, or `ABNORMAL`, including force resend | No SDK call and no write. `SETTLED` renders its stored text. The others render no section | N/A |
++| Suppressed test league | `isTestLeague` and mode `suppress`, flag true | No row, no spend, no section. `sentAt` behavior stays as it is | N/A |
++| Commentary off | Flag false or omitted | No row, no spend, no section, even if a row already exists | N/A |
++| Cell mismatch or banned wording | Cited cell differs, or the sentence hits a drop rule | That line is absent. Other kept sentences stay verbatim. Zero kept lines and a successful call store the quiet sentence | Checker spends nothing |
++| Missing price or key | Any of the four env values missing or a price is not a finite number `>= 0` | Row becomes `ABNORMAL` / `missing_price`. No SDK call, no quiet line, no section | Scores email still sends |
++| Call fails | SDK throws or output fails the Zod list | Row becomes `ABNORMAL` / `model_error`. No quiet line, no section. Spend is recorded only when the SDK reports usage | Scores email still sends |
++| Three kept lines | Model returns more than three, and the first three match | Stored outcome has those three, in order. No further call | N/A |
++| Preview or member page | Admin preview HTML, or any member route | Preview reads a `SETTLED` row and does not call. No member page shows the note or calls the model | N/A |
++
++</intent-contract>
++
++## Code Map
++
++- `prisma/schema.prisma` `League` (~59–79) — `commentaryEnabled` already exists. Add `LeaguePerson` (`leagueId`, unique nullable `membershipId`) and `CommentaryRun` (`leagueId`, `nflSeasonYear`, `weekNumber` unique; status `PENDING` \| `SETTLED` \| `ABNORMAL`; `stopReason`; `outcomeText`; `lines` Json; `spend` Decimal default 0). `Pick` (~379–403) is the cell source: `outcome`, `pointsEarned`, `nflWeekNumber`, `teamId`, `leagueMembershipId`, `seasonId`. `LeagueWeekEmailConfig` (~354–377) already uses the same league-week key. Migration folder pattern `YYYYMMDDHHMMSS_description`.
++- `src/lib/league/player-membership-where.ts` `leaguePlayerMembershipWhere` (~8–18) — the membership set to link. Invite lists stay on memberships.
++- `src/lib/email/get-tuesday-digest-data.ts` `getTuesdayDigestData` (~75–82) — select and return `commentaryEnabled`. Today the type allows it (~22–23) but the loader omits it, so cron and admin send never see the flag. `nflSeasonYear` and `weekNumber` on the payload are the run key.
++- `src/lib/email/send-tuesday-digest.ts` `sendTuesdayDigest` (~26–258) — suppression returns at ~62–111 before any commentary work. The recipient `createElement` (~144–162) has an empty `commentaryEnabled` spread (~160–161). Run once after suppression, before the loop, and pass the render text into the template. A runner failure must not skip the scores send.
++- `src/lib/email/templates/TuesdayDigestEmail.tsx` — props (~34–43) have no commentary field. Insert a `Weekly note` section after the jailed-team block (~139–144) and before `PrimaryCta` (~146). Reuse `sectionStyle`, `subheadingStyle`, and `textStyle`. Body is the stored sentences or the quiet sentence, not cells and not `stopReason`. Commissioner note stays at ~148–155.
++- `src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts` `GET` (~66–83) — same props, read the stored row, never call the runner.
++- `src/lib/scoring/get-league-peer-pick-history.ts` (~12–24) — do not use; `teamAbbreviation` is null while the window is open.
++- `src/lib/reports/reports-config.ts` (~3–8) — pattern for a server env getter. Add `COMMENTARY_API_KEY`, `COMMENTARY_MODEL_ID`, `COMMENTARY_INPUT_USD_PER_MILLION`, and `COMMENTARY_OUTPUT_USD_PER_MILLION` to `.env.example` as server-only, with no chosen model id.
++- `package.json` — `ai` is not a dependency. Zod `^4.3.6` is. No `src/lib/commentary/` yet. `send-tuesday-digest.test.ts` (~161–197) asserts both flag values skip the section and mocks a `commentaryRun` delegate that does not exist yet.
++
++## Tasks & Acceptance
++
++**Execution:**
++- `prisma/schema.prisma` -- add `LeaguePerson` and `CommentaryRun` plus a migration -- one run row and one person per player membership
++- `package.json` -- add the `ai` package and no provider package -- the only model client
++- `.env.example` -- document the four commentary env vars as server-only -- missing price is an observable stop
++- `src/lib/commentary/config.ts` -- parse the four env values and compute decimal spend; colocated test -- missing or non-numeric price does not call
++- `src/lib/commentary/lines.ts` -- Zod line schema and the drop rules; colocated test -- mismatch, banned phrases, unnamed season comparison, and a year the checker did not read are absent and not rewritten
++- `src/lib/commentary/persons.ts` -- link `leaguePlayerMembershipWhere` memberships, creating a person only when missing; colocated test -- a second run does not create a second person
++- `src/lib/commentary/view.ts` -- build this week's person, outcome, points, and team from `Pick`, with no secrets; re-read cited cells from the database; colocated test -- the checker does not trust the object passed to the model
++- `src/lib/commentary/runner.ts` -- insert, one SDK call, update that row; colocated test with the SDK mocked -- existing row, `missing_price`, and `model_error` do not call again and do not store the quiet line
++- `src/lib/email/get-tuesday-digest-data.ts` -- return `commentaryEnabled` from the league row and cover it in the colocated test -- callers can tell on from off
++- `src/lib/email/send-tuesday-digest.ts` -- on a delivering send with the flag true, run once and pass the settled text; update `send-tuesday-digest.test.ts` -- off, suppress, and an abnormal run still send scores and omit the section
++- `src/lib/email/templates/TuesdayDigestEmail.tsx` -- render `Weekly note` from the stored text only; extend `email-templates.test.tsx` -- the quiet sentence and kept sentences appear, cells and stop reasons do not
++- `src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts` -- pass the same stored text and do not call the runner -- preview cannot spend
++
++**Acceptance Criteria:**
++- Given commentary is on and the Tuesday send will deliver mail, when that league-week has no commentary row, then one row is inserted before the only model call and updated in place, and the digest shows the kept sentences or the exact quiet sentence.
++- Given a commentary row already exists, when a later Tuesday send or preview runs, then the model is not called, and the digest shows the note only when that row is `SETTLED`.
++- Given the send is suppressed, commentary is off, the price or key is missing, or the model call fails, when the scores email is produced, then it has no commentary section, and a new abnormal row does not contain the quiet sentence.
++- Given a cited cell or a drop rule fails, when the row is settled, then that sentence is absent, remaining sentences are the model's words, and there is no fourth line.
++- Given a member opens a page in the app, when the page renders, then it does not show this note and it does not call the model.
++
++## Spec Change Log
++
++## Review Triage Log
++
++## Design Notes
++
++The model proposes the whole list in the one call this story allows. The `$1` ceiling is the reason a later story must not add a follow-up call; this runner never makes one, even when the first list is short and the spend is under `$1`. Lines the call already returned are still checked. The ceiling does not delete a line from that call.
++
++Story 10.5 is what adds book rows and other years to the view. Until then a cited cell matches only this week's `Pick`. A line about another year fails the re-read and is dropped, so an empty book still lets the run finish.
++
++The member-facing note is the sentence text under the heading `Weekly note`. Cells stay on the row for the checker. Story 10.4 is what puts the stored outcome on the admin email screen and adds debug.
++
++## Verification
++
++**Commands:**
++- `npm test` -- expected: commentary unit tests and the updated digest tests pass, including no section on off, suppress, missing price, and model error
++- `npm run db:generate` -- expected: Prisma client includes `LeaguePerson` and `CommentaryRun`
+diff --git a/package-lock.json b/package-lock.json
+index 8785e8b..df6838d 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -19,6 +19,7 @@
+         "@prisma/client": "^7.8.0",
+         "@react-email/components": "^1.0.12",
+         "@vercel/blob": "^2.7.0",
++        "ai": "^7.0.173",
+         "bcryptjs": "^3.0.3",
+         "date-fns": "^4.1.0",
+         "date-fns-tz": "^3.2.0",
+@@ -54,6 +55,62 @@
+         "vitest": "^3.2.4"
+       }
+     },
++    "node_modules/@ai-sdk/gateway": {
++      "version": "4.0.146",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/gateway/-/gateway-4.0.146.tgz",
++      "integrity": "sha512-rJ5NQSyjnpo6HSBEYc9Ff6k1EROUuB7KeAfHYVbVDsk68ynY0Eb8JeWflZKXlT6NhYgqyCiBDxE5blXWACXMKQ==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.38",
++        "@ai-sdk/provider-utils": "5.0.81",
++        "@vercel/oidc": "3.2.0"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
++    "node_modules/@ai-sdk/gateway/node_modules/@vercel/oidc": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/@vercel/oidc/-/oidc-3.2.0.tgz",
++      "integrity": "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">= 20"
++      }
++    },
++    "node_modules/@ai-sdk/provider": {
++      "version": "4.0.38",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/provider/-/provider-4.0.38.tgz",
++      "integrity": "sha512-GElz70UUCuDFFyD6m6aQJFgRY0HEABQzB5otzgkrisYaF5mnss7o0upAmbBTSD6KWiM9h7lZm1ls2c7xzHR8CA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "json-schema": "^0.4.0"
++      },
++      "engines": {
++        "node": ">=22"
++      }
++    },
++    "node_modules/@ai-sdk/provider-utils": {
++      "version": "5.0.81",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/provider-utils/-/provider-utils-5.0.81.tgz",
++      "integrity": "sha512-pfvvdQ3d1WxdBuug/mnGEP6E48cPokwD8dMBnsFeeAUp0/rb/H2aj0f3mwOiY62gu/Cu5GO44e+SE5nDHyBWMA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.38",
++        "@standard-schema/spec": "^1.1.0",
++        "@workflow/serde": "4.1.0",
++        "eventsource-parser": "^3.0.8"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
+     "node_modules/@alloc/quick-lru": {
+       "version": "5.2.0",
+       "resolved": "https://registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz",
+@@ -3636,7 +3693,6 @@
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
+       "integrity": "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==",
+-      "devOptional": true,
+       "license": "MIT"
+     },
+     "node_modules/@swc/helpers": {
+@@ -4098,7 +4154,7 @@
+       "version": "19.2.3",
+       "resolved": "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz",
+       "integrity": "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==",
+-      "devOptional": true,
++      "dev": true,
+       "license": "MIT",
+       "peerDependencies": {
+         "@types/react": "^19.2.0"
+@@ -4864,6 +4920,12 @@
+         "url": "https://opencollective.com/vitest"
+       }
+     },
++    "node_modules/@workflow/serde": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/@workflow/serde/-/serde-4.1.0.tgz",
++      "integrity": "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==",
++      "license": "Apache-2.0"
++    },
+     "node_modules/accepts": {
+       "version": "1.3.8",
+       "resolved": "https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz",
+@@ -4921,6 +4983,23 @@
+         "acorn": "^6.0.0 || ^7.0.0 || ^8.0.0"
+       }
+     },
++    "node_modules/ai": {
++      "version": "7.0.173",
++      "resolved": "https://registry.npmjs.org/ai/-/ai-7.0.173.tgz",
++      "integrity": "sha512-dLea37zT1h7cjkUsBprU4Rq35HJqhtHHaq1jTAXjHQoyfpeswpgCrhjZJWdWc10gjEAxmz114py7iLGQ3xIMxw==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/gateway": "4.0.146",
++        "@ai-sdk/provider": "4.0.38",
++        "@ai-sdk/provider-utils": "5.0.81"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
+     "node_modules/ajv": {
+       "version": "6.14.0",
+       "resolved": "https://registry.npmjs.org/ajv/-/ajv-6.14.0.tgz",
+@@ -7003,6 +7082,15 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/eventsource-parser": {
++      "version": "3.1.1",
++      "resolved": "https://registry.npmjs.org/eventsource-parser/-/eventsource-parser-3.1.1.tgz",
++      "integrity": "sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18.0.0"
++      }
++    },
+     "node_modules/execa": {
+       "version": "5.1.1",
+       "resolved": "https://registry.npmjs.org/execa/-/execa-5.1.1.tgz",
+@@ -8464,6 +8552,12 @@
+       "integrity": "sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==",
+       "license": "MIT"
+     },
++    "node_modules/json-schema": {
++      "version": "0.4.0",
++      "resolved": "https://registry.npmjs.org/json-schema/-/json-schema-0.4.0.tgz",
++      "integrity": "sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==",
++      "license": "(AFL-2.1 OR BSD-3-Clause)"
++    },
+     "node_modules/json-schema-traverse": {
+       "version": "0.4.1",
+       "resolved": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz",
+@@ -12465,6 +12559,24 @@
+         }
+       }
+     },
++    "node_modules/vite-node/node_modules/yaml": {
++      "version": "2.9.1",
++      "resolved": "https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz",
++      "integrity": "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==",
++      "dev": true,
++      "license": "ISC",
++      "optional": true,
++      "peer": true,
++      "bin": {
++        "yaml": "bin.mjs"
++      },
++      "engines": {
++        "node": ">= 14.6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/eemeli"
++      }
++    },
+     "node_modules/vitest": {
+       "version": "3.2.4",
+       "resolved": "https://registry.npmjs.org/vitest/-/vitest-3.2.4.tgz",
+@@ -12678,6 +12790,24 @@
+         }
+       }
+     },
++    "node_modules/vitest/node_modules/yaml": {
++      "version": "2.9.1",
++      "resolved": "https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz",
++      "integrity": "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==",
++      "dev": true,
++      "license": "ISC",
++      "optional": true,
++      "peer": true,
++      "bin": {
++        "yaml": "bin.mjs"
++      },
++      "engines": {
++        "node": ">= 14.6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/eemeli"
++      }
++    },
+     "node_modules/w3c-xmlserializer": {
+       "version": "5.0.0",
+       "resolved": "https://registry.npmjs.org/w3c-xmlserializer/-/w3c-xmlserializer-5.0.0.tgz",
+diff --git a/package.json b/package.json
+index 8271081..8d1ea0e 100644
+--- a/package.json
++++ b/package.json
+@@ -32,6 +32,7 @@
+     "@prisma/client": "^7.8.0",
+     "@react-email/components": "^1.0.12",
+     "@vercel/blob": "^2.7.0",
++    "ai": "^7.0.173",
+     "bcryptjs": "^3.0.3",
+     "date-fns": "^4.1.0",
+     "date-fns-tz": "^3.2.0",
+diff --git a/prisma/migrations/20261114031100_add_league_person_and_commentary_run/migration.sql b/prisma/migrations/20261114031100_add_league_person_and_commentary_run/migration.sql
+new file mode 100644
+index 0000000..f5d3ec7
+--- /dev/null
++++ b/prisma/migrations/20261114031100_add_league_person_and_commentary_run/migration.sql
+@@ -0,0 +1,51 @@
++-- CreateEnum
++CREATE TYPE "commentary_run_status" AS ENUM ('PENDING', 'SETTLED', 'ABNORMAL');
++
++-- CreateTable
++CREATE TABLE "league_persons" (
++    "id" TEXT NOT NULL,
++    "league_id" TEXT NOT NULL,
++    "membership_id" TEXT,
++    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updated_at" TIMESTAMPTZ NOT NULL,
++
++    CONSTRAINT "league_persons_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateTable
++CREATE TABLE "commentary_runs" (
++    "id" TEXT NOT NULL,
++    "league_id" TEXT NOT NULL,
++    "nfl_season_year" INTEGER NOT NULL,
++    "week_number" INTEGER NOT NULL,
++    "status" "commentary_run_status" NOT NULL,
++    "stop_reason" TEXT,
++    "outcome_text" TEXT,
++    "lines" JSONB,
++    "spend" DECIMAL(14,8) NOT NULL DEFAULT 0,
++    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updated_at" TIMESTAMPTZ NOT NULL,
++
++    CONSTRAINT "commentary_runs_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "league_persons_membership_id_key" ON "league_persons"("membership_id");
++
++-- CreateIndex
++CREATE INDEX "league_persons_league_id_idx" ON "league_persons"("league_id");
++
++-- CreateIndex
++CREATE INDEX "commentary_runs_league_id_nfl_season_year_idx" ON "commentary_runs"("league_id", "nfl_season_year");
++
++-- CreateIndex
++CREATE UNIQUE INDEX "commentary_runs_league_id_nfl_season_year_week_number_key" ON "commentary_runs"("league_id", "nfl_season_year", "week_number");
++
++-- AddForeignKey
++ALTER TABLE "league_persons" ADD CONSTRAINT "league_persons_league_id_fkey" FOREIGN KEY ("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "league_persons" ADD CONSTRAINT "league_persons_membership_id_fkey" FOREIGN KEY ("membership_id") REFERENCES "league_memberships"("id") ON DELETE SET NULL ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "commentary_runs" ADD CONSTRAINT "commentary_runs_league_id_fkey" FOREIGN KEY ("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 263bfd4..01e4c1f 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -74,6 +74,8 @@ model League {
+   simGames         LeagueSimGame[]
+   simOddsSnapshotRuns LeagueSimOddsSnapshotRun[]
+   weekJailedTeams  LeagueWeekJailedTeam[]
++  leaguePersons    LeaguePerson[]
++  commentaryRuns   CommentaryRun[]
+ 
+   @@map("leagues")
+ }
+@@ -119,6 +121,7 @@ model LeagueMembership {
+   picks  Pick[]
+   auditEntriesAsAdmin  AuditLogEntry[] @relation("AuditAdmin")
+   auditEntriesAsTarget AuditLogEntry[] @relation("AuditTarget")
++  leaguePerson         LeaguePerson?
+ 
+   @@unique([userId, leagueId])
+   @@map("league_memberships")
+@@ -376,6 +379,53 @@ model LeagueWeekEmailConfig {
+   @@map("league_week_email_configs")
+ }
+ 
++/// A person in one league. `membershipId` is set for a current player and null for a book-only person.
++/// At most one person points at a membership.
++model LeaguePerson {
++  id           String   @id @default(cuid())
++  leagueId     String   @map("league_id")
++  membershipId String?  @unique @map("membership_id")
++  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
++  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
++
++  league     League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
++  /// SetNull: the person can outlive the membership (a later book row has no login).
++  membership LeagueMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
++
++  @@index([leagueId])
++  @@map("league_persons")
++}
++
++enum CommentaryRunStatus {
++  PENDING
++  SETTLED
++  ABNORMAL
++
++  @@map("commentary_run_status")
++}
++
++/// One checked Tuesday note per league-week. Inserted as `PENDING` before the only model call.
++model CommentaryRun {
++  id            String               @id @default(cuid())
++  leagueId      String               @map("league_id")
++  nflSeasonYear Int                  @map("nfl_season_year")
++  weekNumber    Int                  @map("week_number")
++  status        CommentaryRunStatus
++  stopReason    String?              @map("stop_reason")
++  outcomeText   String?              @map("outcome_text") @db.Text
++  lines         Json?
++  /// Decimal dollars for the one model call. Default 0 when the call did not report usage.
++  spend         Decimal              @default(0) @db.Decimal(14, 8)
++  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz
++  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz
++
++  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
++
++  @@unique([leagueId, nflSeasonYear, weekNumber])
++  @@index([leagueId, nflSeasonYear])
++  @@map("commentary_runs")
++}
++
+ /// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.
+ model Pick {
+   id                 String   @id @default(cuid())
+diff --git a/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.test.ts b/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.test.ts
+new file mode 100644
+index 0000000..12c53f9
+--- /dev/null
++++ b/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.test.ts
+@@ -0,0 +1,129 @@
++import { NextRequest } from "next/server";
++import { beforeEach, describe, expect, it, vi } from "vitest";
++
++const mockAuth = vi.fn();
++const mockAccess = vi.fn();
++const mockGetTuesdayDigestData = vi.fn();
++const mockEmailConfigFindUnique = vi.fn();
++const mockCommentaryRunFindUnique = vi.fn();
++const mockRunWeeklyCommentary = vi.fn();
++const mockGenerateText = vi.fn();
++
++vi.mock("@/lib/auth", () => ({
++  auth: () => mockAuth(),
++}));
++
++vi.mock("@/lib/league/require-league-admin", () => ({
++  requireLeagueAdminAccess: () => mockAccess(),
++  forbiddenAdminJson: () =>
++    Response.json({ error: { code: "FORBIDDEN", message: "Admin access required" } }, { status: 403 }),
++}));
++
++vi.mock("@/lib/email/get-tuesday-digest-data", async () => {
++  const actual = await vi.importActual<typeof import("@/lib/email/get-tuesday-digest-data")>(
++    "@/lib/email/get-tuesday-digest-data",
++  );
++  return {
++    ...actual,
++    getTuesdayDigestData: (...args: unknown[]) => mockGetTuesdayDigestData(...args),
++  };
++});
++
++vi.mock("@/lib/db", () => ({
++  prisma: {
++    leagueWeekEmailConfig: {
++      findUnique: (...args: unknown[]) => mockEmailConfigFindUnique(...args),
++    },
++    commentaryRun: {
++      findUnique: (...args: unknown[]) => mockCommentaryRunFindUnique(...args),
++    },
++  },
++}));
++
++vi.mock("@/lib/commentary/runner", () => ({
++  runWeeklyCommentary: (...args: unknown[]) => mockRunWeeklyCommentary(...args),
++}));
++
++vi.mock("ai", () => ({
++  generateText: (...args: unknown[]) => mockGenerateText(...args),
++  createGateway: () => () => ({}),
++  Output: { array: (spec: unknown) => spec },
++}));
++
++import { GET } from "./route";
++
++const LEAGUE_ID = "lg-1";
++
++const digest = {
++  leagueName: "Office League",
++  leagueId: LEAGUE_ID,
++  isTestLeague: false,
++  commentaryEnabled: true,
++  nflSeasonYear: 2026,
++  weekNumber: 4,
++  isPreviewWeek: false,
++  hasConcludedFirstCompetitionWeek: true,
++  pickDeadlineUtc: null,
++  standings: [],
++  jailedTeamName: "Eagles",
++  jailedTeamAbbreviation: "PHI",
++  picksUrl: "http://localhost:3000/leagues/lg-1/picks",
++  members: [],
++};
++
++function call() {
++  return GET(new NextRequest(`http://localhost:3000/api/leagues/${LEAGUE_ID}/email/tuesday-preview`), {
++    params: Promise.resolve({ leagueId: LEAGUE_ID }),
++  });
++}
++
++describe("GET tuesday preview", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
++    mockAccess.mockResolvedValue({ isAdmin: true });
++    mockGetTuesdayDigestData.mockResolvedValue(digest);
++    mockEmailConfigFindUnique.mockResolvedValue({ bodyText: "Commissioner says hello." });
++    mockCommentaryRunFindUnique.mockResolvedValue(null);
++  });
++
++  it("renders a settled note and does not call the model", async () => {
++    mockCommentaryRunFindUnique.mockResolvedValue({
++      status: "SETTLED",
++      outcomeText: "Alex won the week.",
++    });
++
++    const response = await call();
++    const html = await response.text();
++
++    expect(response.status).toBe(200);
++    expect(html).toContain("Weekly note");
++    expect(html).toContain("Alex won the week.");
++    expect(html).toContain("Commissioner says hello.");
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
++    expect(mockGenerateText).not.toHaveBeenCalled();
++  });
++
++  it("omits the section for an abnormal row and when commentary is off", async () => {
++    mockCommentaryRunFindUnique.mockResolvedValue({
++      status: "ABNORMAL",
++      outcomeText: null,
++    });
++
++    const abnormal = await (await call()).text();
++    expect(abnormal).not.toContain("Weekly note");
++    expect(abnormal).not.toContain("Quiet week");
++
++    mockGetTuesdayDigestData.mockResolvedValue({ ...digest, commentaryEnabled: false });
++    mockCommentaryRunFindUnique.mockResolvedValue({
++      status: "SETTLED",
++      outcomeText: "Alex won the week.",
++    });
++
++    const off = await (await call()).text();
++    expect(off).not.toContain("Weekly note");
++    expect(off).not.toContain("Alex won the week.");
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
++    expect(mockGenerateText).not.toHaveBeenCalled();
++  });
++});
+diff --git a/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts b/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts
+index 8108df0..ecbf5d4 100644
+--- a/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts
++++ b/src/app/api/leagues/[leagueId]/email/tuesday-preview/route.ts
+@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
+ import type { NextRequest } from "next/server";
+ import { createElement } from "react";
+ 
++import { commentarySectionText } from "@/lib/commentary/lines";
+ import { auth } from "@/lib/auth";
+ import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
+ import { prisma } from "@/lib/db";
+@@ -63,6 +64,21 @@ export async function GET(
+       select: { bodyText: true },
+     });
+ 
++    let weeklyNote: string | null = null;
++    if (data.commentaryEnabled) {
++      const run = await prisma.commentaryRun.findUnique({
++        where: {
++          leagueId_nflSeasonYear_weekNumber: {
++            leagueId,
++            nflSeasonYear: data.nflSeasonYear,
++            weekNumber: data.weekNumber,
++          },
++        },
++        select: { status: true, outcomeText: true },
++      });
++      weeklyNote = commentarySectionText(run);
++    }
++
+     const html = await render(
+       createElement(TuesdayDigestEmail, {
+         leagueName: data.leagueName,
+@@ -79,6 +95,7 @@ export async function GET(
+         jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+         picksUrl: data.picksUrl,
+         adminNote: config?.bodyText ?? null,
++        weeklyNote,
+         isTestLeague: data.isTestLeague,
+       }),
+     );
+diff --git a/src/lib/commentary/config.test.ts b/src/lib/commentary/config.test.ts
+new file mode 100644
+index 0000000..1c4b437
+--- /dev/null
++++ b/src/lib/commentary/config.test.ts
+@@ -0,0 +1,45 @@
++import { Prisma } from "@prisma/client";
++import { describe, expect, it } from "vitest";
++
++import { commentarySpend, parseCommentaryPrice, readCommentaryConfig } from "./config";
++
++const COMPLETE = {
++  COMMENTARY_API_KEY: "secret-key",
++  COMMENTARY_MODEL_ID: "provider/model",
++  COMMENTARY_INPUT_USD_PER_MILLION: "3",
++  COMMENTARY_OUTPUT_USD_PER_MILLION: "15",
++};
++
++describe("readCommentaryConfig", () => {
++  it("reads the four server values", () => {
++    expect(readCommentaryConfig(COMPLETE)).toEqual({
++      apiKey: "secret-key",
++      modelId: "provider/model",
++      inputUsdPerMillion: 3,
++      outputUsdPerMillion: 15,
++    });
++  });
++
++  it("returns null when a value is missing or a price is not a finite number >= 0", () => {
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_API_KEY: "  " })).toBeNull();
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_MODEL_ID: undefined })).toBeNull();
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_INPUT_USD_PER_MILLION: "nope" })).toBeNull();
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_OUTPUT_USD_PER_MILLION: "-1" })).toBeNull();
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_INPUT_USD_PER_MILLION: "Infinity" })).toBeNull();
++    expect(readCommentaryConfig({ ...COMPLETE, COMMENTARY_OUTPUT_USD_PER_MILLION: "" })).toBeNull();
++    expect(parseCommentaryPrice("0")).toBe(0);
++    expect(parseCommentaryPrice("1.5")).toBe(1.5);
++  });
++});
++
++describe("commentarySpend", () => {
++  it("computes decimal dollars from tokens and the price per million", () => {
++    const spend = commentarySpend({
++      inputTokens: 100,
++      outputTokens: 50,
++      inputUsdPerMillion: 3,
++      outputUsdPerMillion: 15,
++    });
++    expect(spend.equals(new Prisma.Decimal("0.00105"))).toBe(true);
++  });
++});
+diff --git a/src/lib/commentary/config.ts b/src/lib/commentary/config.ts
+new file mode 100644
+index 0000000..f0cdc4f
+--- /dev/null
++++ b/src/lib/commentary/config.ts
+@@ -0,0 +1,71 @@
++import "server-only";
++
++import { Prisma } from "@prisma/client";
++
++export type CommentaryConfig = {
++  apiKey: string;
++  modelId: string;
++  inputUsdPerMillion: number;
++  outputUsdPerMillion: number;
++};
++
++const DECIMAL_PRICE = /^[+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/;
++
++function requiredText(value: string | undefined): string | null {
++  if (value == null) {
++    return null;
++  }
++  const trimmed = value.trim();
++  return trimmed === "" ? null : trimmed;
++}
++
++/** Finite decimal price `>= 0`, or null when the env value is missing or not that number. */
++export function parseCommentaryPrice(value: string | undefined): number | null {
++  if (value == null) {
++    return null;
++  }
++  const trimmed = value.trim();
++  if (trimmed === "" || !DECIMAL_PRICE.test(trimmed)) {
++    return null;
++  }
++  const parsed = Number(trimmed);
++  if (!Number.isFinite(parsed) || parsed < 0) {
++    return null;
++  }
++  return parsed;
++}
++
++/** The four server env values, or null when any is missing or a price is not a finite number `>= 0`. */
++export function readCommentaryConfig(
++  env: Record<string, string | undefined> = process.env,
++): CommentaryConfig | null {
++  const apiKey = requiredText(env.COMMENTARY_API_KEY);
++  const modelId = requiredText(env.COMMENTARY_MODEL_ID);
++  const inputUsdPerMillion = parseCommentaryPrice(env.COMMENTARY_INPUT_USD_PER_MILLION);
++  const outputUsdPerMillion = parseCommentaryPrice(env.COMMENTARY_OUTPUT_USD_PER_MILLION);
++  if (
++    apiKey == null ||
++    modelId == null ||
++    inputUsdPerMillion == null ||
++    outputUsdPerMillion == null
++  ) {
++    return null;
++  }
++  return { apiKey, modelId, inputUsdPerMillion, outputUsdPerMillion };
++}
++
++/** Decimal dollars: tokens / 1_000_000 times the configured price per million. */
++export function commentarySpend(args: {
++  inputTokens: number;
++  outputTokens: number;
++  inputUsdPerMillion: number;
++  outputUsdPerMillion: number;
++}): Prisma.Decimal {
++  const input = new Prisma.Decimal(args.inputTokens)
++    .div(1_000_000)
++    .mul(new Prisma.Decimal(args.inputUsdPerMillion));
++  const output = new Prisma.Decimal(args.outputTokens)
++    .div(1_000_000)
++    .mul(new Prisma.Decimal(args.outputUsdPerMillion));
++  return input.add(output);
++}
+diff --git a/src/lib/commentary/lines.test.ts b/src/lib/commentary/lines.test.ts
+new file mode 100644
+index 0000000..8741f6a
+--- /dev/null
++++ b/src/lib/commentary/lines.test.ts
+@@ -0,0 +1,136 @@
++import { describe, expect, it } from "vitest";
++
++import {
++  QUIET_WEEK_SENTENCE,
++  commentarySectionText,
++  keepCheckedLines,
++  outcomeTextForKeptLines,
++  parseCommentaryLines,
++  type CommentaryLine,
++  type FreshPickCell,
++} from "./lines";
++
++const fresh: FreshPickCell = {
++  leaguePersonId: "person-1",
++  year: 2026,
++  week: 4,
++  outcome: "WIN",
++  points: 2,
++  teamAbbreviation: "PHI",
++};
++
++function line(sentence: string, cell: Partial<CommentaryLine["cells"][number]> = {}): CommentaryLine {
++  return {
++    sentence,
++    cells: [
++      {
++        leaguePersonId: fresh.leaguePersonId,
++        year: fresh.year,
++        week: fresh.week,
++        outcome: fresh.outcome,
++        points: fresh.points,
++        teamAbbreviation: fresh.teamAbbreviation,
++        ...cell,
++      },
++    ],
++  };
++}
++
++describe("parseCommentaryLines", () => {
++  it("keeps the first three lines when the model returns more", () => {
++    const parsed = parseCommentaryLines([
++      line("One."),
++      line("Two."),
++      line("Three."),
++      { sentence: 4 },
++    ]);
++    expect(parsed?.map((entry) => entry.sentence)).toEqual(["One.", "Two.", "Three."]);
++  });
++
++  it("returns null when the payload is not a list of lines", () => {
++    expect(parseCommentaryLines(null)).toBeNull();
++    expect(parseCommentaryLines({ lines: [] })).toBeNull();
++    expect(parseCommentaryLines([{ sentence: "", cells: [] }])).toBeNull();
++  });
++});
++
++describe("keepCheckedLines", () => {
++  it("drops a mismatched cell and keeps the other sentence verbatim", () => {
++    const keptSentence = "  Alex won the week.  ";
++    const kept = keepCheckedLines(
++      [line("Alex lost.", { outcome: "LOSS" }), line(keptSentence)],
++      [fresh],
++    );
++    expect(kept.map((entry) => entry.sentence)).toEqual([keptSentence]);
++    expect(kept).toHaveLength(1);
++  });
++
++  it("drops league history and all-time in any case", () => {
++    const kept = keepCheckedLines(
++      [line("This is League History."), line("The ALL-TIME best."), line("Alex won the week.")],
++      [fresh],
++    );
++    expect(kept.map((entry) => entry.sentence)).toEqual(["Alex won the week."]);
++  });
++
++  it("drops an unnamed season comparison and a year the checker did not read", () => {
++    const dropped = keepCheckedLines(
++      [
++        line("Better than last year."),
++        line("Better than the Previous Year."),
++        line("The prior year was different."),
++      ],
++      [fresh],
++    );
++    expect(dropped).toEqual([]);
++    expect(
++      keepCheckedLines(
++        [
++          line("The year before was quieter."),
++          line("Better than the previous season."),
++          line("In 1999 Alex won."),
++        ],
++        [fresh],
++      ),
++    ).toEqual([]);
++
++    const named = "Better than last year, 2026.";
++    const kept = keepCheckedLines([line(named)], [fresh]);
++    expect(kept.map((entry) => entry.sentence)).toEqual([named]);
++  });
++
++  it("drops a cited team that does not match and keeps a cell that omits the team", () => {
++    const omitted = "Alex won the week.";
++    const kept = keepCheckedLines(
++      [line("Wrong team.", { teamAbbreviation: "DAL" }), line(omitted, { teamAbbreviation: null })],
++      [fresh],
++    );
++    expect(kept.map((entry) => entry.sentence)).toEqual([omitted]);
++  });
++
++  it("does not keep a fourth line or a sentence with no cited cell", () => {
++    const fourth = "Fourth stays out.";
++    const kept = keepCheckedLines(
++      [line("One."), line("Two."), line("Three."), line(fourth), { sentence: "No cells.", cells: [] }],
++      [fresh],
++    );
++    expect(kept.map((entry) => entry.sentence)).toEqual(["One.", "Two.", "Three."]);
++    expect(kept.map((entry) => entry.sentence)).not.toContain(fourth);
++  });
++});
++
++describe("outcome text", () => {
++  it("stores the quiet sentence only when nothing was kept", () => {
++    expect(outcomeTextForKeptLines([])).toBe(QUIET_WEEK_SENTENCE);
++    expect(outcomeTextForKeptLines([line("Alex won the week.")])).toBe("Alex won the week.");
++  });
++
++  it("shows settled text and hides pending or abnormal rows", () => {
++    expect(commentarySectionText({ status: "SETTLED", outcomeText: QUIET_WEEK_SENTENCE })).toBe(
++      QUIET_WEEK_SENTENCE,
++    );
++    expect(commentarySectionText({ status: "PENDING", outcomeText: QUIET_WEEK_SENTENCE })).toBeNull();
++    expect(commentarySectionText({ status: "ABNORMAL", outcomeText: null })).toBeNull();
++    expect(commentarySectionText(null)).toBeNull();
++  });
++});
+diff --git a/src/lib/commentary/lines.ts b/src/lib/commentary/lines.ts
+new file mode 100644
+index 0000000..4427d14
+--- /dev/null
++++ b/src/lib/commentary/lines.ts
+@@ -0,0 +1,148 @@
++import { z } from "zod";
++
++/** Written by the app when a normal finish keeps zero lines. The model does not write this. */
++export const QUIET_WEEK_SENTENCE = "Quiet week. Nothing new for the record book.";
++
++const BANNED_PHRASES = ["league history", "all-time"] as const;
++
++/** Season comparisons that are dropped when the sentence names no 4-digit year. */
++const UNNAMED_SEASON_COMPARISONS = [
++  "last year",
++  "previous year",
++  "prior year",
++  "year before",
++  "previous season",
++] as const;
++
++export const commentaryCellSchema = z.object({
++  leaguePersonId: z.string().min(1),
++  year: z.number().int(),
++  week: z.number().int(),
++  outcome: z.enum(["WIN", "LOSS", "TIE"]),
++  points: z.number().finite(),
++  teamAbbreviation: z.string().nullish(),
++});
++
++export const commentaryLineSchema = z.object({
++  sentence: z.string().min(1),
++  cells: z.array(commentaryCellSchema),
++});
++
++/** At most three lines. A longer model list is sliced before this parse. */
++export const commentaryLineListSchema = z.array(commentaryLineSchema).max(3);
++
++export type CommentaryCell = z.infer<typeof commentaryCellSchema>;
++export type CommentaryLine = z.infer<typeof commentaryLineSchema>;
++
++/** A cell the checker read from `Pick` for this season and week. */
++export type FreshPickCell = {
++  leaguePersonId: string;
++  year: number;
++  week: number;
++  outcome: "WIN" | "LOSS" | "TIE";
++  points: number;
++  teamAbbreviation: string;
++};
++
++export type CommentaryRunSection = {
++  status: "PENDING" | "SETTLED" | "ABNORMAL";
++  outcomeText: string | null;
++};
++
++/**
++ * Accept a model payload as a Zod list of at most three lines.
++ * Returns null when the payload is not that list. Extra lines beyond three are ignored.
++ */
++export function parseCommentaryLines(output: unknown): CommentaryLine[] | null {
++  if (!Array.isArray(output)) {
++    return null;
++  }
++  const parsed = commentaryLineListSchema.safeParse(output.slice(0, 3));
++  return parsed.success ? parsed.data : null;
++}
++
++function citedTeam(cell: CommentaryCell): string | null {
++  if (cell.teamAbbreviation == null || cell.teamAbbreviation === "") {
++    return null;
++  }
++  return cell.teamAbbreviation;
++}
++
++function cellMatchesRow(cell: CommentaryCell, row: FreshPickCell): boolean {
++  if (row.leaguePersonId !== cell.leaguePersonId) return false;
++  if (row.year !== cell.year) return false;
++  if (row.week !== cell.week) return false;
++  if (row.outcome !== cell.outcome) return false;
++  if (row.points !== cell.points) return false;
++  const team = citedTeam(cell);
++  if (team != null && team !== row.teamAbbreviation) return false;
++  return true;
++}
++
++export function citedCellMatchesFresh(cell: CommentaryCell, fresh: FreshPickCell[]): boolean {
++  return fresh.some((row) => cellMatchesRow(cell, row));
++}
++
++function fourDigitYears(sentence: string): string[] {
++  return sentence.match(/\b\d{4}\b/g) ?? [];
++}
++
++function sentenceIsDropped(sentence: string, matchedYears: number[]): boolean {
++  const lower = sentence.toLowerCase();
++  if (BANNED_PHRASES.some((phrase) => lower.includes(phrase))) {
++    return true;
++  }
++  const years = fourDigitYears(sentence);
++  if (years.length === 0 && UNNAMED_SEASON_COMPARISONS.some((phrase) => lower.includes(phrase))) {
++    return true;
++  }
++  const readYears = new Set(matchedYears.map(String));
++  return years.some((year) => !readYears.has(year));
++}
++
++/**
++ * Keep model sentences whose every cited cell matches a fresh read, in order, at most three.
++ * The sentence text is the model's. Dropped lines are absent. Nothing is rewritten or padded.
++ */
++export function keepCheckedLines(lines: CommentaryLine[], fresh: FreshPickCell[]): CommentaryLine[] {
++  const kept: CommentaryLine[] = [];
++  for (const line of lines.slice(0, 3)) {
++    if (line.cells.length === 0) {
++      continue;
++    }
++    const matchedYears: number[] = [];
++    let mismatch = false;
++    for (const cell of line.cells) {
++      const row = fresh.find((candidate) => cellMatchesRow(cell, candidate));
++      if (!row) {
++        mismatch = true;
++        break;
++      }
++      matchedYears.push(row.year);
++    }
++    if (mismatch || sentenceIsDropped(line.sentence, matchedYears)) {
++      continue;
++    }
++    kept.push(line);
++  }
++  return kept;
++}
++
++/** Settled display text: the kept sentences, or the quiet sentence when none were kept. */
++export function outcomeTextForKeptLines(lines: CommentaryLine[]): string {
++  if (lines.length === 0) {
++    return QUIET_WEEK_SENTENCE;
++  }
++  return lines.map((line) => line.sentence).join("\n");
++}
++
++/** Digest section text. Only a settled row with stored text renders. */
++export function commentarySectionText(row: CommentaryRunSection | null): string | null {
++  if (row?.status !== "SETTLED") {
++    return null;
++  }
++  if (row.outcomeText == null || row.outcomeText.trim() === "") {
++    return null;
++  }
++  return row.outcomeText;
++}
+diff --git a/src/lib/commentary/persons.test.ts b/src/lib/commentary/persons.test.ts
+new file mode 100644
+index 0000000..1a99ff5
+--- /dev/null
++++ b/src/lib/commentary/persons.test.ts
+@@ -0,0 +1,70 @@
++import { beforeEach, describe, expect, it, vi } from "vitest";
++
++const mockMembershipFindMany = vi.fn();
++const mockPersonFindUnique = vi.fn();
++const mockPersonCreate = vi.fn();
++
++vi.mock("@/lib/db", () => ({
++  prisma: {
++    leagueMembership: {
++      findMany: (...args: unknown[]) => mockMembershipFindMany(...args),
++    },
++    leaguePerson: {
++      findUnique: (...args: unknown[]) => mockPersonFindUnique(...args),
++      create: (...args: unknown[]) => mockPersonCreate(...args),
++    },
++  },
++}));
++
++import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
++
++import { linkLeaguePersons } from "./persons";
++
++describe("linkLeaguePersons", () => {
++  const linked = new Set<string>();
++
++  beforeEach(() => {
++    vi.clearAllMocks();
++    linked.clear();
++    mockMembershipFindMany.mockResolvedValue([{ id: "mem-1" }, { id: "mem-2" }]);
++    mockPersonFindUnique.mockImplementation(async (args: { where: { membershipId: string } }) => {
++      return linked.has(args.where.membershipId) ? { id: `person-${args.where.membershipId}` } : null;
++    });
++    mockPersonCreate.mockImplementation(async (args: { data: { membershipId: string } }) => {
++      linked.add(args.data.membershipId);
++      return { id: `person-${args.data.membershipId}` };
++    });
++  });
++
++  it("creates a person only for a membership that has none", async () => {
++    linked.add("mem-1");
++
++    await linkLeaguePersons("lg-1");
++
++    expect(mockMembershipFindMany).toHaveBeenCalledWith({
++      where: leaguePlayerMembershipWhere("lg-1"),
++      select: { id: true },
++    });
++    expect(mockPersonCreate).toHaveBeenCalledTimes(1);
++    expect(mockPersonCreate).toHaveBeenCalledWith({
++      data: { leagueId: "lg-1", membershipId: "mem-2" },
++    });
++  });
++
++  it("does not create a second person on a later run", async () => {
++    await linkLeaguePersons("lg-1");
++    await linkLeaguePersons("lg-1");
++
++    expect(mockPersonCreate).toHaveBeenCalledTimes(2);
++    expect(mockPersonCreate.mock.calls.map((call) => call[0].data.membershipId).sort()).toEqual([
++      "mem-1",
++      "mem-2",
++    ]);
++  });
++
++  it("treats a unique membership conflict as already linked", async () => {
++    mockPersonCreate.mockRejectedValueOnce({ code: "P2002" });
++
++    await expect(linkLeaguePersons("lg-1")).resolves.toBeUndefined();
++  });
++});
+diff --git a/src/lib/commentary/persons.ts b/src/lib/commentary/persons.ts
+new file mode 100644
+index 0000000..a3114c7
+--- /dev/null
++++ b/src/lib/commentary/persons.ts
+@@ -0,0 +1,38 @@
++import "server-only";
++
++import { prisma } from "@/lib/db";
++import { leaguePlayerMembershipWhere } from "@/lib/league/player-membership-where";
++
++function isUniqueViolation(error: unknown): boolean {
++  return (error as { code?: string }).code === "P2002";
++}
++
++/**
++ * Link every current player membership to one league person.
++ * Creates a person only when that membership has none. A second call does not create another.
++ */
++export async function linkLeaguePersons(leagueId: string): Promise<void> {
++  const memberships = await prisma.leagueMembership.findMany({
++    where: leaguePlayerMembershipWhere(leagueId),
++    select: { id: true },
++  });
++
++  for (const membership of memberships) {
++    const existing = await prisma.leaguePerson.findUnique({
++      where: { membershipId: membership.id },
++      select: { id: true },
++    });
++    if (existing) {
++      continue;
++    }
++    try {
++      await prisma.leaguePerson.create({
++        data: { leagueId, membershipId: membership.id },
++      });
++    } catch (error) {
++      if (!isUniqueViolation(error)) {
++        throw error;
++      }
++    }
++  }
++}
+diff --git a/src/lib/commentary/runner.test.ts b/src/lib/commentary/runner.test.ts
+new file mode 100644
+index 0000000..8651cac
+--- /dev/null
++++ b/src/lib/commentary/runner.test.ts
+@@ -0,0 +1,341 @@
++import { Prisma } from "@prisma/client";
++import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++
++const mockRunFindUnique = vi.fn();
++const mockRunCreate = vi.fn();
++const mockRunUpdate = vi.fn();
++const mockMembershipFindMany = vi.fn();
++const mockPersonFindUnique = vi.fn();
++const mockPersonCreate = vi.fn();
++const mockSeasonFindUnique = vi.fn();
++const mockPickFindMany = vi.fn();
++const mockGenerateText = vi.fn();
++let gatewayApiKey: string | undefined;
++
++vi.mock("@/lib/db", () => ({
++  prisma: {
++    commentaryRun: {
++      findUnique: (...args: unknown[]) => mockRunFindUnique(...args),
++      create: (...args: unknown[]) => mockRunCreate(...args),
++      update: (...args: unknown[]) => mockRunUpdate(...args),
++    },
++    leagueMembership: {
++      findMany: (...args: unknown[]) => mockMembershipFindMany(...args),
++    },
++    leaguePerson: {
++      findUnique: (...args: unknown[]) => mockPersonFindUnique(...args),
++      create: (...args: unknown[]) => mockPersonCreate(...args),
++    },
++    season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
++    pick: { findMany: (...args: unknown[]) => mockPickFindMany(...args) },
++  },
++}));
++
++vi.mock("ai", () => ({
++  createGateway: (settings: { apiKey?: string }) => {
++    gatewayApiKey = settings.apiKey;
++    return (modelId: string) => ({ modelId });
++  },
++  generateText: (...args: unknown[]) => mockGenerateText(...args),
++  Output: { array: (spec: unknown) => ({ kind: "array", spec }) },
++  NoObjectGeneratedError: {
++    isInstance: (error: unknown) =>
++      Boolean(
++        error &&
++          typeof error === "object" &&
++          (error as { name?: string }).name === "NoObjectGeneratedError",
++      ),
++  },
++}));
++
++import { QUIET_WEEK_SENTENCE } from "./lines";
++import { runWeeklyCommentary } from "./runner";
++
++const KEY = { leagueId: "lg-1", nflSeasonYear: 2026, weekNumber: 4 };
++
++const scoredPick = {
++  outcome: "WIN" as const,
++  pointsEarned: 2,
++  nflWeekNumber: 4,
++  team: { abbreviation: "PHI" },
++  leagueMembership: {
++    leaguePerson: { id: "person-1" },
++    user: { name: "Alex" },
++  },
++};
++
++function modelLine(sentence: string) {
++  return {
++    sentence,
++    cells: [
++      {
++        leaguePersonId: "person-1",
++        year: 2026,
++        week: 4,
++        outcome: "WIN" as const,
++        points: 2,
++        teamAbbreviation: "PHI",
++      },
++    ],
++  };
++}
++
++function stubConfig() {
++  vi.stubEnv("COMMENTARY_API_KEY", "test-key");
++  vi.stubEnv("COMMENTARY_MODEL_ID", "test/model");
++  vi.stubEnv("COMMENTARY_INPUT_USD_PER_MILLION", "3");
++  vi.stubEnv("COMMENTARY_OUTPUT_USD_PER_MILLION", "15");
++}
++
++function lastUpdate(): { data: Record<string, unknown> } {
++  const call = mockRunUpdate.mock.calls.at(-1)?.[0] as { data: Record<string, unknown> } | undefined;
++  if (!call) {
++    throw new Error("expected a commentary run update");
++  }
++  return call;
++}
++
++describe("runWeeklyCommentary", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++    gatewayApiKey = undefined;
++    stubConfig();
++    mockRunFindUnique.mockResolvedValue(null);
++    mockRunCreate.mockResolvedValue({ id: "run-1", status: "PENDING", outcomeText: null });
++    mockRunUpdate.mockResolvedValue({});
++    mockMembershipFindMany.mockResolvedValue([{ id: "mem-1" }]);
++    mockPersonFindUnique.mockResolvedValue({ id: "person-1" });
++    mockSeasonFindUnique.mockResolvedValue({ id: "season-1" });
++    mockPickFindMany.mockResolvedValue([scoredPick]);
++    mockGenerateText.mockResolvedValue({
++      output: [modelLine("Alex won the week.")],
++      usage: { inputTokens: 100, outputTokens: 50 },
++    });
++  });
++
++  afterEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  it.each([
++    ["PENDING", null, null],
++    ["ABNORMAL", "Quiet week. Nothing new for the record book.", null],
++    ["SETTLED", "Alex won the week.", "Alex won the week."],
++  ] as const)(
++    "an existing %s row does not call the model or write",
++    async (status, outcomeText, expected) => {
++      mockRunFindUnique.mockResolvedValue({ id: "run-1", status, outcomeText });
++
++      const result = await runWeeklyCommentary(KEY);
++
++      expect(result.outcomeText).toBe(expected);
++      expect(mockGenerateText).not.toHaveBeenCalled();
++      expect(mockRunCreate).not.toHaveBeenCalled();
++      expect(mockRunUpdate).not.toHaveBeenCalled();
++      expect(mockMembershipFindMany).not.toHaveBeenCalled();
++    },
++  );
++
++  it.each([
++    ["COMMENTARY_API_KEY", ""],
++    ["COMMENTARY_MODEL_ID", "   "],
++    ["COMMENTARY_INPUT_USD_PER_MILLION", "nope"],
++    ["COMMENTARY_OUTPUT_USD_PER_MILLION", "-2"],
++  ] as const)("missing or non-numeric %s does not call or store the quiet line", async (name, value) => {
++    vi.stubEnv(name, value);
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBeNull();
++    expect(mockGenerateText).not.toHaveBeenCalled();
++    expect(mockRunCreate).toHaveBeenCalledWith(
++      expect.objectContaining({ data: expect.objectContaining({ status: "PENDING" }) }),
++    );
++    expect(lastUpdate().data).toMatchObject({
++      status: "ABNORMAL",
++      stopReason: "missing_price",
++      outcomeText: null,
++    });
++    expect(JSON.stringify(lastUpdate().data)).not.toContain(QUIET_WEEK_SENTENCE);
++  });
++
++  it("stores model_error without the quiet line when the call throws", async () => {
++    mockGenerateText.mockRejectedValue(new Error("down"));
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBeNull();
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++    expect(lastUpdate().data).toMatchObject({
++      status: "ABNORMAL",
++      stopReason: "model_error",
++      outcomeText: null,
++    });
++    expect((lastUpdate().data.spend as Prisma.Decimal).equals(new Prisma.Decimal(0))).toBe(true);
++    expect(JSON.stringify(lastUpdate().data)).not.toContain(QUIET_WEEK_SENTENCE);
++  });
++
++  it("records spend when a thrown call reports usage", async () => {
++    const error = new Error("down") as Error & {
++      usage: { inputTokens: number; outputTokens: number };
++    };
++    error.usage = { inputTokens: 100, outputTokens: 50 };
++    mockGenerateText.mockRejectedValue(error);
++
++    await runWeeklyCommentary(KEY);
++
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++    expect((lastUpdate().data.spend as Prisma.Decimal).equals(new Prisma.Decimal("0.00105"))).toBe(
++      true,
++    );
++    expect(lastUpdate().data.outcomeText).toBeNull();
++    expect(lastUpdate().data.stopReason).toBe("model_error");
++  });
++
++  it("stores model_error when the output is not a Zod list", async () => {
++    mockGenerateText.mockResolvedValue({
++      output: { nope: true },
++      usage: { inputTokens: 100, outputTokens: 50 },
++    });
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBeNull();
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++    expect(lastUpdate().data).toMatchObject({
++      status: "ABNORMAL",
++      stopReason: "model_error",
++      outcomeText: null,
++    });
++    expect(JSON.stringify(lastUpdate().data)).not.toContain(QUIET_WEEK_SENTENCE);
++  });
++
++  it("inserts pending, calls once, and settles the kept sentence on that row", async () => {
++    let picksReadBeforeTheCall = 0;
++    mockGenerateText.mockImplementation(async () => {
++      picksReadBeforeTheCall = mockPickFindMany.mock.calls.length;
++      return {
++        output: [modelLine("Alex won the week.")],
++        usage: { inputTokens: 100, outputTokens: 50 },
++      };
++    });
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBe("Alex won the week.");
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++    expect(mockMembershipFindMany.mock.invocationCallOrder[0]).toBeLessThan(
++      mockRunCreate.mock.invocationCallOrder[0] ?? 0,
++    );
++    expect(mockRunCreate.mock.invocationCallOrder[0]).toBeLessThan(
++      mockGenerateText.mock.invocationCallOrder[0] ?? 0,
++    );
++    expect(picksReadBeforeTheCall).toBe(1);
++    expect(mockPickFindMany).toHaveBeenCalledTimes(2);
++    expect(mockRunUpdate).toHaveBeenCalledWith(
++      expect.objectContaining({
++        where: { id: "run-1" },
++        data: expect.objectContaining({
++          status: "SETTLED",
++          stopReason: null,
++          outcomeText: "Alex won the week.",
++        }),
++      }),
++    );
++    expect((lastUpdate().data.spend as Prisma.Decimal).equals(new Prisma.Decimal("0.00105"))).toBe(
++      true,
++    );
++    expect(gatewayApiKey).toBe("test-key");
++    const call = mockGenerateText.mock.calls[0]?.[0] as {
++      maxRetries: number;
++      model: { modelId: string };
++      prompt: string;
++    };
++    expect(call.maxRetries).toBe(0);
++    expect(call.model).toEqual({ modelId: "test/model" });
++    expect(call.prompt).toContain("person-1");
++    expect(call.prompt).not.toContain("test-key");
++    expect(call.prompt).not.toContain("password");
++    expect(call.prompt).not.toContain("@");
++  });
++
++  it("does not call again when the list is short and the spend is under $1", async () => {
++    mockGenerateText.mockResolvedValue({
++      output: [modelLine("Alex won the week.")],
++      usage: { inputTokens: 10, outputTokens: 5 },
++    });
++
++    await runWeeklyCommentary(KEY);
++
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++  });
++
++  it("keeps the first three matching lines and does not backfill a fourth", async () => {
++    mockGenerateText.mockResolvedValue({
++      output: [
++        modelLine("ALL-TIME best."),
++        modelLine("Alex won the week."),
++        modelLine("Second kept."),
++        modelLine("Fourth stays out."),
++      ],
++      usage: { inputTokens: 10, outputTokens: 5 },
++    });
++
++    const dropped = await runWeeklyCommentary(KEY);
++
++    expect(dropped.outcomeText).toBe("Alex won the week.\nSecond kept.");
++    expect(dropped.outcomeText).not.toContain("Fourth");
++    expect(dropped.outcomeText).not.toContain("ALL-TIME");
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++
++    mockRunFindUnique.mockResolvedValue(null);
++    mockGenerateText.mockResolvedValue({
++      output: [
++        modelLine("One."),
++        modelLine("Two."),
++        modelLine("Three."),
++        modelLine("Fourth stays out."),
++      ],
++      usage: { inputTokens: 10, outputTokens: 5 },
++    });
++
++    const three = await runWeeklyCommentary(KEY);
++
++    expect(three.outcomeText).toBe("One.\nTwo.\nThree.");
++    expect(three.outcomeText).not.toContain("Fourth");
++    expect(mockGenerateText).toHaveBeenCalledTimes(2);
++  });
++
++  it("stores the quiet sentence when the fresh read does not match the prompted view", async () => {
++    mockPickFindMany
++      .mockResolvedValueOnce([scoredPick])
++      .mockResolvedValueOnce([{ ...scoredPick, outcome: "LOSS", pointsEarned: 0 }]);
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBe(QUIET_WEEK_SENTENCE);
++    expect(lastUpdate().data).toMatchObject({
++      status: "SETTLED",
++      outcomeText: QUIET_WEEK_SENTENCE,
++      lines: [],
++    });
++    expect(mockGenerateText).toHaveBeenCalledTimes(1);
++  });
++
++  it("does not call when a concurrent insert already stored the row", async () => {
++    mockRunFindUnique
++      .mockResolvedValueOnce(null)
++      .mockResolvedValueOnce({
++        id: "run-existing",
++        status: "SETTLED",
++        outcomeText: "Already written.",
++      });
++    mockRunCreate.mockRejectedValue({ code: "P2002" });
++
++    const result = await runWeeklyCommentary(KEY);
++
++    expect(result.outcomeText).toBe("Already written.");
++    expect(mockGenerateText).not.toHaveBeenCalled();
++    expect(mockRunUpdate).not.toHaveBeenCalled();
++  });
++});
+diff --git a/src/lib/commentary/runner.ts b/src/lib/commentary/runner.ts
+new file mode 100644
+index 0000000..7939b9e
+--- /dev/null
++++ b/src/lib/commentary/runner.ts
+@@ -0,0 +1,234 @@
++import "server-only";
++
++import { createGateway, generateText, NoObjectGeneratedError, Output } from "ai";
++import { Prisma } from "@prisma/client";
++
++import { commentarySpend, readCommentaryConfig, type CommentaryConfig } from "@/lib/commentary/config";
++import {
++  commentaryLineSchema,
++  keepCheckedLines,
++  outcomeTextForKeptLines,
++  parseCommentaryLines,
++  type CommentaryLine,
++} from "@/lib/commentary/lines";
++import { linkLeaguePersons } from "@/lib/commentary/persons";
++import { buildCommentaryView, loadFreshPickCells, type CommentaryViewEntry } from "@/lib/commentary/view";
++import { prisma } from "@/lib/db";
++
++export const COMMENTARY_STOP_MISSING_PRICE = "missing_price";
++export const COMMENTARY_STOP_MODEL_ERROR = "model_error";
++
++type RunKey = {
++  leagueId: string;
++  nflSeasonYear: number;
++  weekNumber: number;
++};
++
++type StoredRun = {
++  id: string;
++  status: "PENDING" | "SETTLED" | "ABNORMAL";
++  outcomeText: string | null;
++};
++
++export type WeeklyCommentaryResult = {
++  outcomeText: string | null;
++};
++
++function isUniqueViolation(error: unknown): boolean {
++  return (error as { code?: string }).code === "P2002";
++}
++
++function settledText(row: StoredRun | null): string | null {
++  if (row?.status !== "SETTLED") {
++    return null;
++  }
++  return row.outcomeText;
++}
++
++function reportedTokenUsage(source: unknown): { inputTokens: number; outputTokens: number } | null {
++  if (!source || typeof source !== "object") {
++    return null;
++  }
++  const usage =
++    "usage" in source && source.usage && typeof source.usage === "object" ? source.usage : source;
++  if (!usage || typeof usage !== "object") {
++    return null;
++  }
++  const input = "inputTokens" in usage ? usage.inputTokens : undefined;
++  const output = "outputTokens" in usage ? usage.outputTokens : undefined;
++  if (typeof input !== "number" && typeof output !== "number") {
++    return null;
++  }
++  const inputTokens = typeof input === "number" && Number.isFinite(input) && input >= 0 ? input : 0;
++  const outputTokens =
++    typeof output === "number" && Number.isFinite(output) && output >= 0 ? output : 0;
++  return { inputTokens, outputTokens };
++}
++
++function spendFor(
++  usage: { inputTokens: number; outputTokens: number } | null,
++  config: CommentaryConfig | null,
++): Prisma.Decimal {
++  if (!usage || !config) {
++    return new Prisma.Decimal(0);
++  }
++  return commentarySpend({
++    inputTokens: usage.inputTokens,
++    outputTokens: usage.outputTokens,
++    inputUsdPerMillion: config.inputUsdPerMillion,
++    outputUsdPerMillion: config.outputUsdPerMillion,
++  });
++}
++
++function usageFromThrown(error: unknown): { inputTokens: number; outputTokens: number } | null {
++  if (NoObjectGeneratedError.isInstance(error)) {
++    return reportedTokenUsage({ usage: error.usage });
++  }
++  return reportedTokenUsage(error);
++}
++
++function promptFor(view: CommentaryViewEntry[]): string {
++  return [
++    "Write the Tuesday note for this league week.",
++    "Use only the results in the JSON. Each result is one league person for this week: person id, display name, year, week, outcome, points, and team abbreviation.",
++    "Return at most 3 lines. A line is one sentence plus every result that sentence cites.",
++    "Cite a result by its league person, year, week, outcome, points, and team abbreviation when you include one.",
++    "Do not invent a person, score, team, or season.",
++    "Do not mention league history or all-time records.",
++    "Do not compare this week with another season unless you name that season's four-digit year, and only name a year that appears on a result you cite.",
++    "If nothing in the results is worth a sentence, return an empty list.",
++    JSON.stringify(view),
++  ].join("\n");
++}
++
++function linesJson(lines: CommentaryLine[]): Prisma.InputJsonValue {
++  return lines.map((line) => ({
++    sentence: line.sentence,
++    cells: line.cells.map((cell) => ({
++      leaguePersonId: cell.leaguePersonId,
++      year: cell.year,
++      week: cell.week,
++      outcome: cell.outcome,
++      points: cell.points,
++      ...(cell.teamAbbreviation != null && cell.teamAbbreviation !== ""
++        ? { teamAbbreviation: cell.teamAbbreviation }
++        : {}),
++    })),
++  }));
++}
++
++async function findRun(key: RunKey): Promise<StoredRun | null> {
++  return prisma.commentaryRun.findUnique({
++    where: { leagueId_nflSeasonYear_weekNumber: key },
++    select: { id: true, status: true, outcomeText: true },
++  });
++}
++
++/**
++ * One commentary run for the league-week.
++ * An existing row is left as it is and the model is not called.
++ * The caller sends the scores email either way.
++ */
++export async function runWeeklyCommentary(key: RunKey): Promise<WeeklyCommentaryResult> {
++  const existing = await findRun(key);
++  if (existing) {
++    return { outcomeText: settledText(existing) };
++  }
++
++  await linkLeaguePersons(key.leagueId);
++
++  let created: StoredRun;
++  try {
++    created = await prisma.commentaryRun.create({
++      data: {
++        leagueId: key.leagueId,
++        nflSeasonYear: key.nflSeasonYear,
++        weekNumber: key.weekNumber,
++        status: "PENDING",
++        spend: new Prisma.Decimal(0),
++      },
++      select: { id: true, status: true, outcomeText: true },
++    });
++  } catch (error) {
++    if (!isUniqueViolation(error)) {
++      throw error;
++    }
++    return { outcomeText: settledText(await findRun(key)) };
++  }
++
++  const config = readCommentaryConfig();
++  if (!config) {
++    await prisma.commentaryRun.update({
++      where: { id: created.id },
++      data: {
++        status: "ABNORMAL",
++        stopReason: COMMENTARY_STOP_MISSING_PRICE,
++        outcomeText: null,
++        spend: new Prisma.Decimal(0),
++      },
++    });
++    return { outcomeText: null };
++  }
++
++  const view = await buildCommentaryView(key);
++  const gateway = createGateway({ apiKey: config.apiKey });
++
++  // One SDK call. A short list or unused room under $1 does not start another.
++  let usage: { inputTokens: number; outputTokens: number } | null = null;
++  let output: unknown;
++  try {
++    const result = await generateText({
++      model: gateway(config.modelId),
++      maxRetries: 0,
++      output: Output.array({ element: commentaryLineSchema }),
++      prompt: promptFor(view),
++    });
++    usage = reportedTokenUsage(result);
++    try {
++      output = result.output;
++    } catch (error) {
++      usage = usageFromThrown(error) ?? usage;
++      throw error;
++    }
++  } catch (error) {
++    await prisma.commentaryRun.update({
++      where: { id: created.id },
++      data: {
++        status: "ABNORMAL",
++        stopReason: COMMENTARY_STOP_MODEL_ERROR,
++        outcomeText: null,
++        spend: spendFor(usage ?? usageFromThrown(error), config),
++      },
++    });
++    return { outcomeText: null };
++  }
++
++  const parsed = parseCommentaryLines(output);
++  if (!parsed) {
++    await prisma.commentaryRun.update({
++      where: { id: created.id },
++      data: {
++        status: "ABNORMAL",
++        stopReason: COMMENTARY_STOP_MODEL_ERROR,
++        outcomeText: null,
++        spend: spendFor(usage, config),
++      },
++    });
++    return { outcomeText: null };
++  }
++
++  const fresh = await loadFreshPickCells(key);
++  const kept = keepCheckedLines(parsed, fresh);
++  const outcomeText = outcomeTextForKeptLines(kept);
++  await prisma.commentaryRun.update({
++    where: { id: created.id },
++    data: {
++      status: "SETTLED",
++      stopReason: null,
++      outcomeText,
++      lines: kept.length === 0 ? [] : linesJson(kept),
++      spend: spendFor(usage, config),
++    },
++  });
++  return { outcomeText };
++}
+diff --git a/src/lib/commentary/view.test.ts b/src/lib/commentary/view.test.ts
+new file mode 100644
+index 0000000..0f67c5b
+--- /dev/null
++++ b/src/lib/commentary/view.test.ts
+@@ -0,0 +1,145 @@
++import { beforeEach, describe, expect, it, vi } from "vitest";
++
++const mockSeasonFindUnique = vi.fn();
++const mockPickFindMany = vi.fn();
++
++vi.mock("@/lib/db", () => ({
++  prisma: {
++    season: { findUnique: (...args: unknown[]) => mockSeasonFindUnique(...args) },
++    pick: { findMany: (...args: unknown[]) => mockPickFindMany(...args) },
++  },
++}));
++
++import { keepCheckedLines } from "./lines";
++import { buildCommentaryView, loadFreshPickCells, publicDisplayName } from "./view";
++
++const ARGS = { leagueId: "lg-1", nflSeasonYear: 2026, weekNumber: 4 };
++
++function pick(overrides: Record<string, unknown> = {}) {
++  return {
++    outcome: "WIN",
++    pointsEarned: 2,
++    nflWeekNumber: 4,
++    team: { abbreviation: "PHI" },
++    leagueMembership: {
++      leaguePerson: { id: "person-1" },
++      user: { name: "Alex" },
++    },
++    ...overrides,
++  };
++}
++
++describe("buildCommentaryView", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++    mockSeasonFindUnique.mockResolvedValue({ id: "season-1" });
++    mockPickFindMany.mockResolvedValue([
++      pick(),
++      pick({
++        outcome: null,
++        pointsEarned: null,
++        leagueMembership: { leaguePerson: { id: "person-2" }, user: { name: "Sam" } },
++      }),
++      pick({
++        leagueMembership: {
++          leaguePerson: { id: "person-3" },
++          user: { name: "sam@example.com" },
++        },
++      }),
++    ]);
++  });
++
++  it("builds this week's person, outcome, points, and team without secrets", async () => {
++    const view = await buildCommentaryView(ARGS);
++
++    expect(mockPickFindMany).toHaveBeenCalledWith(
++      expect.objectContaining({
++        where: {
++          seasonId: "season-1",
++          nflWeekNumber: 4,
++          outcome: { not: null },
++          pointsEarned: { not: null },
++        },
++      }),
++    );
++    const select = JSON.stringify(mockPickFindMany.mock.calls[0]?.[0].select);
++    expect(select).not.toContain("email");
++    expect(select).not.toContain("password");
++    expect(select).not.toContain("session");
++    expect(view).toEqual([
++      {
++        leaguePersonId: "person-1",
++        displayName: "Alex",
++        year: 2026,
++        week: 4,
++        outcome: "WIN",
++        points: 2,
++        teamAbbreviation: "PHI",
++      },
++      {
++        leaguePersonId: "person-3",
++        displayName: null,
++        year: 2026,
++        week: 4,
++        outcome: "WIN",
++        points: 2,
++        teamAbbreviation: "PHI",
++      },
++    ]);
++    expect(JSON.stringify(view)).not.toContain("@");
++    expect(publicDisplayName("  Alex  ")).toBe("Alex");
++    expect(publicDisplayName("a@b.com")).toBeNull();
++  });
++});
++
++describe("loadFreshPickCells", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++    mockSeasonFindUnique.mockResolvedValue({ id: "season-1" });
++  });
++
++  it("matches cited cells against a fresh read, not the object passed to the model", async () => {
++    const viewPassedToModel = [
++      {
++        leaguePersonId: "person-1",
++        displayName: "Alex",
++        year: 2026,
++        week: 4,
++        outcome: "WIN" as const,
++        points: 2,
++        teamAbbreviation: "PHI",
++      },
++    ];
++    mockPickFindMany.mockResolvedValue([
++      pick({ outcome: "LOSS", pointsEarned: 0, leagueMembership: { leaguePerson: { id: "person-1" } } }),
++    ]);
++
++    const fresh = await loadFreshPickCells(ARGS);
++    const sentence = "Alex won the week.";
++    const kept = keepCheckedLines(
++      [
++        {
++          sentence,
++          cells: [
++            {
++              leaguePersonId: "person-1",
++              year: 2026,
++              week: 4,
++              outcome: "WIN",
++              points: 2,
++              teamAbbreviation: "PHI",
++            },
++          ],
++        },
++      ],
++      fresh,
++    );
++
++    expect(kept).toEqual([]);
++    expect(viewPassedToModel[0]?.outcome).toBe("WIN");
++    const select = JSON.stringify(mockPickFindMany.mock.calls[0]?.[0].select);
++    expect(select).not.toContain("email");
++    expect(select).not.toContain("password");
++    expect(select).not.toContain("user");
++  });
++});
+diff --git a/src/lib/commentary/view.ts b/src/lib/commentary/view.ts
+new file mode 100644
+index 0000000..3121591
+--- /dev/null
++++ b/src/lib/commentary/view.ts
+@@ -0,0 +1,159 @@
++import "server-only";
++
++import { prisma } from "@/lib/db";
++import type { FreshPickCell } from "@/lib/commentary/lines";
++
++export type CommentaryViewEntry = {
++  leaguePersonId: string;
++  displayName: string | null;
++  year: number;
++  week: number;
++  outcome: "WIN" | "LOSS" | "TIE";
++  points: number;
++  teamAbbreviation: string;
++};
++
++type ScoredPickRow = {
++  outcome: "WIN" | "LOSS" | "TIE" | null;
++  pointsEarned: number | null;
++  nflWeekNumber: number;
++  team: { abbreviation: string };
++  leagueMembership: {
++    leaguePerson: { id: string } | null;
++    user?: { name: string | null };
++  };
++};
++
++function isOutcome(value: string | null): value is "WIN" | "LOSS" | "TIE" {
++  return value === "WIN" || value === "LOSS" || value === "TIE";
++}
++
++/** A name the model may say. Emails and blank names are omitted. */
++export function publicDisplayName(name: string | null | undefined): string | null {
++  const trimmed = name?.trim() ?? "";
++  if (trimmed === "" || trimmed.includes("@")) {
++    return null;
++  }
++  return trimmed;
++}
++
++async function seasonIdFor(leagueId: string, nflSeasonYear: number): Promise<string | null> {
++  const season = await prisma.season.findUnique({
++    where: { leagueId_nflSeasonYear: { leagueId, nflSeasonYear } },
++    select: { id: true },
++  });
++  return season?.id ?? null;
++}
++
++/**
++ * This week's scored picks for the model: person, outcome, points, and team.
++ * No passwords, sessions, emails, or credentials.
++ */
++export async function buildCommentaryView(args: {
++  leagueId: string;
++  nflSeasonYear: number;
++  weekNumber: number;
++}): Promise<CommentaryViewEntry[]> {
++  const seasonId = await seasonIdFor(args.leagueId, args.nflSeasonYear);
++  if (seasonId == null) {
++    return [];
++  }
++
++  const picks = await prisma.pick.findMany({
++    where: {
++      seasonId,
++      nflWeekNumber: args.weekNumber,
++      outcome: { not: null },
++      pointsEarned: { not: null },
++    },
++    orderBy: { leagueMembershipId: "asc" },
++    select: {
++      outcome: true,
++      pointsEarned: true,
++      nflWeekNumber: true,
++      team: { select: { abbreviation: true } },
++      leagueMembership: {
++        select: {
++          leaguePerson: { select: { id: true } },
++          user: { select: { name: true } },
++        },
++      },
++    },
++  });
++
++  return mapViewEntries(picks, args.nflSeasonYear);
++}
++
++/**
++ * Re-read this week's scored picks from `Pick`. The checker uses this, not the object sent to the model.
++ */
++export async function loadFreshPickCells(args: {
++  leagueId: string;
++  nflSeasonYear: number;
++  weekNumber: number;
++}): Promise<FreshPickCell[]> {
++  const seasonId = await seasonIdFor(args.leagueId, args.nflSeasonYear);
++  if (seasonId == null) {
++    return [];
++  }
++
++  const picks = await prisma.pick.findMany({
++    where: {
++      seasonId,
++      nflWeekNumber: args.weekNumber,
++      outcome: { not: null },
++      pointsEarned: { not: null },
++    },
++    orderBy: { leagueMembershipId: "asc" },
++    select: {
++      outcome: true,
++      pointsEarned: true,
++      nflWeekNumber: true,
++      team: { select: { abbreviation: true } },
++      leagueMembership: {
++        select: {
++          leaguePerson: { select: { id: true } },
++        },
++      },
++    },
++  });
++
++  return mapFreshCells(picks, args.nflSeasonYear);
++}
++
++function mapViewEntries(picks: ScoredPickRow[], nflSeasonYear: number): CommentaryViewEntry[] {
++  const entries: CommentaryViewEntry[] = [];
++  for (const pick of picks) {
++    const cell = toFreshCell(pick, nflSeasonYear);
++    if (!cell) continue;
++    entries.push({
++      ...cell,
++      displayName: publicDisplayName(pick.leagueMembership.user?.name),
++    });
++  }
++  return entries;
++}
++
++function mapFreshCells(picks: ScoredPickRow[], nflSeasonYear: number): FreshPickCell[] {
++  const cells: FreshPickCell[] = [];
++  for (const pick of picks) {
++    const cell = toFreshCell(pick, nflSeasonYear);
++    if (cell) cells.push(cell);
++  }
++  return cells;
++}
++
++function toFreshCell(pick: ScoredPickRow, nflSeasonYear: number): FreshPickCell | null {
++  const leaguePersonId = pick.leagueMembership.leaguePerson?.id;
++  if (leaguePersonId == null || pick.pointsEarned == null || !isOutcome(pick.outcome)) {
++    return null;
++  }
++  return {
++    leaguePersonId,
++    year: nflSeasonYear,
++    week: pick.nflWeekNumber,
++    outcome: pick.outcome,
++    points: pick.pointsEarned,
++    teamAbbreviation: pick.team.abbreviation,
++  };
++}
+diff --git a/src/lib/email/get-tuesday-digest-data.test.ts b/src/lib/email/get-tuesday-digest-data.test.ts
+index 31b2f04..37505f0 100644
+--- a/src/lib/email/get-tuesday-digest-data.test.ts
++++ b/src/lib/email/get-tuesday-digest-data.test.ts
+@@ -44,6 +44,7 @@ function seedActiveWeekFixtures() {
+     id: LEAGUE_ID,
+     name: "Test League",
+     isTestLeague: false,
++    commentaryEnabled: false,
+   });
+   mockSeasonFindUnique.mockResolvedValue({
+     id: "season-1",
+@@ -141,6 +142,7 @@ describe("getTuesdayDigestData", () => {
+       id: LEAGUE_ID,
+       name: "Test League",
+       isTestLeague: true,
++      commentaryEnabled: false,
+     });
+     mockSeasonFindUnique.mockResolvedValue({
+       id: "season-1",
+@@ -157,6 +159,28 @@ describe("getTuesdayDigestData", () => {
+     const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
+ 
+     expect(result.isTestLeague).toBe(true);
++    expect(result.commentaryEnabled).toBe(false);
++  });
++
++  it("returns commentaryEnabled from the league row", async () => {
++    mockLeagueFindUnique.mockResolvedValue({
++      id: LEAGUE_ID,
++      name: "Test League",
++      isTestLeague: false,
++      commentaryEnabled: true,
++    });
++    mockGetLeagueStandings.mockResolvedValue([]);
++    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
++    mockMembershipFindMany.mockResolvedValue([]);
++
++    const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
++
++    expect(result.commentaryEnabled).toBe(true);
++    expect(mockLeagueFindUnique).toHaveBeenCalledWith(
++      expect.objectContaining({
++        select: expect.objectContaining({ commentaryEnabled: true }),
++      }),
++    );
+   });
+ 
+   it("sets isPreviewWeek true before the week's window-open instant", async () => {
+@@ -256,6 +280,7 @@ describe("getTuesdayDigestData", () => {
+       id: LEAGUE_ID,
+       name: "Test League",
+       isTestLeague: true,
++      commentaryEnabled: false,
+     });
+     mockSeasonFindUnique.mockResolvedValue({
+       id: "season-1",
+diff --git a/src/lib/email/get-tuesday-digest-data.ts b/src/lib/email/get-tuesday-digest-data.ts
+index c876325..ebbf1f2 100644
+--- a/src/lib/email/get-tuesday-digest-data.ts
++++ b/src/lib/email/get-tuesday-digest-data.ts
+@@ -19,7 +19,7 @@ export type TuesdayDigestData = {
+   leagueName: string;
+   leagueId: string;
+   isTestLeague: boolean;
+-  /** When omitted, the send treats commentary as off. Both values skip a section in this story. */
++  /** When omitted or false, the send stores no run and the digest has no note. */
+   commentaryEnabled?: boolean;
+   nflSeasonYear: number;
+   weekNumber: number;
+@@ -78,7 +78,7 @@ export async function getTuesdayDigestData(
+ ): Promise<TuesdayDigestData> {
+   const league = await prisma.league.findUnique({
+     where: { id: leagueId },
+-    select: { id: true, name: true, isTestLeague: true },
++    select: { id: true, name: true, isTestLeague: true, commentaryEnabled: true },
+   });
+ 
+   if (!league) {
+@@ -167,6 +167,7 @@ export async function getTuesdayDigestData(
+     leagueName: league.name,
+     leagueId: league.id,
+     isTestLeague: league.isTestLeague,
++    commentaryEnabled: league.commentaryEnabled,
+     nflSeasonYear: season.nflSeasonYear,
+     weekNumber,
+     isPreviewWeek,
+diff --git a/src/lib/email/send-tuesday-digest.test.ts b/src/lib/email/send-tuesday-digest.test.ts
+index 76a6143..30fba23 100644
+--- a/src/lib/email/send-tuesday-digest.test.ts
++++ b/src/lib/email/send-tuesday-digest.test.ts
+@@ -9,6 +9,7 @@ const mockCommentaryRunUpdate = vi.fn();
+ const mockCommentaryRunUpsert = vi.fn();
+ const mockResendSend = vi.fn();
+ const mockGetTestLeagueEmailMode = vi.fn();
++const mockRunWeeklyCommentary = vi.fn();
+ 
+ vi.mock("@/lib/db", () => ({
+   prisma: {
+@@ -48,6 +49,10 @@ vi.mock("@/lib/logging/log-event", () => ({
+   logEvent: vi.fn(),
+ }));
+ 
++vi.mock("@/lib/commentary/runner", () => ({
++  runWeeklyCommentary: (...args: unknown[]) => mockRunWeeklyCommentary(...args),
++}));
++
+ import { logEvent } from "@/lib/logging/log-event";
+ import { EMAIL_SEND_CONCURRENCY } from "./map-with-concurrency";
+ import {
+@@ -100,6 +105,7 @@ describe("sendTuesdayDigest", () => {
+     mockLeagueWeekEmailConfigFindUnique.mockResolvedValue(null);
+     mockLeagueWeekEmailConfigUpsert.mockResolvedValue({});
+     mockResendSend.mockResolvedValue({ error: null });
++    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: null });
+   });
+ 
+   it("suppress mode never calls Resend but still upserts sentAt", async () => {
+@@ -111,6 +117,7 @@ describe("sendTuesdayDigest", () => {
+     });
+ 
+     expect(mockResendSend).not.toHaveBeenCalled();
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
+     expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledOnce();
+     expect(result).toMatchObject({
+       sent: 0,
+@@ -158,7 +165,7 @@ describe("sendTuesdayDigest", () => {
+     expect(result.sentAt).toBeInstanceOf(Date);
+   });
+ 
+-  it.each([false, true])(
++  it.each([false, undefined])(
+     "send with commentaryEnabled %s adds no commentary section, run, or spend",
+     async (commentaryEnabled) => {
+       mockGetTestLeagueEmailMode.mockReturnValue("send");
+@@ -174,12 +181,15 @@ describe("sendTuesdayDigest", () => {
+         suppressed: false,
+         wouldSendCount: 0,
+       });
++      expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
+       expect(mockCommentaryRunCreate).not.toHaveBeenCalled();
+       expect(mockCommentaryRunUpdate).not.toHaveBeenCalled();
+       expect(mockCommentaryRunUpsert).not.toHaveBeenCalled();
+       expect(mockLeagueWeekEmailConfigUpsert).toHaveBeenCalledOnce();
+ 
+-      const payloads = mockResendSend.mock.calls.map((call) => call[0] as { react?: ReactElement });
++      const payloads = mockResendSend.mock.calls.map(
++        (call) => call[0] as { react?: ReactElement<{ weeklyNote?: string | null }> },
++      );
+       expect(payloads).toHaveLength(PRELOADED_DATA.members.length);
+       for (const payload of payloads) {
+         if (!payload.react) {
+@@ -187,15 +197,135 @@ describe("sendTuesdayDigest", () => {
+         }
+         expect(payload.react.props).not.toHaveProperty("commentary");
+         expect(payload.react.props).not.toHaveProperty("commentaryEnabled");
++        expect(payload.react.props.weeklyNote).toBeNull();
+         const html = await render(payload.react);
+         expect(html).toContain("Standings");
+         expect(html).toContain("Jailed team");
+-        expect(html.toLowerCase()).not.toContain("commentary");
++        expect(html).not.toContain("Weekly note");
+         expect(html).not.toContain("Quiet week");
+       }
+     },
+   );
+ 
++  it("a suppressed test league with commentary on does not run or spend", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("suppress");
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: { ...PRELOADED_DATA, commentaryEnabled: true },
++    });
++
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
++    expect(mockCommentaryRunCreate).not.toHaveBeenCalled();
++    expect(mockResendSend).not.toHaveBeenCalled();
++    expect(result).toMatchObject({ suppressed: true, sent: 0, wouldSendCount: 2 });
++  });
++
++  it("a delivering send with commentary on runs once and renders the settled note", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("send");
++    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: "Alex won the week." });
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
++    });
++
++    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
++    expect(mockRunWeeklyCommentary).toHaveBeenCalledTimes(1);
++    expect(mockRunWeeklyCommentary).toHaveBeenCalledWith({
++      leagueId: LEAGUE_ID,
++      nflSeasonYear: PRELOADED_DATA.nflSeasonYear,
++      weekNumber: PRELOADED_DATA.weekNumber,
++    });
++
++    const payloads = mockResendSend.mock.calls.map(
++      (call) => call[0] as { react?: ReactElement<{ weeklyNote?: string | null }> },
++    );
++    for (const payload of payloads) {
++      if (!payload.react) {
++        throw new Error("expected Tuesday digest email element");
++      }
++      expect(payload.react.props.weeklyNote).toBe("Alex won the week.");
++      const html = await render(payload.react);
++      expect(html).toContain("Weekly note");
++      expect(html).toContain("Alex won the week.");
++      expect(html.indexOf("Weekly note")).toBeLessThan(html.indexOf("Make your picks"));
++    }
++  });
++
++  it("an abnormal commentary run still sends scores and omits the section", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("send");
++    mockRunWeeklyCommentary.mockResolvedValue({ outcomeText: null });
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
++    });
++
++    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
++    expect(mockRunWeeklyCommentary).toHaveBeenCalledTimes(1);
++    const html = await render((mockResendSend.mock.calls[0]?.[0] as { react: ReactElement }).react);
++    expect(html).not.toContain("Weekly note");
++    expect(html).not.toContain("Quiet week");
++    expect(html).toContain("Standings");
++  });
++
++  it("a runner failure still sends the scores email without a note", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("send");
++    mockRunWeeklyCommentary.mockRejectedValue(new Error("commentary down"));
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
++    });
++
++    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
++    expect(mockResendSend).toHaveBeenCalledTimes(2);
++    const html = await render((mockResendSend.mock.calls[0]?.[0] as { react: ReactElement }).react);
++    expect(html).not.toContain("Weekly note");
++    expect(logEvent).toHaveBeenCalledWith(
++      expect.objectContaining({
++        level: "error",
++        action: "commentary_run_failed",
++        leagueId: LEAGUE_ID,
++      }),
++    );
++  });
++
++  it("does not run commentary when the circuit is already open", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("send");
++    const breaker = createEmailCircuitBreaker();
++    breaker.open = true;
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: { ...PRELOADED_DATA, isTestLeague: false, commentaryEnabled: true },
++      breaker,
++    });
++
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
++    expect(mockResendSend).not.toHaveBeenCalled();
++    expect(result).toMatchObject({ sent: 0, failed: 2, suppressed: false });
++  });
++
++  it("does not run commentary when the send has no recipients", async () => {
++    mockGetTestLeagueEmailMode.mockReturnValue("send");
++
++    const result = await sendTuesdayDigest({
++      leagueId: LEAGUE_ID,
++      preloadedData: {
++        ...PRELOADED_DATA,
++        isTestLeague: false,
++        commentaryEnabled: true,
++        members: [],
++      },
++    });
++
++    expect(mockRunWeeklyCommentary).not.toHaveBeenCalled();
++    expect(mockResendSend).not.toHaveBeenCalled();
++    expect(result).toMatchObject({ sent: 0, failed: 0, suppressed: false });
++  });
++
+   it("production league always uses the normal Resend path regardless of suppress mode", async () => {
+     mockGetTestLeagueEmailMode.mockReturnValue("suppress");
+ 
+diff --git a/src/lib/email/send-tuesday-digest.ts b/src/lib/email/send-tuesday-digest.ts
+index 3ebb1c8..680b9ac 100644
+--- a/src/lib/email/send-tuesday-digest.ts
++++ b/src/lib/email/send-tuesday-digest.ts
+@@ -1,5 +1,6 @@
+ import { createElement } from "react";
+ 
++import { runWeeklyCommentary } from "@/lib/commentary/runner";
+ import { prisma } from "@/lib/db";
+ import {
+   EMAIL_CIRCUIT_OPEN_CODE,
+@@ -124,6 +125,30 @@ export async function sendTuesdayDigest({
+     };
+   }
+ 
++  let weeklyNote: string | null = null;
++  if (data.commentaryEnabled === true && data.members.length > 0) {
++    try {
++      const commentary = await runWeeklyCommentary({
++        leagueId,
++        nflSeasonYear: data.nflSeasonYear,
++        weekNumber: data.weekNumber,
++      });
++      weeklyNote = commentary.outcomeText;
++    } catch (err) {
++      logEvent({
++        level: "error",
++        domain: "email",
++        action: "commentary_run_failed",
++        leagueId,
++        weekNumber: data.weekNumber,
++        message: "tuesday commentary failed; scores email will still send",
++        context: {
++          error: emailSendErrorMessage(err),
++        },
++      });
++    }
++  }
++
+   let sent = 0;
+   let failed = 0;
+ 
+@@ -156,9 +181,8 @@ export async function sendTuesdayDigest({
+                 jailedTeamAbbreviation: data.jailedTeamAbbreviation,
+                 picksUrl: data.picksUrl,
+                 adminNote,
++                weeklyNote,
+                 isTestLeague: data.isTestLeague,
+-                // On and off both skip commentary. Story 10.2 is the first branch that may add a section.
+-                ...(data.commentaryEnabled ? {} : {}),
+               }),
+             },
+             {
+diff --git a/src/lib/email/templates/TuesdayDigestEmail.tsx b/src/lib/email/templates/TuesdayDigestEmail.tsx
+index ade38ee..acc73ef 100644
+--- a/src/lib/email/templates/TuesdayDigestEmail.tsx
++++ b/src/lib/email/templates/TuesdayDigestEmail.tsx
+@@ -39,6 +39,8 @@ export type TuesdayDigestEmailProps = {
+   jailedTeamAbbreviation: string | null;
+   picksUrl: string;
+   adminNote: string | null;
++  /** Stored settled note. Null, omitted, or blank renders no Weekly note section. */
++  weeklyNote?: string | null;
+   isTestLeague?: boolean;
+ };
+ 
+@@ -85,6 +87,7 @@ export function TuesdayDigestEmail({
+   jailedTeamAbbreviation,
+   picksUrl,
+   adminNote,
++  weeklyNote = null,
+   isTestLeague = false,
+ }: TuesdayDigestEmailProps) {
+   const jailedLabel =
+@@ -143,6 +146,15 @@ export function TuesdayDigestEmail({
+         <Text style={textStyle}>{jailedLabel}</Text>
+       </Section>
+ 
++      {weeklyNote != null && weeklyNote.trim() !== "" ? (
++        <Section style={sectionStyle}>
++          <Heading as="h2" style={subheadingStyle}>
++            Weekly note
++          </Heading>
++          <Text style={{ ...textStyle, whiteSpace: "pre-wrap" }}>{weeklyNote}</Text>
++        </Section>
++      ) : null}
++
+       <PrimaryCta href={picksUrl} label="Make your picks" />
+ 
+       {adminNote != null && adminNote.trim() !== "" ? (
+diff --git a/src/lib/email/templates/email-templates.test.tsx b/src/lib/email/templates/email-templates.test.tsx
+index ef6c336..3f1d5c3 100644
+--- a/src/lib/email/templates/email-templates.test.tsx
++++ b/src/lib/email/templates/email-templates.test.tsx
+@@ -39,6 +39,7 @@ describe("email templates CTA + plaintext fallback", () => {
+     expect(html).toContain(picksUrl);
+     expect(html).toContain("Or paste this link:");
+     expect(html).toContain("#2ECC71");
++    expect(html).not.toContain("Weekly note");
+     // CTA should appear before commissioner note in HTML source order
+     expect(html.indexOf("Make your picks")).toBeLessThan(
+       html.indexOf("Note from your commissioner"),
+@@ -107,6 +108,53 @@ describe("email templates CTA + plaintext fallback", () => {
+     expect(html).not.toMatch(/src=["']\s*["']/);
+   });
+ 
++  it("TuesdayDigestEmail shows the stored weekly note and not cells or a stop reason", async () => {
++    const quiet = "Quiet week. Nothing new for the record book.";
++    const quietHtml = await render(
++      createElement(TuesdayDigestEmail, {
++        leagueName: "Office League",
++        weekNumber: 3,
++        standings: [],
++        jailedTeamName: "Eagles",
++        jailedTeamAbbreviation: "PHI",
++        picksUrl: "https://example.test/leagues/abc/picks",
++        adminNote: "Have fun this week!",
++        weeklyNote: quiet,
++        isTestLeague: false,
++      }),
++    );
++    expect(quietHtml).toContain("Weekly note");
++    expect(quietHtml).toContain(quiet);
++    expect(quietHtml.indexOf("Weekly note")).toBeLessThan(quietHtml.indexOf("Make your picks"));
++    expect(quietHtml.indexOf("Make your picks")).toBeLessThan(
++      quietHtml.indexOf("Note from your commissioner"),
++    );
++    expect(quietHtml).not.toContain("missing_price");
++    expect(quietHtml).not.toContain("model_error");
++    expect(quietHtml).not.toContain("leaguePersonId");
++
++    const kept = "Alex won the week.\nSam tied the Eagles.";
++    const keptHtml = await render(
++      createElement(TuesdayDigestEmail, {
++        leagueName: "Office League",
++        weekNumber: 3,
++        standings: [],
++        jailedTeamName: null,
++        jailedTeamAbbreviation: null,
++        picksUrl: "https://example.test/leagues/abc/picks",
++        adminNote: null,
++        weeklyNote: kept,
++        isTestLeague: false,
++      }),
++    );
++    expect(keptHtml).toContain("Weekly note");
++    expect(keptHtml).toContain("Alex won the week.");
++    expect(keptHtml).toContain("Sam tied the Eagles.");
++    expect(keptHtml).not.toContain("WIN");
++    expect(keptHtml).not.toContain("missing_price");
++    expect(keptHtml).not.toContain("model_error");
++  });
++
+   it("ReminderEmail slot 1 / slot 2 keep labels + plaintext fallback and name the lock time", async () => {
+     const picksUrl = "https://example.test/leagues/abc/picks";
+     const pickDeadlineUtc = new Date("2026-09-10T00:10:00.000Z");

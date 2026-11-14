@@ -44,6 +44,7 @@ function seedActiveWeekFixtures() {
     id: LEAGUE_ID,
     name: "Test League",
     isTestLeague: false,
+    commentaryEnabled: false,
   });
   mockSeasonFindUnique.mockResolvedValue({
     id: "season-1",
@@ -141,6 +142,7 @@ describe("getTuesdayDigestData", () => {
       id: LEAGUE_ID,
       name: "Test League",
       isTestLeague: true,
+      commentaryEnabled: false,
     });
     mockSeasonFindUnique.mockResolvedValue({
       id: "season-1",
@@ -157,6 +159,28 @@ describe("getTuesdayDigestData", () => {
     const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
 
     expect(result.isTestLeague).toBe(true);
+    expect(result.commentaryEnabled).toBe(false);
+  });
+
+  it("returns commentaryEnabled from the league row", async () => {
+    mockLeagueFindUnique.mockResolvedValue({
+      id: LEAGUE_ID,
+      name: "Test League",
+      isTestLeague: false,
+      commentaryEnabled: true,
+    });
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+
+    const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
+
+    expect(result.commentaryEnabled).toBe(true);
+    expect(mockLeagueFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ commentaryEnabled: true }),
+      }),
+    );
   });
 
   it("sets isPreviewWeek true before the week's window-open instant", async () => {
@@ -256,6 +280,7 @@ describe("getTuesdayDigestData", () => {
       id: LEAGUE_ID,
       name: "Test League",
       isTestLeague: true,
+      commentaryEnabled: false,
     });
     mockSeasonFindUnique.mockResolvedValue({
       id: "season-1",

@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createElement } from "react";
 
+import { commentarySectionText } from "@/lib/commentary/lines";
 import { auth } from "@/lib/auth";
 import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { prisma } from "@/lib/db";
@@ -63,6 +64,21 @@ export async function GET(
       select: { bodyText: true },
     });
 
+    let weeklyNote: string | null = null;
+    if (data.commentaryEnabled) {
+      const run = await prisma.commentaryRun.findUnique({
+        where: {
+          leagueId_nflSeasonYear_weekNumber: {
+            leagueId,
+            nflSeasonYear: data.nflSeasonYear,
+            weekNumber: data.weekNumber,
+          },
+        },
+        select: { status: true, outcomeText: true },
+      });
+      weeklyNote = commentarySectionText(run);
+    }
+
     const html = await render(
       createElement(TuesdayDigestEmail, {
         leagueName: data.leagueName,
@@ -79,6 +95,7 @@ export async function GET(
         jailedTeamAbbreviation: data.jailedTeamAbbreviation,
         picksUrl: data.picksUrl,
         adminNote: config?.bodyText ?? null,
+        weeklyNote,
         isTestLeague: data.isTestLeague,
       }),
     );

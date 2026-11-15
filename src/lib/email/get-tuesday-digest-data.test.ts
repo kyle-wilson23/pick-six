@@ -275,4 +275,25 @@ describe("getTuesdayDigestData", () => {
     expect(result.weekNumber).toBe(3);
     expect(result.isTestLeague).toBe(true);
   });
+
+  it("selects and returns commentaryEnabled", async () => {
+    mockLeagueFindUnique.mockResolvedValue({
+      id: LEAGUE_ID,
+      name: "Test League",
+      isTestLeague: false,
+      commentaryEnabled: true,
+    });
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+
+    const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
+
+    expect(result.commentaryEnabled).toBe(true);
+    expect(mockLeagueFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ commentaryEnabled: true }),
+      }),
+    );
+  });
 });

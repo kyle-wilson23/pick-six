@@ -1,5 +1,6 @@
 import { createElement } from "react";
 
+import { runCommentary } from "@/lib/commentary/run-commentary";
 import { prisma } from "@/lib/db";
 import {
   EMAIL_CIRCUIT_OPEN_CODE,
@@ -124,6 +125,31 @@ export async function sendTuesdayDigest({
     };
   }
 
+  let lines: string[] = [];
+  if (data.commentaryEnabled === true && data.members.length > 0) {
+    try {
+      const run = await runCommentary({
+        leagueId,
+        nflSeasonYear: data.nflSeasonYear,
+        weekNumber: data.weekNumber,
+      });
+      lines = run.sentences;
+    } catch (err) {
+      logEvent({
+        level: "error",
+        domain: "email",
+        action: "commentary_run_failed",
+        leagueId,
+        weekNumber: data.weekNumber,
+        message: "tuesday digest commentary failed; sending scores",
+        context: {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
+      lines = [];
+    }
+  }
+
   let sent = 0;
   let failed = 0;
 
@@ -157,8 +183,7 @@ export async function sendTuesdayDigest({
                 picksUrl: data.picksUrl,
                 adminNote,
                 isTestLeague: data.isTestLeague,
-                // On and off both skip commentary. Story 10.2 is the first branch that may add a section.
-                ...(data.commentaryEnabled ? {} : {}),
+                lines,
               }),
             },
             {

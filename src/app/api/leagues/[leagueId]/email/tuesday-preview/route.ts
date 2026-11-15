@@ -8,6 +8,7 @@ import type { NextRequest } from "next/server";
 import { createElement } from "react";
 
 import { auth } from "@/lib/auth";
+import { digestCommentarySentences } from "@/lib/commentary/digest-sentences";
 import { forbiddenAdminJson, requireLeagueAdminAccess } from "@/lib/league/require-league-admin";
 import { prisma } from "@/lib/db";
 import {
@@ -52,15 +53,18 @@ export async function GET(
 
   try {
     const data = await getTuesdayDigestData({ leagueId });
+    const weekKey = {
+      leagueId,
+      nflSeasonYear: data.nflSeasonYear,
+      weekNumber: data.weekNumber,
+    };
     const config = await prisma.leagueWeekEmailConfig.findUnique({
-      where: {
-        leagueId_nflSeasonYear_weekNumber: {
-          leagueId,
-          nflSeasonYear: data.nflSeasonYear,
-          weekNumber: data.weekNumber,
-        },
-      },
+      where: { leagueId_nflSeasonYear_weekNumber: weekKey },
       select: { bodyText: true },
+    });
+    const commentaryRun = await prisma.commentaryRun.findUnique({
+      where: { leagueId_nflSeasonYear_weekNumber: weekKey },
+      select: { status: true, sentences: true },
     });
 
     const html = await render(
@@ -80,6 +84,7 @@ export async function GET(
         picksUrl: data.picksUrl,
         adminNote: config?.bodyText ?? null,
         isTestLeague: data.isTestLeague,
+        lines: digestCommentarySentences(commentaryRun),
       }),
     );
 

@@ -40,6 +40,8 @@ export type TuesdayDigestEmailProps = {
   picksUrl: string;
   adminNote: string | null;
   isTestLeague?: boolean;
+  /** Proved sentences or the quiet line. Empty omits the section. */
+  lines?: string[];
 };
 
 function StandingNameCell({
@@ -86,6 +88,7 @@ export function TuesdayDigestEmail({
   picksUrl,
   adminNote,
   isTestLeague = false,
+  lines = [],
 }: TuesdayDigestEmailProps) {
   const jailedLabel =
     jailedTeamName != null && jailedTeamAbbreviation != null
@@ -142,6 +145,19 @@ export function TuesdayDigestEmail({
         </Heading>
         <Text style={textStyle}>{jailedLabel}</Text>
       </Section>
+
+      {lines.length > 0 ? (
+        <Section style={sectionStyle}>
+          <Heading as="h2" style={subheadingStyle}>
+            This week
+          </Heading>
+          {lines.map((line, index) => (
+            <Text key={`${index}-${line}`} style={textStyle}>
+              {line}
+            </Text>
+          ))}
+        </Section>
+      ) : null}
 
       <PrimaryCta href={picksUrl} label="Make your picks" />
 

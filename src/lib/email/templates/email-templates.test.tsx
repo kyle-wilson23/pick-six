@@ -43,6 +43,28 @@ describe("email templates CTA + plaintext fallback", () => {
     expect(html.indexOf("Make your picks")).toBeLessThan(
       html.indexOf("Note from your commissioner"),
     );
+    expect(html).not.toContain("This week");
+  });
+
+  it("TuesdayDigestEmail prints lines after jailed and before the picks CTA", async () => {
+    const html = await render(
+      createElement(TuesdayDigestEmail, {
+        leagueName: "Office League",
+        weekNumber: 3,
+        standings: [],
+        jailedTeamName: "Eagles",
+        jailedTeamAbbreviation: "PHI",
+        picksUrl: "https://example.test/leagues/abc/picks",
+        adminNote: "Have fun this week!",
+        lines: ["Alice took Buffalo for two."],
+      }),
+    );
+
+    expect(html.indexOf("Jailed team")).toBeLessThan(html.indexOf("Alice took Buffalo for two."));
+    expect(html.indexOf("Alice took Buffalo for two.")).toBeLessThan(html.indexOf("Make your picks"));
+    expect(html.indexOf("Make your picks")).toBeLessThan(
+      html.indexOf("Note from your commissioner"),
+    );
   });
 
   it("TuesdayDigestEmail standings show photo thumb or initials by imageUrl", async () => {

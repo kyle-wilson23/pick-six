@@ -74,6 +74,8 @@ model League {
   simGames         LeagueSimGame[]
   simOddsSnapshotRuns LeagueSimOddsSnapshotRun[]
   weekJailedTeams  LeagueWeekJailedTeam[]
+  persons          LeaguePerson[]
+  commentaryRuns   CommentaryRun[]
 
   @@map("leagues")
 }
@@ -117,6 +119,7 @@ model LeagueMembership {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   picks  Pick[]
+  leaguePerson LeaguePerson?
   auditEntriesAsAdmin  AuditLogEntry[] @relation("AuditAdmin")
   auditEntriesAsTarget AuditLogEntry[] @relation("AuditTarget")
 
@@ -374,6 +377,48 @@ model LeagueWeekEmailConfig {
   @@unique([leagueId, nflSeasonYear, weekNumber])
   @@index([leagueId, nflSeasonYear])
   @@map("league_week_email_configs")
+}
+
+/// One league person per current player membership. Story 10.2 links memberships before a commentary run.
+model LeaguePerson {
+  id                 String   @id @default(cuid())
+  leagueId           String   @map("league_id")
+  leagueMembershipId String   @unique @map("league_membership_id")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  league     League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  membership LeagueMembership @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)
+
+  @@index([leagueId])
+  @@map("league_persons")
+}
+
+enum CommentaryRunStatus {
+  STARTED
+  COMPLETED
+  STOPPED
+
+  @@map("commentary_run_status")
+}
+
+/// One commentary attempt per league, NFL season year, and week. Inserted before any model call.
+model CommentaryRun {
+  id            String               @id @default(cuid())
+  leagueId      String               @map("league_id")
+  nflSeasonYear Int                  @map("nfl_season_year")
+  weekNumber    Int                  @map("week_number")
+  status        CommentaryRunStatus
+  stopReason    String?              @map("stop_reason") @db.Text
+  spendUsd      Decimal              @default(0) @map("spend_usd") @db.Decimal(12, 6)
+  sentences     String[]             @default([])
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, nflSeasonYear, weekNumber])
+  @@map("commentary_runs")
 }
 
 /// One saved pick per membership per NFL week per `Season` (Epic 3). Writers for `first_competition_week_locked_at` land in Stories 3.4 / 3.5.

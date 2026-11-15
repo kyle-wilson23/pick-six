@@ -19,7 +19,7 @@ export type TuesdayDigestData = {
   leagueName: string;
   leagueId: string;
   isTestLeague: boolean;
-  /** When omitted, the send treats commentary as off. Both values skip a section in this story. */
+  /** When omitted or false, the send stores nothing and spends nothing. */
   commentaryEnabled?: boolean;
   nflSeasonYear: number;
   weekNumber: number;
@@ -78,7 +78,7 @@ export async function getTuesdayDigestData(
 ): Promise<TuesdayDigestData> {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, name: true, isTestLeague: true },
+    select: { id: true, name: true, isTestLeague: true, commentaryEnabled: true },
   });
 
   if (!league) {
@@ -167,6 +167,7 @@ export async function getTuesdayDigestData(
     leagueName: league.name,
     leagueId: league.id,
     isTestLeague: league.isTestLeague,
+    commentaryEnabled: league.commentaryEnabled,
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     isPreviewWeek,

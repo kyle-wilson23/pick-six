@@ -10,6 +10,8 @@ const digest = { year: 2026, week: 4 };
 const alice: CommentaryWeekViewRow = {
   personId: "person-alice",
   userDisplayName: "Alice",
+  year: digest.year,
+  week: digest.week,
   outcome: "WIN",
   points: 2,
   teamAbbreviation: "BUF",
@@ -43,15 +45,64 @@ describe("confirmCommentaryLines", () => {
     expect(confirmed).toEqual([]);
   });
 
-  it("keeps a sentence that names 2024 and 2026 unchanged", () => {
+  it("keeps a named comparison whose years were read", () => {
     const sentence = "Alice's 2024 win showed up again in 2026.";
-    expect(confirmCommentaryLines([line({ sentence })], [alice], digest)).toEqual([sentence]);
+    const prior: CommentaryWeekViewRow = { ...alice, year: 2024, week: 1 };
+    expect(confirmCommentaryLines([line({ sentence })], [alice, prior], digest)).toEqual([
+      sentence,
+    ]);
   });
 
-  it("drops a line that cites another year or week", () => {
+  it("drops an unread year and does not rewrite it", () => {
+    const sentence = "Alice's 2019 win showed up again in 2026.";
+    expect(confirmCommentaryLines([line({ sentence })], [alice], digest)).toEqual([]);
+  });
+
+  it("drops a person, year, and week that the view does not contain", () => {
     expect(
       confirmCommentaryLines([line({ year: 2025 }), line({ week: 3 })], [alice], digest),
     ).toEqual([]);
+  });
+
+  it("keeps a matching history cell that is not the digest week", () => {
+    const sentence = "Alice's 2024 loss is on the book.";
+    const history: CommentaryWeekViewRow = {
+      ...alice,
+      year: 2024,
+      week: 7,
+      outcome: "LOSS",
+      points: 0,
+      teamAbbreviation: null,
+    };
+    expect(
+      confirmCommentaryLines(
+        [
+          line({
+            sentence,
+            year: 2024,
+            week: 7,
+            outcome: "LOSS",
+            points: 0,
+            team: null,
+          }),
+          line({ year: 2018, week: 1 }),
+        ],
+        [history],
+        digest,
+      ),
+    ).toEqual([sentence]);
+  });
+
+  it("matches a missing team only when the line names no team", () => {
+    const row: CommentaryWeekViewRow = { ...alice, teamAbbreviation: null };
+    const sentence = "Alice's result had no team.";
+    expect(confirmCommentaryLines([line({ sentence, team: null })], [row], digest)).toEqual([
+      sentence,
+    ]);
+    expect(confirmCommentaryLines([line({ sentence, team: undefined })], [row], digest)).toEqual([
+      sentence,
+    ]);
+    expect(confirmCommentaryLines([line({ team: "BUF" })], [row], digest)).toEqual([]);
   });
 
   it("keeps at most three confirmed sentences", () => {

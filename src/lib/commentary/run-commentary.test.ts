@@ -66,6 +66,8 @@ const view: CommentaryWeekViewRow[] = [
   {
     personId: "person-1",
     userDisplayName: "Alice",
+    year: YEAR,
+    week: WEEK,
     outcome: "WIN",
     points: 2,
     teamAbbreviation: "BUF",
@@ -73,6 +75,8 @@ const view: CommentaryWeekViewRow[] = [
   {
     personId: "person-2",
     userDisplayName: "Bob",
+    year: YEAR,
+    week: WEEK,
     outcome: "LOSS",
     points: 0,
     teamAbbreviation: "NYJ",
@@ -80,6 +84,8 @@ const view: CommentaryWeekViewRow[] = [
   {
     personId: "person-3",
     userDisplayName: "Cara",
+    year: YEAR,
+    week: WEEK,
     outcome: "TIE",
     points: 0,
     teamAbbreviation: "PHI",
@@ -97,8 +103,8 @@ function line(person: CommentaryWeekViewRow, sentence: string): CommentaryLine {
   return {
     sentence,
     personId: person.personId,
-    year: YEAR,
-    week: WEEK,
+    year: person.year,
+    week: person.week,
     outcome: person.outcome,
     points: person.points,
     team: person.teamAbbreviation,
@@ -169,6 +175,8 @@ describe("runCommentary", () => {
       {
         personId: "person-4",
         userDisplayName: "Dee",
+        year: YEAR,
+        week: WEEK,
         outcome: "WIN",
         points: 1,
         teamAbbreviation: "DAL",
@@ -205,9 +213,15 @@ describe("runCommentary", () => {
     );
     expect(result.sentences).not.toContain("Dee took Dallas.");
     expect(row?.sentences).not.toContain("Dee took Dallas.");
-    const prompt = mocks.generateText.mock.calls[0][0].prompt as string;
+    const call = mocks.generateText.mock.calls[0][0];
+    const prompt = call.prompt as string;
+    expect(prompt).toContain(JSON.stringify(promptView));
+    expect(prompt).toContain("Copy those cells");
+    expect(prompt).toContain("Use only these rows.");
+    expect(prompt).not.toMatch(/this week only/i);
     expect(prompt).toContain("Alice");
     expect(prompt).not.toContain("email");
+    expect(call).not.toHaveProperty("tools");
     expect(result.sentences).toEqual(sentences);
     expect(row?.status).toBe(CommentaryRunStatus.COMPLETED);
     expect(row?.sentences).toEqual(sentences);

@@ -29,6 +29,36 @@ describe("member surfaces", () => {
     }
   });
 
+  it("member routes and scoring readers do not reference the book", () => {
+    const pages = [
+      ["standings/page.tsx", "getLeagueStandings"],
+      ["results/page.tsx", "getLeaguePeerPickHistory"],
+      ["history/page.tsx", "getPersonalPickHistory"],
+    ] as const;
+    for (const [page, reader] of pages) {
+      const source = readFileSync(
+        join(process.cwd(), "src/app/(app)/leagues/[leagueId]", page),
+        "utf8",
+      );
+      expect(source).toContain("getCurrentNflSeasonYear");
+      expect(source).toContain(reader);
+      expect(source).not.toMatch(/bookRow|book_rows|BookRow/);
+      expect(source).not.toMatch(/runCommentary|loadCommentaryWeekView/);
+    }
+    const readers = [
+      "src/lib/scoring/get-league-standings.ts",
+      "src/lib/scoring/get-league-peer-pick-history.ts",
+      "src/lib/scoring/get-personal-pick-history.ts",
+    ];
+    for (const relative of readers) {
+      const source = readFileSync(join(process.cwd(), relative), "utf8");
+      expect(source).toContain("nflSeasonYear");
+      expect(source).toMatch(/pick/i);
+      expect(source).not.toMatch(/bookRow|book_rows|BookRow/);
+      expect(source).not.toMatch(/runCommentary|loadCommentaryWeekView|commentary/);
+    }
+  });
+
   it("does not add a chat route", () => {
     const chatRoutes = filesUnder(join(process.cwd(), "src/app")).filter((path) =>
       path.includes(`${join("chat")}`),

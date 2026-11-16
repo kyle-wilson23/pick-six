@@ -44,14 +44,9 @@ function stopReasonFor(error: unknown): string {
   return "model call failed";
 }
 
-function commentaryPrompt(
-  rows: CommentaryWeekViewRow[],
-  digest: { year: number; week: number },
-): string {
+function commentaryPrompt(rows: CommentaryWeekViewRow[]): string {
   return [
-    `NFL season ${digest.year}, week ${digest.week}.`,
-    "Write lines about this week only.",
-    "Each line needs the sentence plus personId, year, week, outcome, points, and team. Copy teamAbbreviation from these rows into team.",
+    "Each line needs the sentence plus personId, year, week, outcome, points, and team. Copy those cells from these rows. Copy teamAbbreviation into team.",
     "Use only these rows.",
     JSON.stringify(rows),
   ].join("\n\n");
@@ -166,7 +161,7 @@ export async function runCommentary(args: RunKey): Promise<CommentaryRunResult> 
       const result = await generateText({
         model: config.modelId,
         output: Output.object({ schema: commentaryLineListSchema }),
-        prompt: commentaryPrompt(promptRows, digest),
+        prompt: commentaryPrompt(promptRows),
       });
       const usage = pricedUsage(result.totalUsage);
       const nextSpend = addCallSpend(spend, usage, config);

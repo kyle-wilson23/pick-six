@@ -144,6 +144,7 @@ model Team {
   simHomeGames        LeagueSimGame[]     @relation("LeagueSimGameHomeTeam")
   simAwayGames        LeagueSimGame[]     @relation("LeagueSimGameAwayTeam")
   picks               Pick[]
+  bookRows            BookRow[]
   nflWeekJailedAsTeam NflWeekJailedTeam[]
   leagueWeekJailedAsTeam LeagueWeekJailedTeam[]
   auditEntriesAsBefore AuditLogEntry[] @relation("AuditBeforeTeam")
@@ -393,9 +394,29 @@ model LeaguePerson {
 
   league     League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   membership LeagueMembership @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)
+  bookRows   BookRow[]
 
   @@index([leagueId])
   @@map("league_persons")
+}
+
+/// One stored book cell for a league person, year, and week. Not a `Pick`.
+model BookRow {
+  id             String      @id @default(cuid())
+  leaguePersonId String      @map("league_person_id")
+  nflSeasonYear  Int         @map("nfl_season_year")
+  weekNumber     Int         @map("week_number")
+  outcome        PickOutcome
+  points         Int
+  teamId         String?     @map("team_id")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  leaguePerson LeaguePerson @relation(fields: [leaguePersonId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  @@unique([leaguePersonId, nflSeasonYear, weekNumber])
+  @@map("book_rows")
 }
 
 enum CommentaryRunStatus {

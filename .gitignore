@@ -49,3 +49,7 @@ _bmad-output/implementation-artifacts/post-epic-9-*.md
 
 # Local priorities / wishlist (not published)
 PRIORITIES.md
+
+# One-time local screenshot reader. Stays on this machine; not part of the app.
+scripts/print-season-screenshot.mjs
+scripts/print-season-screenshot.test.ts

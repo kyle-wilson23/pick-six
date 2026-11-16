@@ -47,9 +47,35 @@ describe("BookRow", () => {
     expect(teamColumn).not.toContain("NOT NULL");
   });
 
-  it("keeps the league person membership required", () => {
+  it("allows a league person with no membership and an optional display name", () => {
     const person = modelBlock(schema, "LeaguePerson");
-    expect(person).toMatch(/leagueMembershipId\s+String\s+@unique\s+@map\("league_membership_id"\)/);
-    expect(person).not.toMatch(/leagueMembershipId\s+String\?/);
+    const optionalMembership = readFileSync(
+      join(
+        process.cwd(),
+        "prisma/migrations/20261116170000_league_person_optional_membership/migration.sql",
+      ),
+      "utf8",
+    );
+    expect(person).toMatch(
+      /leagueMembershipId\s+String\?\s+@unique\s+@map\("league_membership_id"\)/,
+    );
+    expect(person).toMatch(/membership\s+LeagueMembership\?\s+@relation/);
+    expect(person).toMatch(/displayName\s+String\?\s+@map\("display_name"\)/);
+    const personMigration = readFileSync(
+      join(
+        process.cwd(),
+        "prisma/migrations/20261115180000_add_league_person_and_commentary_run/migration.sql",
+      ),
+      "utf8",
+    );
+    expect(personMigration).toMatch(
+      /CREATE UNIQUE INDEX "league_persons_league_membership_id_key" ON "league_persons"\("league_membership_id"\)/,
+    );
+    expect(optionalMembership).toMatch(
+      /ALTER TABLE "league_persons" ALTER COLUMN "league_membership_id" DROP NOT NULL/,
+    );
+    expect(optionalMembership).toMatch(/ADD COLUMN "display_name" TEXT/);
+    expect(optionalMembership).not.toMatch(/display_name" TEXT NOT NULL/);
+    expect(optionalMembership).not.toMatch(/DROP INDEX/);
   });
 });

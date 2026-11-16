@@ -76,7 +76,10 @@ export async function loadCommentaryWeekView(args: {
         }),
     prisma.bookRow.findMany({
       where: {
-        leaguePerson: { membership: playerMembership },
+        leaguePerson: {
+          leagueId: args.leagueId,
+          OR: [{ leagueMembershipId: null }, { membership: playerMembership }],
+        },
         ...(liveYears.length > 0 ? { nflSeasonYear: { notIn: liveYears } } : {}),
       },
       select: {
@@ -88,6 +91,7 @@ export async function loadCommentaryWeekView(args: {
         leaguePerson: {
           select: {
             id: true,
+            displayName: true,
             membership: {
               select: {
                 user: { select: { name: true, email: true } },
@@ -118,9 +122,12 @@ export async function loadCommentaryWeekView(args: {
   }
   for (const book of bookRows) {
     if (liveYearSet.has(book.nflSeasonYear)) continue;
+    const membership = book.leaguePerson.membership;
     const row: CommentaryWeekViewRow = {
       personId: book.leaguePerson.id,
-      userDisplayName: commentaryDisplayName(book.leaguePerson.membership.user),
+      userDisplayName: membership
+        ? commentaryDisplayName(membership.user)
+        : (book.leaguePerson.displayName ?? ""),
       year: book.nflSeasonYear,
       week: book.weekNumber,
       outcome: book.outcome,

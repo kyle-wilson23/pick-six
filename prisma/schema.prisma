@@ -384,16 +384,18 @@ model LeagueWeekEmailConfig {
   @@map("league_week_email_configs")
 }
 
-/// One league person per current player membership. Story 10.2 links memberships before a commentary run.
+/// One person in a league. A current player membership links here; a past member has none.
 model LeaguePerson {
   id                 String   @id @default(cuid())
   leagueId           String   @map("league_id")
-  leagueMembershipId String   @unique @map("league_membership_id")
+  leagueMembershipId String?  @unique @map("league_membership_id")
+  /// Checker label for a person with no membership. Not a lookup key.
+  displayName        String?  @map("display_name")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  league     League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  membership LeagueMembership @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)
+  league     League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  membership LeagueMembership? @relation(fields: [leagueMembershipId], references: [id], onDelete: Cascade)
   bookRows   BookRow[]
 
   @@index([leagueId])

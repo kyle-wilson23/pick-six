@@ -19,6 +19,19 @@ import { loadCommentaryWeekView, type CommentaryWeekViewRow } from "./week-view"
 
 const LEAGUE_ID = "league-1";
 
+function expectedBookWhere(years: number[]) {
+  return {
+    leaguePerson: {
+      leagueId: LEAGUE_ID,
+      OR: [
+        { leagueMembershipId: null },
+        { membership: leaguePlayerMembershipWhere(LEAGUE_ID) },
+      ],
+    },
+    ...(years.length > 0 ? { nflSeasonYear: { notIn: years } } : {}),
+  };
+}
+
 function keysOf(value: unknown, found = new Set<string>()): Set<string> {
   if (value == null || typeof value !== "object") return found;
   if (Array.isArray(value)) {
@@ -96,10 +109,7 @@ describe("loadCommentaryWeekView", () => {
     });
     expect(mockBookRowFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          leaguePerson: { membership: leaguePlayerMembershipWhere(LEAGUE_ID) },
-          nflSeasonYear: { notIn: [2026] },
-        },
+        where: expectedBookWhere([2026]),
       }),
     );
     expect(rows).toEqual([
@@ -126,6 +136,7 @@ describe("loadCommentaryWeekView", () => {
         team: { abbreviation: "KC" },
         leaguePerson: {
           id: "person-1",
+          displayName: "Not Alice",
           membership: { user: { name: "Alice", email: "alice@example.com" } },
         },
       },
@@ -292,7 +303,7 @@ describe("loadCommentaryWeekView", () => {
 
     expect(mockBookRowFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ nflSeasonYear: { notIn: [2024, 2026] } }),
+        where: expectedBookWhere([2024, 2026]),
       }),
     );
     expect(rows).toEqual([
@@ -341,8 +352,7 @@ describe("loadCommentaryWeekView", () => {
     });
 
     expect(mockPickFindMany).not.toHaveBeenCalled();
-    const bookWhere = mockBookRowFindMany.mock.calls[0][0].where;
-    expect(bookWhere).not.toHaveProperty("nflSeasonYear");
+    expect(mockBookRowFindMany.mock.calls[0][0].where).toEqual(expectedBookWhere([]));
     expect(rows).toEqual([
       {
         personId: "person-1",
@@ -499,5 +509,61 @@ describe("loadCommentaryWeekView", () => {
     expect(
       mockBookRowFindMany.mock.calls[0][0].select.leaguePerson.select.membership.select.user.select,
     ).toEqual(userSelect);
+    expect(
+      mockBookRowFindMany.mock.calls[0][0].select.leaguePerson.select.displayName,
+    ).toBe(true);
+  });
+
+  it("includes a book-only past member for a year with no season and skips that person's live year", async () => {
+    mockSeasonFindMany.mockResolvedValue([{ nflSeasonYear: 2024 }]);
+    mockBookRowFindMany.mockResolvedValue([
+      {
+        nflSeasonYear: 2023,
+        weekNumber: 2,
+        outcome: "LOSS",
+        points: 0,
+        team: null,
+        leaguePerson: {
+          id: "blair",
+          displayName: "Blair",
+          membership: null,
+        },
+      },
+      {
+        nflSeasonYear: 2024,
+        weekNumber: 1,
+        outcome: "WIN",
+        points: 1,
+        team: { abbreviation: "KC" },
+        leaguePerson: {
+          id: "blair",
+          displayName: "Blair",
+          membership: null,
+        },
+      },
+    ]);
+
+    const rows = await loadCommentaryWeekView({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: 2024,
+      weekNumber: 1,
+    });
+
+    expect(mockBookRowFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expectedBookWhere([2024]),
+      }),
+    );
+    expect(rows).toEqual([
+      {
+        personId: "blair",
+        userDisplayName: "Blair",
+        year: 2023,
+        week: 2,
+        outcome: "LOSS",
+        points: 0,
+        teamAbbreviation: null,
+      },
+    ]);
   });
 });

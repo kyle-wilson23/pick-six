@@ -1,0 +1,20 @@
+# Team override: every bmad-build-auto run that finishes a tracked story
+# writes that story's status back to sprint-status.yaml.
+
+[workflow]
+
+on_complete = """
+Update the sprint tracker for this run, then stop.
+
+1. Read `{spec_file}` frontmatter `status`. If `{spec_file}` is missing, or its filename is not `spec-<key>.md` under `_bmad-output/implementation-artifacts`, stop. `<key>` is the filename without the `spec-` prefix and without `.md`.
+2. Open `{project-root}/_bmad-output/implementation-artifacts/sprint-status.yaml`. If `development_status` has no entry whose key equals `<key>`, stop. Do not add a key. Do not change any `epic-*` or `*-retrospective` entry.
+3. Replace only that entry's status word, and keep any existing trailing comment on the same line. Map the spec status as follows:
+   - `done` → `done`
+   - `in-review` → `review`
+   - `in-progress` → `in-progress`
+   - `ready-for-dev` → `ready-for-dev`
+   - `draft` → `ready-for-dev`
+   - `blocked` → `in-progress`
+4. Set `last_updated` to the current local time as `M-D-YYYY HH:MM`, and set its comment to the story number, the new status, and a few words from the story title. Example: `11-15-2026 20:00 # story 10.3 done: weekly dollar ceiling`.
+5. If that file is the only working-tree change, commit it. Do not stage anything else. Do not push. If the file did not change, do not commit.
+"""

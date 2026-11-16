@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: 11-15-2026 18:36 # story 10.2 done: checked note in the Tuesday digest
+last_updated: 11-15-2026 20:00 # story 10.3 done: weekly dollar ceiling
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -168,7 +168,7 @@ development_status:
   epic-10: in-progress
   10-1-turn-weekly-commentary-on-or-off: done
   10-2-show-the-checked-note-in-the-tuesday-digest: done
-  10-3-set-the-league-s-weekly-dollar-ceiling: backlog
+  10-3-set-the-league-s-weekly-dollar-ceiling: done
   10-4-hold-the-note-on-the-league-admin-email-screen: backlog
   10-5-count-the-loaded-book-as-one-history: backlog
   epic-10-retrospective: optional

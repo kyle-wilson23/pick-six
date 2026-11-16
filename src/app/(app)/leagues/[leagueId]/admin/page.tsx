@@ -13,8 +13,11 @@ import { AdminSimulationControls } from "@/components/admin/AdminSimulationContr
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { AdminWeeklyEmailStatus } from "@/components/admin/AdminWeeklyEmailStatus";
 import { CommentaryCeilingField } from "@/components/admin/CommentaryCeilingField";
+import { CommentaryDebugSwitch } from "@/components/admin/CommentaryDebugSwitch";
 import { CommentarySwitch } from "@/components/admin/CommentarySwitch";
+import { HeldCommentaryNote } from "@/components/admin/HeldCommentaryNote";
 import { auth } from "@/lib/auth";
+import { heldCommentarySentences } from "@/lib/commentary/digest-sentences";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
 import { getAuditLog } from "@/lib/admin/get-audit-log";
 import { getJailedVerification } from "@/lib/admin/get-jailed-verification";
@@ -103,6 +106,24 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
     });
   }
 
+  const commentaryRun =
+    league.commentaryDebug && season != null && weekNumber != null
+      ? await prisma.commentaryRun.findUnique({
+          where: {
+            leagueId_nflSeasonYear_weekNumber: {
+              leagueId,
+              nflSeasonYear: season.nflSeasonYear,
+              weekNumber,
+            },
+          },
+          select: { status: true, sentences: true },
+        })
+      : null;
+  const heldSentences = heldCommentarySentences({
+    commentaryDebug: league.commentaryDebug,
+    run: commentaryRun,
+  });
+
   return (
     <Stack
       component="main"
@@ -184,12 +205,20 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
               commentaryEnabled={league.commentaryEnabled}
             />
             {access.isSuperuser ? (
-              <CommentaryCeilingField
-                key={leagueId}
-                leagueId={leagueId}
-                ceilingUsd={league.commentaryWeeklyCeilingUsd.toString()}
-              />
+              <Stack spacing={1.5}>
+                <CommentaryDebugSwitch
+                  key={`${leagueId}-commentary-debug`}
+                  leagueId={leagueId}
+                  commentaryDebug={league.commentaryDebug}
+                />
+                <CommentaryCeilingField
+                  key={`${leagueId}-commentary-ceiling`}
+                  leagueId={leagueId}
+                  ceilingUsd={league.commentaryWeeklyCeilingUsd.toString()}
+                />
+              </Stack>
             ) : null}
+            <HeldCommentaryNote sentences={heldSentences} />
             <AdminEmailComposer
               leagueId={leagueId}
               weekNumber={weekNumber}

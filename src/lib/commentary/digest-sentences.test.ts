@@ -1,7 +1,7 @@
 import { CommentaryRunStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { digestCommentarySentences } from "./digest-sentences";
+import { digestCommentarySentences, heldCommentarySentences } from "./digest-sentences";
 import { QUIET_WEEK_SENTENCE } from "./quiet-week";
 
 describe("digestCommentarySentences", () => {
@@ -34,5 +34,39 @@ describe("digestCommentarySentences", () => {
       }),
     ).toEqual([]);
     expect(digestCommentarySentences(null)).toEqual([]);
+  });
+});
+
+describe("heldCommentarySentences", () => {
+  const proved = ["Alice took Buffalo for two.", "Bob lost with the Jets."];
+
+  it("yields a completed run's sentences when debug is on", () => {
+    expect(
+      heldCommentarySentences({
+        commentaryDebug: true,
+        run: { status: CommentaryRunStatus.COMPLETED, sentences: proved },
+      }),
+    ).toEqual(proved);
+  });
+
+  it("yields none for a stopped run when debug is on, and not the quiet sentence", () => {
+    const sentences = heldCommentarySentences({
+      commentaryDebug: true,
+      run: { status: CommentaryRunStatus.STOPPED, sentences: [...proved, QUIET_WEEK_SENTENCE] },
+    });
+    expect(sentences).toEqual([]);
+    expect(sentences).not.toContain(QUIET_WEEK_SENTENCE);
+  });
+
+  it("yields none when debug is off", () => {
+    expect(
+      heldCommentarySentences({
+        commentaryDebug: false,
+        run: {
+          status: CommentaryRunStatus.COMPLETED,
+          sentences: [...proved, QUIET_WEEK_SENTENCE],
+        },
+      }),
+    ).toEqual([]);
   });
 });

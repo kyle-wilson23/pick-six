@@ -64,6 +64,7 @@ function digestData() {
     jailedTeamAbbreviation: "PHI",
     picksUrl: "https://example.test/leagues/league-1/picks",
     members: [],
+    commentaryDebug: false,
   };
 }
 
@@ -90,6 +91,29 @@ describe("GET tuesday preview", () => {
     expect(response.status).toBe(200);
     expect(html).toContain("Alice took Buffalo for two.");
     expect(html.indexOf("Alice took Buffalo for two.")).toBeLessThan(html.indexOf("Make your picks"));
+    expect(mockRunCommentary).not.toHaveBeenCalled();
+    expect(mockGenerateText).not.toHaveBeenCalled();
+  });
+
+  it("omits the stored note when debug is on and does not call the model", async () => {
+    mockGetTuesdayDigestData.mockResolvedValue({ ...digestData(), commentaryDebug: true });
+    mockCommentaryRunFindUnique.mockResolvedValue({
+      status: "COMPLETED",
+      sentences: ["Alice took Buffalo for two.", "Quiet week. Nothing new for the record book."],
+    });
+
+    const response = await GET(new NextRequest("http://localhost/preview"), {
+      params: Promise.resolve({ leagueId: LEAGUE_ID }),
+    });
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(mockCommentaryRunFindUnique).toHaveBeenCalled();
+    expect(html).toContain("Standings");
+    expect(html).toContain("Jailed team");
+    expect(html).not.toContain("This week");
+    expect(html).not.toContain("Alice took Buffalo for two.");
+    expect(html).not.toContain("Quiet week. Nothing new for the record book.");
     expect(mockRunCommentary).not.toHaveBeenCalled();
     expect(mockGenerateText).not.toHaveBeenCalled();
   });

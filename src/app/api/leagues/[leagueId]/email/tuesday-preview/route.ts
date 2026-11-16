@@ -84,7 +84,8 @@ export async function GET(
         picksUrl: data.picksUrl,
         adminNote: config?.bodyText ?? null,
         isTestLeague: data.isTestLeague,
-        lines: digestCommentarySentences(commentaryRun),
+        lines:
+          data.commentaryDebug === true ? [] : digestCommentarySentences(commentaryRun),
       }),
     );
 

@@ -35,5 +35,17 @@ describe("patchCommentaryEnabledBodySchema", () => {
         commentaryWeeklyCeilingUsd: "2.5",
       }).success,
     ).toBe(false);
+    expect(
+      patchCommentaryEnabledBodySchema.safeParse({
+        commentaryEnabled: true,
+        commentaryDebug: true,
+      }).success,
+    ).toBe(false);
+    expect(
+      patchCommentaryEnabledBodySchema.safeParse({
+        commentaryEnabled: false,
+        commentaryDebug: false,
+      }).success,
+    ).toBe(false);
   });
 });

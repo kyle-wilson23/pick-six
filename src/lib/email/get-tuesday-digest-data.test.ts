@@ -296,4 +296,26 @@ describe("getTuesdayDigestData", () => {
       }),
     );
   });
+
+  it("selects and returns commentaryDebug", async () => {
+    mockLeagueFindUnique.mockResolvedValue({
+      id: LEAGUE_ID,
+      name: "Test League",
+      isTestLeague: false,
+      commentaryEnabled: false,
+      commentaryDebug: true,
+    });
+    mockGetLeagueStandings.mockResolvedValue([]);
+    mockNflWeekJailedTeamFindUnique.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([]);
+
+    const result = await getTuesdayDigestData({ leagueId: LEAGUE_ID });
+
+    expect(result.commentaryDebug).toBe(true);
+    expect(mockLeagueFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ commentaryDebug: true }),
+      }),
+    );
+  });
 });

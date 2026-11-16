@@ -294,6 +294,66 @@ describe("sendTuesdayDigest", () => {
     }
   });
 
+  it("a delivering on-send with debug on still runs once and omits the section", async () => {
+    mockGetTestLeagueEmailMode.mockReturnValue("send");
+    const sentences = ["Alice took Buffalo for two.", "Bob lost with the Jets."];
+    mockRunCommentary.mockResolvedValue({ sentences });
+
+    const result = await sendTuesdayDigest({
+      leagueId: LEAGUE_ID,
+      preloadedData: {
+        ...PRELOADED_DATA,
+        isTestLeague: false,
+        commentaryEnabled: true,
+        commentaryDebug: true,
+      },
+    });
+
+    expect(result.sent).toBe(2);
+    expect(mockRunCommentary).toHaveBeenCalledOnce();
+    expect(mockRunCommentary).toHaveBeenCalledWith({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: 2026,
+      weekNumber: 1,
+    });
+    const payloads = mockResendSend.mock.calls.map((call) => call[0] as { react?: ReactElement });
+    expect(payloads).toHaveLength(2);
+    for (const payload of payloads) {
+      if (!payload.react) throw new Error("expected Tuesday digest email element");
+      expect(payload.react.props.lines).toEqual([]);
+      const html = await render(payload.react);
+      expect(html).toContain("Standings");
+      expect(html).toContain("Jailed team");
+      expect(html).not.toContain("This week");
+      for (const sentence of sentences) {
+        expect(html).not.toContain(sentence);
+      }
+    }
+  });
+
+  it("a delivering on-send with debug on still sends scores when the runner throws", async () => {
+    mockGetTestLeagueEmailMode.mockReturnValue("send");
+    mockRunCommentary.mockRejectedValue(new Error("database down"));
+
+    const result = await sendTuesdayDigest({
+      leagueId: LEAGUE_ID,
+      preloadedData: {
+        ...PRELOADED_DATA,
+        isTestLeague: false,
+        commentaryEnabled: true,
+        commentaryDebug: true,
+      },
+    });
+
+    expect(mockRunCommentary).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ sent: 2, failed: 0, suppressed: false });
+    const html = await render(
+      (mockResendSend.mock.calls[0][0] as { react: ReactElement }).react,
+    );
+    expect(html).not.toContain("This week");
+    expect(html).toContain("Standings");
+  });
+
   it("a delivering on-send shows the quiet sentence", async () => {
     mockGetTestLeagueEmailMode.mockReturnValue("send");
     mockRunCommentary.mockResolvedValue({

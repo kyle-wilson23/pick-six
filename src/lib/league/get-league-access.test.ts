@@ -8,6 +8,7 @@ const league = {
   name: "Test",
   isTestLeague: false,
   commentaryEnabled: false,
+  commentaryDebug: false,
   commentaryWeeklyCeilingUsd: new Prisma.Decimal(1),
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
@@ -87,6 +88,16 @@ describe("resolveLeagueAccess", () => {
       env,
     });
     expect(access?.league.commentaryEnabled).toBe(true);
+  });
+
+  it("returns the saved commentaryDebug value on a later read", () => {
+    const access = resolveLeagueAccess({
+      userEmail: "admin@example.com",
+      membership: adminMembership,
+      league: { ...league, commentaryDebug: true },
+      env,
+    });
+    expect(access?.league.commentaryDebug).toBe(true);
   });
 
   it("returns the saved commentary ceiling on a later read", () => {

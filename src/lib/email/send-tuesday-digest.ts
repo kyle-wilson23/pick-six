@@ -133,7 +133,7 @@ export async function sendTuesdayDigest({
         nflSeasonYear: data.nflSeasonYear,
         weekNumber: data.weekNumber,
       });
-      lines = run.sentences;
+      lines = data.commentaryDebug === true ? [] : run.sentences;
     } catch (err) {
       logEvent({
         level: "error",

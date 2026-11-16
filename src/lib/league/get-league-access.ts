@@ -17,6 +17,7 @@ export type LeagueAccessLeague = {
   name: string;
   isTestLeague: boolean;
   commentaryEnabled: boolean;
+  commentaryDebug: boolean;
   commentaryWeeklyCeilingUsd: Prisma.Decimal;
   createdAt: Date;
 };
@@ -35,6 +36,7 @@ const leagueSelect = {
   name: true,
   isTestLeague: true,
   commentaryEnabled: true,
+  commentaryDebug: true,
   commentaryWeeklyCeilingUsd: true,
   createdAt: true,
 } as const;

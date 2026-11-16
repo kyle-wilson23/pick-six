@@ -21,6 +21,8 @@ export type TuesdayDigestData = {
   isTestLeague: boolean;
   /** When omitted or false, the send stores nothing and spends nothing. */
   commentaryEnabled?: boolean;
+  /** When omitted or false, a delivering send keeps the lines the run returned. */
+  commentaryDebug?: boolean;
   nflSeasonYear: number;
   weekNumber: number;
   /** True when competition has not started (picks preview). Cron skips; admin may still send. */
@@ -78,7 +80,13 @@ export async function getTuesdayDigestData(
 ): Promise<TuesdayDigestData> {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, name: true, isTestLeague: true, commentaryEnabled: true },
+    select: {
+      id: true,
+      name: true,
+      isTestLeague: true,
+      commentaryEnabled: true,
+      commentaryDebug: true,
+    },
   });
 
   if (!league) {
@@ -168,6 +176,7 @@ export async function getTuesdayDigestData(
     leagueId: league.id,
     isTestLeague: league.isTestLeague,
     commentaryEnabled: league.commentaryEnabled,
+    commentaryDebug: league.commentaryDebug,
     nflSeasonYear: season.nflSeasonYear,
     weekNumber,
     isPreviewWeek,

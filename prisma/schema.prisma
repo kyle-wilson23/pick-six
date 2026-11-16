@@ -63,6 +63,8 @@ model League {
   isTestLeague Boolean  @default(false) @map("is_test_league")
   /// Epic 10: weekly results commentary. Off until a league admin turns it on.
   commentaryEnabled Boolean @default(false) @map("commentary_enabled")
+  /// Epic 10: hold the stored note on the admin email screen. Off until the superuser turns it on.
+  commentaryDebug Boolean @default(false) @map("commentary_debug")
   /// Epic 10: weekly commentary dollar ceiling. Existing and new leagues default to $1.
   commentaryWeeklyCeilingUsd Decimal @default(1) @map("commentary_weekly_ceiling_usd") @db.Decimal(12, 6)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz

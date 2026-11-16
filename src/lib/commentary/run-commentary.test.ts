@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
+  leagueFindUnique: vi.fn(),
 }));
 
 vi.mock("ai", async () => {
@@ -48,6 +49,9 @@ vi.mock("@/lib/db", () => ({
       findUnique: (...args: unknown[]) => mocks.findUnique(...args),
       create: (...args: unknown[]) => mocks.create(...args),
       update: (...args: unknown[]) => mocks.update(...args),
+    },
+    league: {
+      findUnique: (...args: unknown[]) => mocks.leagueFindUnique(...args),
     },
   },
 }));
@@ -114,9 +118,14 @@ function modelResult(
 
 describe("runCommentary", () => {
   let row: StoredRun | null;
+  let ceilingUsd: Prisma.Decimal;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    ceilingUsd = new Prisma.Decimal(1);
+    mocks.leagueFindUnique.mockImplementation(async () => ({
+      commentaryWeeklyCeilingUsd: ceilingUsd,
+    }));
     vi.stubEnv("COMMENTARY_MODEL_ID", CALLABLE_ENV.COMMENTARY_MODEL_ID);
     vi.stubEnv("AI_GATEWAY_API_KEY", CALLABLE_ENV.AI_GATEWAY_API_KEY);
     vi.stubEnv("COMMENTARY_INPUT_USD_PER_MILLION", CALLABLE_ENV.COMMENTARY_INPUT_USD_PER_MILLION);
@@ -288,6 +297,7 @@ describe("runCommentary", () => {
     });
 
     expect(mocks.generateText).not.toHaveBeenCalled();
+    expect(mocks.leagueFindUnique).not.toHaveBeenCalled();
     expect(result.sentences).toEqual([]);
     expect(row?.status).toBe(CommentaryRunStatus.STOPPED);
     expect(row?.stopReason).toBe(stopReason);
@@ -327,9 +337,107 @@ describe("runCommentary", () => {
     });
     expect(unfinished.sentences).toEqual([]);
     expect(mocks.generateText).not.toHaveBeenCalled();
+    expect(mocks.leagueFindUnique).not.toHaveBeenCalled();
     expect(row?.status).toBe(CommentaryRunStatus.STOPPED);
     expect(row?.stopReason).toBe("unfinished run");
     expect(row?.sentences).toEqual(["Bob lost with the Jets."]);
+  });
+
+  it("keeps the sentence from the call that crosses a ceiling below $1 and does not call again", async () => {
+    ceilingUsd = new Prisma.Decimal("0.001");
+    const sentence = "Alice took Buffalo for two.";
+    mocks.generateText.mockResolvedValueOnce(modelResult([line(view[0], sentence)], 1_000));
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    expect(mocks.leagueFindUnique).toHaveBeenCalledWith({
+      where: { id: LEAGUE_ID },
+      select: { commentaryWeeklyCeilingUsd: true },
+    });
+    expect(mocks.findUnique.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.leagueFindUnique.mock.invocationCallOrder[0],
+    );
+    expect(mocks.generateText).toHaveBeenCalledOnce();
+    expect(result.sentences).toEqual([sentence]);
+    expect(row?.status).toBe(CommentaryRunStatus.COMPLETED);
+    expect(row?.sentences).toEqual([sentence]);
+    expect(row?.spendUsd.greaterThanOrEqualTo("0.001")).toBe(true);
+  });
+
+  it("stores the quiet sentence and does not call when the ceiling is 0", async () => {
+    ceilingUsd = new Prisma.Decimal(0);
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    expect(mocks.generateText).not.toHaveBeenCalled();
+    expect(mocks.leagueFindUnique).toHaveBeenCalled();
+    expect(result.sentences).toEqual([QUIET_WEEK_SENTENCE]);
+    expect(row?.status).toBe(CommentaryRunStatus.COMPLETED);
+    expect(row?.stopReason).toBeNull();
+    expect(row?.sentences).toEqual([QUIET_WEEK_SENTENCE]);
+    expect(row?.spendUsd.equals(0)).toBe(true);
+  });
+
+  it("calls again after spend passes $1 when the league ceiling is 2.5", async () => {
+    ceilingUsd = new Prisma.Decimal("2.5");
+    const sentences = [
+      "Alice took Buffalo for two.",
+      "Bob lost with the Jets.",
+      "Cara tied with Philadelphia.",
+    ];
+    mocks.generateText
+      .mockResolvedValueOnce(modelResult([line(view[0], sentences[0])], 1_000_000))
+      .mockResolvedValueOnce(
+        modelResult([line(view[1], sentences[1]), line(view[2], sentences[2])], 1_000),
+      );
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(2);
+    expect(result.sentences).toEqual(sentences);
+    expect(row?.status).toBe(CommentaryRunStatus.COMPLETED);
+    expect(row?.spendUsd.greaterThan(1)).toBe(true);
+    expect(row?.spendUsd.lessThan("2.5")).toBe(true);
+  });
+
+  it("does not rewrite a stored run when the ceiling changes", async () => {
+    ceilingUsd = new Prisma.Decimal(0);
+    row = {
+      id: "run-1",
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+      status: CommentaryRunStatus.COMPLETED,
+      stopReason: null,
+      spendUsd: new Prisma.Decimal("0.2"),
+      sentences: ["Alice took Buffalo for two."],
+    };
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    expect(result.sentences).toEqual(["Alice took Buffalo for two."]);
+    expect(mocks.generateText).not.toHaveBeenCalled();
+    expect(mocks.leagueFindUnique).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(row.sentences).toEqual(["Alice took Buffalo for two."]);
+    expect(row.spendUsd.equals("0.2")).toBe(true);
+    expect(row.status).toBe(CommentaryRunStatus.COMPLETED);
   });
 
   it("stores the quiet sentence only on a normal finish with zero confirms", async () => {

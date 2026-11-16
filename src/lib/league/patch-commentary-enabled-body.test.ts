@@ -29,5 +29,11 @@ describe("patchCommentaryEnabledBodySchema", () => {
     expect(
       patchCommentaryEnabledBodySchema.safeParse({ commentaryEnabled: true, extra: 1 }).success,
     ).toBe(false);
+    expect(
+      patchCommentaryEnabledBodySchema.safeParse({
+        commentaryEnabled: true,
+        commentaryWeeklyCeilingUsd: "2.5",
+      }).success,
+    ).toBe(false);
   });
 });

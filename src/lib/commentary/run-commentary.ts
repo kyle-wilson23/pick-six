@@ -128,6 +128,15 @@ export async function runCommentary(args: RunKey): Promise<CommentaryRunResult> 
     return { sentences: [] };
   }
 
+  const league = await prisma.league.findUnique({
+    where: { id: args.leagueId },
+    select: { commentaryWeeklyCeilingUsd: true },
+  });
+  if (!league) {
+    throw new Error("league not found");
+  }
+  const ceilingUsd = league.commentaryWeeklyCeilingUsd;
+
   let run: { id: string };
   try {
     run = await prisma.commentaryRun.create({
@@ -149,7 +158,7 @@ export async function runCommentary(args: RunKey): Promise<CommentaryRunResult> 
   const confirmed: string[] = [];
   let spend = new Prisma.Decimal(0);
 
-  while (confirmed.length < CONFIRMED_LINE_CAP && spend.lessThan(config.ceilingUsd)) {
+  while (confirmed.length < CONFIRMED_LINE_CAP && spend.lessThan(ceilingUsd)) {
     const promptRows = await loadCommentaryWeekView(args);
     let lines: CommentaryLine[];
     let spentNothing: boolean;
@@ -191,7 +200,7 @@ export async function runCommentary(args: RunKey): Promise<CommentaryRunResult> 
     if (spentNothing && confirmed.length < CONFIRMED_LINE_CAP) {
       return finishStopped(run.id, "model call reported no token spend", spend, confirmed);
     }
-    if (confirmed.length >= CONFIRMED_LINE_CAP || !spend.lessThan(config.ceilingUsd)) {
+    if (confirmed.length >= CONFIRMED_LINE_CAP || !spend.lessThan(ceilingUsd)) {
       break;
     }
   }

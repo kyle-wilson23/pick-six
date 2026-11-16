@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 
-/** Story 10.3 replaces this per league. Until then every run stops at one dollar. */
+/** Documented $1 default for `League.commentaryWeeklyCeilingUsd`. Runs read the league column. */
 export const COMMENTARY_CEILING_USD = new Prisma.Decimal(1);
 
 const MODEL_ID = "COMMENTARY_MODEL_ID";
@@ -19,7 +19,6 @@ export type CommentaryConfig =
   | ({
       callable: true;
       modelId: string;
-      ceilingUsd: Prisma.Decimal;
     } & CommentaryPrices)
   | {
       callable: false;
@@ -63,6 +62,5 @@ export function readCommentaryConfig(
     modelId,
     inputUsdPerMillion,
     outputUsdPerMillion,
-    ceilingUsd: COMMENTARY_CEILING_USD,
   };
 }

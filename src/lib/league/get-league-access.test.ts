@@ -1,4 +1,4 @@
-import { LeagueMembershipRole } from "@prisma/client";
+import { LeagueMembershipRole, Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 import { resolveLeagueAccess } from "./get-league-access";
@@ -8,6 +8,7 @@ const league = {
   name: "Test",
   isTestLeague: false,
   commentaryEnabled: false,
+  commentaryWeeklyCeilingUsd: new Prisma.Decimal(1),
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
@@ -86,6 +87,16 @@ describe("resolveLeagueAccess", () => {
       env,
     });
     expect(access?.league.commentaryEnabled).toBe(true);
+  });
+
+  it("returns the saved commentary ceiling on a later read", () => {
+    const access = resolveLeagueAccess({
+      userEmail: "ops@example.com",
+      membership: null,
+      league: { ...league, commentaryWeeklyCeilingUsd: new Prisma.Decimal("2.5") },
+      env,
+    });
+    expect(access?.league.commentaryWeeklyCeilingUsd.toString()).toBe("2.5");
   });
 
   it("keeps a normal member as participant, not admin", () => {

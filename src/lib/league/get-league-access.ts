@@ -1,4 +1,4 @@
-import { LeagueMembershipRole } from "@prisma/client";
+import { LeagueMembershipRole, Prisma } from "@prisma/client";
 import { cache } from "react";
 
 import { isSuperuserEmail, type SuperuserEnv } from "@/lib/auth/is-superuser";
@@ -17,6 +17,7 @@ export type LeagueAccessLeague = {
   name: string;
   isTestLeague: boolean;
   commentaryEnabled: boolean;
+  commentaryWeeklyCeilingUsd: Prisma.Decimal;
   createdAt: Date;
 };
 
@@ -34,6 +35,7 @@ const leagueSelect = {
   name: true,
   isTestLeague: true,
   commentaryEnabled: true,
+  commentaryWeeklyCeilingUsd: true,
   createdAt: true,
 } as const;
 

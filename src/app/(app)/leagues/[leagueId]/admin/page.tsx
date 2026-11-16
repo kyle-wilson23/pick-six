@@ -12,6 +12,7 @@ import { AdminReminderControls } from "@/components/admin/AdminReminderControls"
 import { AdminSimulationControls } from "@/components/admin/AdminSimulationControls";
 import { AdminSubmissionCard } from "@/components/admin/AdminSubmissionCard";
 import { AdminWeeklyEmailStatus } from "@/components/admin/AdminWeeklyEmailStatus";
+import { CommentaryCeilingField } from "@/components/admin/CommentaryCeilingField";
 import { CommentarySwitch } from "@/components/admin/CommentarySwitch";
 import { auth } from "@/lib/auth";
 import { buildAdminOverrideData } from "@/lib/admin/build-admin-override-data";
@@ -182,6 +183,13 @@ export default async function LeagueAdminDashboardPage({ params }: PageProps) {
               leagueId={leagueId}
               commentaryEnabled={league.commentaryEnabled}
             />
+            {access.isSuperuser ? (
+              <CommentaryCeilingField
+                key={leagueId}
+                leagueId={leagueId}
+                ceilingUsd={league.commentaryWeeklyCeilingUsd.toString()}
+              />
+            ) : null}
             <AdminEmailComposer
               leagueId={leagueId}
               weekNumber={weekNumber}

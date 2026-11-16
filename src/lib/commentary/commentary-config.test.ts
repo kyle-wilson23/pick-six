@@ -18,8 +18,8 @@ describe("readCommentaryConfig", () => {
     expect(config.modelId).toBe("test/model");
     expect(config.inputUsdPerMillion.equals("1.5")).toBe(true);
     expect(config.outputUsdPerMillion.equals("6")).toBe(true);
-    expect(config.ceilingUsd.equals(COMMENTARY_CEILING_USD)).toBe(true);
-    expect(config.ceilingUsd.equals(new Prisma.Decimal(1))).toBe(true);
+    expect(config).not.toHaveProperty("ceilingUsd");
+    expect(COMMENTARY_CEILING_USD.equals(new Prisma.Decimal(1))).toBe(true);
     expect(config).not.toHaveProperty("apiKey");
     expect(config).not.toHaveProperty("AI_GATEWAY_API_KEY");
   });

@@ -232,6 +232,32 @@ describe("runCommentary", () => {
     expect(mocks.loadCommentaryWeekView).toHaveBeenCalledTimes(2);
   });
 
+  it("prompts and stores a row that is not the digest week", async () => {
+    const history: CommentaryWeekViewRow = {
+      personId: "person-1",
+      userDisplayName: "Alice",
+      year: 2024,
+      week: 7,
+      outcome: "LOSS",
+      points: 0,
+      teamAbbreviation: null,
+    };
+    const sentence = "Alice's 2024 loss is on the book.";
+    mocks.loadCommentaryWeekView.mockResolvedValue([history]);
+    mocks.generateText.mockResolvedValueOnce(modelResult([line(history, sentence)], 1_000_000));
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    const prompt = mocks.generateText.mock.calls[0][0].prompt as string;
+    expect(prompt).toContain(JSON.stringify(history));
+    expect(result.sentences).toEqual([sentence]);
+    expect(row?.sentences).toEqual([sentence]);
+  });
+
   it("calls again when the first list matches nothing and spend is under $1", async () => {
     const sentences = [
       "Alice took Buffalo for two.",

@@ -151,6 +151,77 @@ describe("loadCommentaryWeekView", () => {
     expect(bookRow).not.toHaveProperty("seasonId");
   });
 
+  it("returns a scored pick and a book row for the same person", async () => {
+    mockSeasonFindMany.mockResolvedValue([{ nflSeasonYear: 2026 }]);
+    mockPickFindMany.mockResolvedValue([
+      {
+        nflWeekNumber: 4,
+        outcome: "WIN",
+        pointsEarned: 2,
+        team: { abbreviation: "BUF" },
+        season: { nflSeasonYear: 2026 },
+        leagueMembership: {
+          leaguePerson: { id: "person-1" },
+          user: { name: "Alice", email: "alice@example.com" },
+        },
+      },
+    ]);
+    mockBookRowFindMany.mockResolvedValue([
+      {
+        nflSeasonYear: 2024,
+        weekNumber: 8,
+        outcome: "LOSS",
+        points: 0,
+        team: { abbreviation: "KC" },
+        leaguePerson: {
+          id: "person-1",
+          membership: { user: { name: "Alice", email: "alice@example.com" } },
+        },
+      },
+      {
+        nflSeasonYear: 2026,
+        weekNumber: 4,
+        outcome: "WIN",
+        points: 9,
+        team: { abbreviation: "GB" },
+        leaguePerson: {
+          id: "person-1",
+          membership: { user: { name: "Alice", email: "alice@example.com" } },
+        },
+      },
+    ]);
+
+    const rows = await loadCommentaryWeekView({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: 2026,
+      weekNumber: 4,
+    });
+
+    expect(rows).toEqual([
+      {
+        personId: "person-1",
+        userDisplayName: "Alice",
+        year: 2026,
+        week: 4,
+        outcome: "WIN",
+        points: 2,
+        teamAbbreviation: "BUF",
+      },
+      {
+        personId: "person-1",
+        userDisplayName: "Alice",
+        year: 2024,
+        week: 8,
+        outcome: "LOSS",
+        points: 0,
+        teamAbbreviation: "KC",
+      },
+    ]);
+    expect(rows).not.toContainEqual(
+      expect.objectContaining({ year: 2026, teamAbbreviation: "GB" }),
+    );
+  });
+
   it("uses the season pick and ignores book rows for a live year", async () => {
     mockSeasonFindMany.mockResolvedValue([{ nflSeasonYear: 2024 }, { nflSeasonYear: 2026 }]);
     mockPickFindMany.mockResolvedValue([

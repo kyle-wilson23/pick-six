@@ -53,6 +53,18 @@ describe("confirmCommentaryLines", () => {
     ]);
   });
 
+  it("keeps Alice's 2026 cell when 2024 is only on another person", () => {
+    const sentence = "Alice's 2024 win showed up again in 2026.";
+    const bob: CommentaryWeekViewRow = {
+      ...alice,
+      personId: "person-bob",
+      userDisplayName: "Bob",
+      year: 2024,
+      week: 1,
+    };
+    expect(confirmCommentaryLines([line({ sentence })], [alice, bob], digest)).toEqual([sentence]);
+  });
+
   it("drops an unread year and does not rewrite it", () => {
     const sentence = "Alice's 2019 win showed up again in 2026.";
     expect(confirmCommentaryLines([line({ sentence })], [alice], digest)).toEqual([]);
@@ -162,10 +174,11 @@ describe("confirmCommentaryLines", () => {
   });
 
   it("drops league history even when the sentence names a year", () => {
+    const prior: CommentaryWeekViewRow = { ...alice, year: 2024, week: 1 };
     expect(
       confirmCommentaryLines(
         [line({ sentence: "This is league history from 2024." })],
-        [alice],
+        [alice, prior],
         digest,
       ),
     ).toEqual([]);

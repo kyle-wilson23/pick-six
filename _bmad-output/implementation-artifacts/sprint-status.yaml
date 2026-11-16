@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: 11-15-2026 23:05 # story 10.5 done: loaded book as one history
+last_updated: 11-16-2026 8:10 # story 11-1 in progress: print one screenshot season
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -165,7 +165,7 @@ development_status:
   pre-week-1-production-preflight: done # Live league through week 9; week-1 checklist (jailed team, odds, cron ticks, countdown) already passed
 
   # Epic 10 — AI weekly results commentary (epics-ai-weekly-results-commentary.md)
-  epic-10: in-progress
+  epic-10: done
   10-1-turn-weekly-commentary-on-or-off: done
   10-2-show-the-checked-note-in-the-tuesday-digest: done
   10-3-set-the-league-s-weekly-dollar-ceiling: done
@@ -174,8 +174,8 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11 — Past seasons in the book
-  epic-11: backlog
-  11-1-print-one-screenshot-season: backlog
+  epic-11: in-progress
+  11-1-print-one-screenshot-season: in-progress
   11-2-accept-a-mapped-season-into-the-book: backlog
   11-3-leave-a-missing-year-out: backlog
   epic-11-retrospective: optional

@@ -65,4 +65,15 @@ describe("member surfaces", () => {
     );
     expect(chatRoutes).toEqual([]);
   });
+
+  it("app routes do not mention the screenshot scripts", () => {
+    const scriptNames = ["print", "accept"].map((verb) => `${verb}-season-screenshot`);
+    const appFiles = filesUnder(join(process.cwd(), "src/app"));
+    expect(appFiles.length).toBeGreaterThan(0);
+    const hits = appFiles.filter((path) => {
+      const source = readFileSync(path, "utf8");
+      return scriptNames.some((name) => source.includes(name));
+    });
+    expect(hits).toEqual([]);
+  });
 });

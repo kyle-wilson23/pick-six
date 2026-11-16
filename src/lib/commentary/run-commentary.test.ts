@@ -258,6 +258,58 @@ describe("runCommentary", () => {
     expect(row?.sentences).toEqual([sentence]);
   });
 
+  it("completes on a gapped view and stores only the sentence that names years on it", async () => {
+    const y2022: CommentaryWeekViewRow = {
+      personId: "person-1",
+      userDisplayName: "Alice",
+      year: 2022,
+      week: 1,
+      outcome: "WIN",
+      points: 1,
+      teamAbbreviation: "KC",
+    };
+    const y2024: CommentaryWeekViewRow = {
+      personId: "person-1",
+      userDisplayName: "Alice",
+      year: 2024,
+      week: 2,
+      outcome: "LOSS",
+      points: 0,
+      teamAbbreviation: null,
+    };
+    const gapped = [view[0], y2022, y2024];
+    const kept = "Alice's 2022 win showed up again in 2024.";
+    const dropped = [
+      "Alice's 2022 win showed up again in 2023.",
+      "This is league history from 2022.",
+      "An all-time mark in 2022.",
+    ];
+    mocks.loadCommentaryWeekView.mockResolvedValue(gapped);
+    mocks.generateText.mockResolvedValueOnce(
+      modelResult(
+        [line(y2022, kept), ...dropped.map((sentence) => line(y2022, sentence))],
+        1_000_000,
+      ),
+    );
+
+    const result = await runCommentary({
+      leagueId: LEAGUE_ID,
+      nflSeasonYear: YEAR,
+      weekNumber: WEEK,
+    });
+
+    const prompt = mocks.generateText.mock.calls[0][0].prompt as string;
+    expect(prompt).toContain(JSON.stringify(gapped));
+    expect(prompt).not.toContain('"year":2023');
+    expect(mocks.generateText).toHaveBeenCalledOnce();
+    expect(result.sentences).toEqual([kept]);
+    expect(row?.status).toBe(CommentaryRunStatus.COMPLETED);
+    expect(row?.sentences).toEqual([kept]);
+    for (const sentence of dropped) {
+      expect(row?.sentences).not.toContain(sentence);
+    }
+  });
+
   it("calls again when the first list matches nothing and spend is under $1", async () => {
     const sentences = [
       "Alice took Buffalo for two.",

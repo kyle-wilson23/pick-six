@@ -183,4 +183,44 @@ describe("confirmCommentaryLines", () => {
       ),
     ).toEqual([]);
   });
+
+  it("keeps a 2022 and 2024 comparison and drops the gap year and a banned phrase", () => {
+    const y2022: CommentaryWeekViewRow = {
+      ...alice,
+      year: 2022,
+      week: 1,
+      outcome: "WIN",
+      points: 1,
+      teamAbbreviation: "KC",
+    };
+    const y2024: CommentaryWeekViewRow = {
+      ...alice,
+      year: 2024,
+      week: 2,
+      outcome: "LOSS",
+      points: 0,
+      teamAbbreviation: null,
+    };
+    const kept = "Alice's 2022 win showed up again in 2024.";
+    const cited = {
+      year: 2022,
+      week: 1,
+      outcome: "WIN" as const,
+      points: 1,
+      team: "KC",
+    };
+
+    expect(
+      confirmCommentaryLines(
+        [
+          line({ sentence: kept, ...cited }),
+          line({ sentence: "Alice's 2022 win showed up again in 2023.", ...cited }),
+          line({ sentence: "This is league history from 2022.", ...cited }),
+          line({ sentence: "An all-time mark in 2022.", ...cited }),
+        ],
+        [y2022, y2024],
+        digest,
+      ),
+    ).toEqual([kept]);
+  });
 });

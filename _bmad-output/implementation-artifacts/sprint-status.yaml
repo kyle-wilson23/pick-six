@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-04-11'
-last_updated: 11-16-2026 18:52 # story 11.3 done: leave a missing year out
+last_updated: 11-23-2026 19:44 # epic 11 done: past seasons in the book
 project: pick-six
 project_key: pick-six
 tracking_system: file-system
@@ -174,7 +174,7 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11 — Past seasons in the book
-  epic-11: in-progress
+  epic-11: done
   11-1-print-one-screenshot-season: done
   11-2-accept-a-mapped-season-into-the-book: done
   11-3-leave-a-missing-year-out: done
